@@ -1,0 +1,1483 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cifras</title>
+<style>
+/* ─── Variáveis ─────────────────────────────────────────────────────────── */
+:root {
+  --bg: #0f1117;
+  --surface: #1a1d27;
+  --surface2: #22263a;
+  --text: #e8eaf0;
+  --text-muted: #7b82a0;
+  --accent: #6c8ef5;
+  --accent-hover: #8aa4ff;
+  --border: #2c3050;
+  --danger: #e05555;
+  --success: #4caf82;
+  --sidebar-w: 260px;
+  --rep-w: 300px;
+  --header-h: 56px;
+  --radius: 8px;
+  --font-mono: 'Fira Mono', 'Consolas', 'Courier New', monospace;
+}
+
+/* ─── Reset & Base ───────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; background: var(--bg); color: var(--text); font-family: system-ui, -apple-system, sans-serif; font-size: 15px; overflow: hidden; }
+a { color: var(--accent); text-decoration: none; }
+button { cursor: pointer; border: none; background: none; color: inherit; font: inherit; }
+input { font: inherit; }
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+/* ─── Layout ─────────────────────────────────────────────────────────────── */
+#app { display: flex; flex-direction: column; height: 100vh; }
+
+/* Header */
+#header {
+  height: var(--header-h);
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 16px;
+  flex-shrink: 0;
+  z-index: 10;
+}
+#header h1 { font-size: 1.1em; font-weight: 700; color: var(--accent); letter-spacing: 0.04em; margin-right: 4px; }
+#search-box {
+  flex: 1;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  padding: 7px 12px;
+  outline: none;
+  transition: border-color .15s;
+}
+#search-box:focus { border-color: var(--accent); }
+#search-box::placeholder { color: var(--text-muted); }
+.btn {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 6px 13px;
+  font-size: 0.88em;
+  color: var(--text);
+  transition: background .15s, border-color .15s;
+  white-space: nowrap;
+}
+.btn:hover { background: var(--accent); border-color: var(--accent); color: #fff; }
+.btn-accent { background: var(--accent); border-color: var(--accent); color: #fff; }
+.btn-accent:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
+#btn-rep-toggle {
+  position: relative;
+}
+#rep-badge {
+  display: none;
+  position: absolute;
+  top: -5px; right: -5px;
+  background: var(--danger);
+  color: #fff;
+  font-size: 0.7em;
+  font-weight: 700;
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  align-items: center;
+  justify-content: center;
+}
+#rep-badge.show { display: flex; }
+
+/* Body */
+#body { display: flex; flex: 1; overflow: hidden; }
+
+/* Sidebar */
+#sidebar {
+  width: var(--sidebar-w);
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  overflow-y: auto;
+  flex-shrink: 0;
+  padding: 8px 0;
+}
+.sidebar-section { padding: 4px 0; }
+.sidebar-section-title {
+  padding: 8px 16px 6px;
+  font-size: 0.75em;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  user-select: none;
+}
+.sidebar-section-title:hover { color: var(--text); }
+.sidebar-section-title .arrow { transition: transform .2s; font-size: 0.8em; }
+.sidebar-section-title.collapsed .arrow { transform: rotate(-90deg); }
+.sidebar-cats { overflow: hidden; }
+.sidebar-cats.collapsed { display: none; }
+.sidebar-cat {
+  padding: 6px 16px 6px 28px;
+  font-size: 0.88em;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  transition: color .15s, background .15s;
+  border-radius: 0 4px 4px 0;
+  margin-right: 8px;
+}
+.sidebar-cat:hover { color: var(--text); background: var(--surface2); }
+.sidebar-cat.active { color: var(--accent); font-weight: 600; background: rgba(108,142,245,.1); }
+.sidebar-cat .count { font-size: 0.78em; color: var(--text-muted); }
+.sidebar-cat.active .count { color: var(--accent); opacity: .7; }
+
+/* Main area */
+#main { flex: 1; overflow-y: auto; padding: 16px; }
+
+/* Song grid */
+#song-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 10px;
+}
+.song-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px;
+  cursor: pointer;
+  transition: border-color .15s, background .15s;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.song-card:hover { border-color: var(--accent); background: var(--surface2); }
+.song-card .song-name {
+  font-size: 0.88em;
+  font-weight: 500;
+  line-height: 1.3;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+}
+.song-card .song-meta {
+  font-size: 0.75em;
+  color: var(--text-muted);
+}
+.song-card .btn-add-song {
+  margin-top: auto;
+  font-size: 0.78em;
+  padding: 4px 8px;
+  border-radius: 5px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  transition: all .15s;
+  align-self: flex-start;
+}
+.song-card:hover .btn-add-song { color: var(--accent); border-color: var(--accent); }
+.song-card .btn-add-song.added { background: rgba(76,175,130,.15); border-color: var(--success); color: var(--success); }
+
+/* Area vazia / carregando */
+#empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 80px 20px;
+  color: var(--text-muted);
+  text-align: center;
+}
+#empty-state .icon { font-size: 2.5em; }
+
+/* ─── Repertório (painel direito) ────────────────────────────────────────── */
+#rep-panel {
+  width: var(--rep-w);
+  background: var(--surface);
+  border-left: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  transform: translateX(var(--rep-w));
+  transition: transform .25s;
+}
+#rep-panel.open { transform: translateX(0); }
+#rep-header {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+#rep-title-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: var(--text);
+  font-weight: 600;
+  font-size: 0.95em;
+  outline: none;
+  min-width: 0;
+}
+#rep-title-input::placeholder { color: var(--text-muted); }
+#rep-count { font-size: 0.78em; color: var(--text-muted); }
+#rep-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 6px 0;
+}
+.rep-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  cursor: grab;
+  transition: background .15s;
+  user-select: none;
+  border-radius: 4px;
+  margin: 2px 6px;
+}
+.rep-item:hover { background: var(--surface2); }
+.rep-item.dragging { opacity: 0.5; }
+.rep-item.drag-over { border-top: 2px solid var(--accent); }
+.rep-item .drag-handle { color: var(--text-muted); font-size: 0.85em; cursor: grab; flex-shrink: 0; }
+.rep-item .rep-name { flex: 1; font-size: 0.85em; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.rep-item .rep-cat { font-size: 0.73em; color: var(--text-muted); }
+.rep-item .btn-remove { color: var(--text-muted); font-size: 1em; flex-shrink: 0; padding: 2px 4px; border-radius: 4px; }
+.rep-item .btn-remove:hover { color: var(--danger); background: rgba(224,85,85,.1); }
+#rep-empty {
+  padding: 40px 16px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.88em;
+  line-height: 1.6;
+}
+#rep-footer {
+  padding: 10px 12px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+#rep-footer .btn { flex: 1; text-align: center; font-size: 0.85em; }
+
+/* ─── Modal de cifra ─────────────────────────────────────────────────────── */
+#modal-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.7);
+  z-index: 100;
+  align-items: center;
+  justify-content: center;
+}
+#modal-overlay.open { display: flex; }
+#modal {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  width: min(780px, 95vw);
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 24px 64px rgba(0,0,0,.5);
+}
+#modal-header {
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+#modal-title { flex: 1; font-weight: 600; font-size: 1em; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+#modal-meta { font-size: 0.78em; color: var(--text-muted); white-space: nowrap; }
+#modal-close { font-size: 1.2em; color: var(--text-muted); padding: 4px 8px; border-radius: 5px; }
+#modal-close:hover { color: var(--text); background: var(--surface2); }
+
+/* Toolbar de transposição */
+#transpose-toolbar {
+  padding: 10px 18px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  flex-shrink: 0;
+  background: var(--surface2);
+}
+.tp-label { font-size: 0.78em; color: var(--text-muted); white-space: nowrap; }
+.tp-semitone { display: flex; align-items: center; gap: 6px; }
+.tp-semitone button {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  width: 30px; height: 28px;
+  font-size: 1em;
+  color: var(--text);
+  transition: all .15s;
+}
+.tp-semitone button:hover { border-color: var(--accent); color: var(--accent); }
+#tp-display {
+  font-size: 0.82em;
+  font-weight: 600;
+  min-width: 44px;
+  text-align: center;
+  color: var(--accent);
+}
+.tp-notes { display: flex; gap: 4px; flex-wrap: wrap; }
+.tp-notes button {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: 3px 7px;
+  font-size: 0.8em;
+  color: var(--text-muted);
+  transition: all .15s;
+}
+.tp-notes button:hover { border-color: var(--accent); color: var(--accent); }
+.tp-notes button.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+#btn-tp-reset { font-size: 0.78em; color: var(--text-muted); padding: 4px 8px; border-radius: 5px; border: 1px solid transparent; }
+#btn-tp-reset:hover { border-color: var(--border); color: var(--text); }
+
+#modal-body { overflow-y: auto; padding: 18px 20px; }
+#cifra-content {
+  font-family: var(--font-mono);
+  font-size: 0.88em;
+  line-height: 1.7;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: var(--text);
+}
+.chord-line { color: #8ab4f8; font-weight: 600; }
+
+#modal-footer {
+  padding: 10px 18px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+#modal-footer .btn { font-size: 0.85em; }
+.loading-spinner {
+  display: inline-block;
+  width: 18px; height: 18px;
+  border: 2px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin .7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ─── Drag & Drop overlay ────────────────────────────────────────────────── */
+#drop-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(108,142,245,.15);
+  border: 3px dashed var(--accent);
+  z-index: 200;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 12px;
+  color: var(--accent);
+  font-size: 1.2em;
+  font-weight: 600;
+  pointer-events: none;
+}
+#drop-overlay.show { display: flex; }
+
+/* ─── Notificação toast ──────────────────────────────────────────────────── */
+#toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 9px 18px;
+  border-radius: 20px;
+  font-size: 0.88em;
+  opacity: 0;
+  transition: opacity .2s, transform .2s;
+  z-index: 500;
+  pointer-events: none;
+}
+/* ─── User badge ─────────────────────────────────────────────────────────── */
+#user-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 10px 4px 4px;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  background: var(--surface2);
+  flex-shrink: 0;
+}
+#user-badge img {
+  width: 26px; height: 26px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+#user-badge .user-name {
+  font-size: 0.82em;
+  color: var(--text-muted);
+  max-width: 120px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+#btn-logout {
+  font-size: 0.75em;
+  color: var(--text-muted);
+  padding: 3px 8px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+#btn-logout:hover { border-color: var(--danger); color: var(--danger); }
+
+#toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* ─── Modal de importação ────────────────────────────────────────────────── */
+#import-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.7);
+  z-index: 110;
+  align-items: center;
+  justify-content: center;
+}
+#import-overlay.open { display: flex; }
+#import-modal {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  width: min(680px, 95vw);
+  max-height: 92vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 24px 64px rgba(0,0,0,.5);
+}
+#import-modal-header {
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+#import-modal-header h2 { flex: 1; font-size: 1em; font-weight: 600; }
+#import-close { font-size: 1.2em; color: var(--text-muted); padding: 4px 8px; border-radius: 5px; }
+#import-close:hover { color: var(--text); background: var(--surface2); }
+#import-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.import-tab {
+  flex: 1;
+  padding: 10px;
+  text-align: center;
+  font-size: 0.88em;
+  color: var(--text-muted);
+  border-bottom: 2px solid transparent;
+  transition: color .15s, border-color .15s;
+}
+.import-tab:hover { color: var(--text); }
+.import-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+#import-body { overflow-y: auto; padding: 16px 18px; display: flex; flex-direction: column; gap: 14px; }
+.import-panel { display: none; flex-direction: column; gap: 10px; }
+.import-panel.active { display: flex; }
+.import-url-row { display: flex; gap: 8px; }
+.import-url-row input { flex: 1; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius); color: var(--text); padding: 8px 12px; outline: none; }
+.import-url-row input:focus { border-color: var(--accent); }
+#import-textarea {
+  width: 100%;
+  min-height: 140px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  padding: 10px 12px;
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+  resize: vertical;
+  outline: none;
+}
+#import-textarea:focus { border-color: var(--accent); }
+.import-meta-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.import-field { display: flex; flex-direction: column; gap: 4px; }
+.import-field label { font-size: 0.78em; color: var(--text-muted); }
+.import-field input,
+.import-field select {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  padding: 7px 10px;
+  outline: none;
+  font: inherit;
+  font-size: 0.88em;
+}
+.import-field input:focus,
+.import-field select:focus { border-color: var(--accent); }
+.import-field select option { background: var(--surface2); }
+#import-preview-wrap { display: none; flex-direction: column; gap: 6px; }
+#import-preview-wrap label { font-size: 0.78em; color: var(--text-muted); }
+#import-preview {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px;
+  font-family: var(--font-mono);
+  font-size: 0.82em;
+  line-height: 1.7;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 200px;
+  overflow-y: auto;
+  color: var(--text);
+}
+#import-footer {
+  padding: 12px 18px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+#import-footer .btn { font-size: 0.88em; }
+#import-error { font-size: 0.82em; color: var(--danger); flex: 1; }
+</style>
+</head>
+<body>
+
+<div id="app">
+  <!-- Header -->
+  <div id="header">
+    <h1>♪ Cifras</h1>
+    <input type="text" id="search-box" placeholder="Buscar música..." autocomplete="off">
+    <button class="btn" id="btn-import" title="Importar cifra">&#43; Importar</button>
+    <button class="btn" id="btn-upload" title="Abrir arquivo">&#128194; Abrir</button>
+    <button class="btn" id="btn-rep-toggle" title="Repertório">
+      &#127926; Repertório
+      <span id="rep-badge">0</span>
+    </button>
+    <input type="file" id="file-input" accept=".docx,.doc,.pdf,.txt" style="display:none">
+    {% if user %}
+    <div id="user-badge">
+      {% if user.picture %}
+      <img src="{{ user.picture }}" alt="{{ user.name }}" referrerpolicy="no-referrer">
+      {% endif %}
+      <span class="user-name">{{ user.name or user.email }}</span>
+      <a href="/logout" id="btn-logout">Sair</a>
+    </div>
+    {% endif %}
+  </div>
+
+  <div id="body">
+    <!-- Sidebar -->
+    <div id="sidebar"></div>
+
+    <!-- Main -->
+    <div id="main">
+      <div id="song-grid"></div>
+      <div id="empty-state" style="display:none">
+        <div class="icon">&#127926;</div>
+        <div id="empty-msg">Selecione uma categoria ou busque uma música.</div>
+      </div>
+    </div>
+
+    <!-- Repertório -->
+    <div id="rep-panel">
+      <div id="rep-header">
+        <input type="text" id="rep-title-input" placeholder="Nome do repertório" maxlength="60">
+        <span id="rep-count">0 músicas</span>
+      </div>
+      <div id="rep-list"></div>
+      <div id="rep-empty">Adicione músicas pelo<br>botão "+ Repertório" nos cards.</div>
+      <div id="rep-footer">
+        <button class="btn" id="btn-rep-clear">Limpar</button>
+        <button class="btn btn-accent" id="btn-rep-export">&#128196; Exportar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal cifra -->
+<div id="modal-overlay">
+  <div id="modal">
+    <div id="modal-header">
+      <span id="modal-title">—</span>
+      <span id="modal-meta"></span>
+      <button id="modal-close" title="Fechar (Esc)">&#10005;</button>
+    </div>
+    <div id="transpose-toolbar">
+      <span class="tp-label">Tom:</span>
+      <div class="tp-semitone">
+        <button id="btn-tp-down" title="−1 semitom">&#8722;</button>
+        <span id="tp-display">+0</span>
+        <button id="btn-tp-up" title="+1 semitom">+</button>
+      </div>
+      <span class="tp-label">Destino:</span>
+      <div class="tp-notes" id="tp-note-buttons"></div>
+      <button id="btn-tp-reset">&#8635; Reset</button>
+    </div>
+    <div id="modal-body">
+      <pre id="cifra-content"></pre>
+    </div>
+    <div id="modal-footer">
+      <button class="btn btn-accent" id="btn-modal-add">+ Repertório</button>
+      <span style="flex:1"></span>
+      <span id="modal-loading" style="display:none"><span class="loading-spinner"></span></span>
+    </div>
+  </div>
+</div>
+
+<!-- Modal de importação -->
+<div id="import-overlay">
+  <div id="import-modal">
+    <div id="import-modal-header">
+      <h2>&#43; Importar cifra</h2>
+      <button id="import-close" title="Fechar">&#10005;</button>
+    </div>
+    <div id="import-tabs">
+      <button class="import-tab active" data-tab="url">&#127760; Por URL</button>
+      <button class="import-tab" data-tab="text">&#128203; Colar texto</button>
+    </div>
+    <div id="import-body">
+      <!-- Painel URL -->
+      <div class="import-panel active" id="import-panel-url">
+        <div class="import-url-row">
+          <input type="url" id="import-url-input" placeholder="https://www.cifraclub.com.br/...">
+          <button class="btn btn-accent" id="btn-import-fetch">Buscar</button>
+        </div>
+      </div>
+      <!-- Painel Texto -->
+      <div class="import-panel" id="import-panel-text">
+        <textarea id="import-textarea" placeholder="Cole a cifra aqui..."></textarea>
+        <button class="btn btn-accent" id="btn-import-preview-text" style="align-self:flex-start">Pré-visualizar</button>
+      </div>
+
+      <!-- Metadados -->
+      <div id="import-meta-wrap" style="display:none; flex-direction:column; gap:10px;">
+        <div class="import-meta-grid">
+          <div class="import-field" style="grid-column:1/-1">
+            <label>Título</label>
+            <input type="text" id="import-title" placeholder="Nome da música" maxlength="120">
+          </div>
+          <div class="import-field">
+            <label>Artista</label>
+            <input type="text" id="import-artist" placeholder="Artista / Ministério" maxlength="80">
+          </div>
+          <div class="import-field">
+            <label>Tom</label>
+            <input type="text" id="import-key" placeholder="Ex: G, Am, C#" maxlength="4">
+          </div>
+          <div class="import-field">
+            <label>Seção</label>
+            <select id="import-section"><option value="">Selecione...</option></select>
+          </div>
+          <div class="import-field">
+            <label>Categoria</label>
+            <select id="import-category"><option value="">Selecione...</option></select>
+          </div>
+        </div>
+        <!-- Preview da cifra -->
+        <div id="import-preview-wrap">
+          <label>Prévia da cifra</label>
+          <pre id="import-preview"></pre>
+        </div>
+      </div>
+    </div>
+    <div id="import-footer">
+      <span id="import-error"></span>
+      <span id="import-loading" style="display:none"><span class="loading-spinner"></span></span>
+      <button class="btn btn-accent" id="btn-import-save" style="display:none">&#128190; Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Drop overlay -->
+<div id="drop-overlay">
+  <div>&#128194;</div>
+  <div>Solte o arquivo aqui</div>
+</div>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<script>
+// ─── Estado global ──────────────────────────────────────────────────────────
+var library = {};
+var allSongs = [];
+var repertorio = [];
+var currentModal = null;   // { name, path, section, category } ou { name, text }
+var rawCifraText = "";
+var currentSemitone = 0;
+var currentCategory = null; // { section, category }
+var searchActive = false;
+var repOpen = false;
+
+// ─── Notas / Transposição ───────────────────────────────────────────────────
+var NOTES = ["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"];
+var ENHARMONIC = {Db:"C#",Eb:"D#",Gb:"F#",Ab:"G#",Bb:"A#"};
+var CHORD_RE = /^[A-G][b#]?(m|maj|min|dim|aug|sus|add|[0-9]|\/[A-G][b#]?)*$/;
+
+function normalizeNote(n) { return ENHARMONIC[n] || n; }
+
+function transposeNote(note, semitones) {
+  note = normalizeNote(note);
+  var idx = NOTES.indexOf(note);
+  if (idx < 0) return note;
+  return NOTES[((idx + semitones) % 12 + 12) % 12];
+}
+
+function transposeChord(chord, semitones) {
+  // chord: e.g. "Am7", "G/B", "C#m"
+  return chord.replace(/[A-G][b#]?/g, function(m, offset, str) {
+    // only transpose the root and bass note
+    return transposeNote(m, semitones);
+  });
+}
+
+function isChordLine(line) {
+  var words = line.trim().split(/\s+/).filter(Boolean);
+  if (!words.length) return false;
+  var matches = words.filter(w => CHORD_RE.test(w.replace(/[()[\]]/g, "")));
+  return matches.length / words.length >= 0.5;
+}
+
+function transposeText(text, semitones) {
+  if (semitones === 0) return text;
+  return text.split("\n").map(function(line) {
+    if (isChordLine(line)) {
+      return line.replace(/[A-G][b#]?(?:m|maj|min|dim|aug|sus|add|[0-9]|\/[A-G][b#]?)*(?=[^a-z]|$)/g, function(chord) {
+        return transposeChord(chord, semitones);
+      });
+    }
+    return line;
+  }).join("\n");
+}
+
+function detectBaseNote(text) {
+  var lines = text.split("\n");
+  for (var i = 0; i < lines.length; i++) {
+    if (isChordLine(lines[i])) {
+      var m = lines[i].match(/[A-G][b#]?/);
+      if (m) return normalizeNote(m[0]);
+    }
+  }
+  return null;
+}
+
+// ─── Utilitários ───────────────────────────────────────────────────────────
+function escHtml(s) {
+  return String(s)
+    .replace(/&/g,"&amp;")
+    .replace(/</g,"&lt;")
+    .replace(/>/g,"&gt;")
+    .replace(/"/g,"&quot;");
+}
+
+function showToast(msg, duration) {
+  var el = document.getElementById("toast");
+  el.textContent = msg;
+  el.classList.add("show");
+  clearTimeout(el._t);
+  el._t = setTimeout(function() { el.classList.remove("show"); }, duration || 2200);
+}
+
+// ─── Sidebar ────────────────────────────────────────────────────────────────
+function renderSidebar() {
+  var sb = document.getElementById("sidebar");
+  sb.innerHTML = "";
+  Object.keys(library).forEach(function(section) {
+    var sec = document.createElement("div");
+    sec.className = "sidebar-section";
+
+    var title = document.createElement("div");
+    title.className = "sidebar-section-title";
+    title.innerHTML = '<span class="arrow">&#9660;</span> ' + escHtml(section);
+    sec.appendChild(title);
+
+    var cats = document.createElement("div");
+    cats.className = "sidebar-cats";
+
+    var categories = library[section];
+    Object.keys(categories).forEach(function(cat) {
+      var songs = categories[cat];
+      var item = document.createElement("div");
+      item.className = "sidebar-cat";
+      var displayName = cat === "_raiz" ? "Geral" : cat;
+      item.innerHTML = '<span>' + escHtml(displayName) + '</span><span class="count">' + songs.length + '</span>';
+      item.addEventListener("click", function() {
+        selectCategory(section, cat);
+      });
+      item.dataset.section = section;
+      item.dataset.cat = cat;
+      cats.appendChild(item);
+    });
+
+    title.addEventListener("click", function() {
+      title.classList.toggle("collapsed");
+      cats.classList.toggle("collapsed");
+    });
+
+    sec.appendChild(cats);
+    sb.appendChild(sec);
+  });
+}
+
+function selectCategory(section, cat) {
+  currentCategory = { section: section, cat: cat };
+  searchActive = false;
+  document.getElementById("search-box").value = "";
+  document.querySelectorAll(".sidebar-cat").forEach(function(el) {
+    el.classList.toggle("active", el.dataset.section === section && el.dataset.cat === cat);
+  });
+  var songs = (library[section] || {})[cat] || [];
+  renderSongGrid(songs);
+}
+
+// ─── Song Grid ──────────────────────────────────────────────────────────────
+function renderSongGrid(songs) {
+  var grid = document.getElementById("song-grid");
+  var empty = document.getElementById("empty-state");
+  grid.innerHTML = "";
+
+  if (!songs.length) {
+    grid.style.display = "none";
+    empty.style.display = "flex";
+    document.getElementById("empty-msg").textContent = searchActive
+      ? "Nenhuma música encontrada."
+      : "Nenhuma música nesta categoria.";
+    return;
+  }
+
+  grid.style.display = "grid";
+  empty.style.display = "none";
+
+  songs.forEach(function(song) {
+    var inRep = repertorio.some(function(r) { return r.path === song.path && r.name === song.name; });
+    var card = document.createElement("div");
+    card.className = "song-card";
+    card.innerHTML =
+      '<div class="song-name">' + escHtml(song.name) + '</div>' +
+      '<div class="song-meta">' + escHtml(song.category === "_raiz" ? song.section : song.category) + '</div>' +
+      '<button class="btn-add-song' + (inRep ? ' added' : '') + '">' +
+        (inRep ? '&#10003; Adicionado' : '+ Repertório') +
+      '</button>';
+
+    card.querySelector(".btn-add-song").addEventListener("click", function(e) {
+      e.stopPropagation();
+      toggleRepertorio(song, this);
+    });
+
+    card.addEventListener("click", function() { openModal(song); });
+    grid.appendChild(card);
+  });
+}
+
+// ─── Modal ──────────────────────────────────────────────────────────────────
+function openModal(song) {
+  currentModal = song;
+  currentSemitone = 0;
+  rawCifraText = "";
+  document.getElementById("modal-title").textContent = song.name;
+  document.getElementById("modal-meta").textContent = song.category
+    ? (song.category === "_raiz" ? song.section : song.category)
+    : "";
+  document.getElementById("cifra-content").textContent = "";
+  document.getElementById("modal-loading").style.display = "inline";
+  document.getElementById("modal-overlay").classList.add("open");
+  updateTransposeUI();
+
+  // Atualiza botão de repertório
+  updateModalRepBtn();
+
+  if (song.text) {
+    // arquivo avulso (já tem texto)
+    rawCifraText = song.text;
+    document.getElementById("modal-loading").style.display = "none";
+    applyTranspose(0);
+  } else {
+    fetch(song.fileId
+      ? "/api/cifra?fileId=" + encodeURIComponent(song.fileId) + "&mimeType=" + encodeURIComponent(song.mimeType || "")
+      : "/api/cifra?path=" + encodeURIComponent(song.path))
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        document.getElementById("modal-loading").style.display = "none";
+        if (data.error) {
+          rawCifraText = "[Erro: " + data.error + "]";
+        } else {
+          rawCifraText = data.text;
+        }
+        applyTranspose(0);
+      })
+      .catch(function(err) {
+        document.getElementById("modal-loading").style.display = "none";
+        rawCifraText = "[Falha ao carregar cifra]";
+        applyTranspose(0);
+      });
+  }
+}
+
+function closeModal() {
+  document.getElementById("modal-overlay").classList.remove("open");
+  currentModal = null;
+}
+
+function applyTranspose(semitones) {
+  currentSemitone = semitones;
+  var text = transposeText(rawCifraText, semitones);
+
+  // Renderiza com destaque em linhas de acordes
+  var html = text.split("\n").map(function(line) {
+    if (isChordLine(line)) {
+      return '<span class="chord-line">' + escHtml(line) + '</span>';
+    }
+    return escHtml(line);
+  }).join("\n");
+
+  document.getElementById("cifra-content").innerHTML = html;
+  updateTransposeUI();
+}
+
+function updateTransposeUI() {
+  var display = document.getElementById("tp-display");
+  display.textContent = currentSemitone >= 0 ? "+" + currentSemitone : String(currentSemitone);
+
+  // Detecta nota base do texto original e calcula nota atual
+  var baseNote = rawCifraText ? detectBaseNote(rawCifraText) : null;
+  var currentNote = baseNote ? transposeNote(baseNote, currentSemitone) : null;
+
+  document.querySelectorAll("#tp-note-buttons button").forEach(function(btn) {
+    btn.classList.toggle("active", btn.dataset.note === currentNote);
+  });
+}
+
+function buildNoteButtons() {
+  var container = document.getElementById("tp-note-buttons");
+  container.innerHTML = "";
+  NOTES.forEach(function(note) {
+    var btn = document.createElement("button");
+    btn.textContent = note;
+    btn.dataset.note = note;
+    btn.addEventListener("click", function() {
+      var baseNote = detectBaseNote(rawCifraText);
+      if (!baseNote) { showToast("Nenhum acorde detectado."); return; }
+      var baseIdx = NOTES.indexOf(normalizeNote(baseNote));
+      var targetIdx = NOTES.indexOf(note);
+      var diff = ((targetIdx - baseIdx) + 12) % 12;
+      applyTranspose(diff);
+    });
+    container.appendChild(btn);
+  });
+}
+
+function updateModalRepBtn() {
+  if (!currentModal) return;
+  var btn = document.getElementById("btn-modal-add");
+  var inRep = repertorio.some(function(r) {
+    return r.name === currentModal.name &&
+           (r.path === currentModal.path || (!r.path && !currentModal.path));
+  });
+  btn.textContent = inRep ? "✓ No repertório" : "+ Repertório";
+  btn.classList.toggle("btn-accent", !inRep);
+}
+
+// ─── Repertório ─────────────────────────────────────────────────────────────
+function toggleRepertorio(song, btnEl) {
+  var idx = repertorio.findIndex(function(r) {
+    return r.path === song.path && r.name === song.name;
+  });
+  if (idx >= 0) {
+    repertorio.splice(idx, 1);
+    showToast(song.name + " removido do repertório.");
+  } else {
+    repertorio.push(song);
+    showToast(song.name + " adicionado ao repertório.");
+  }
+  renderRepList();
+  updateRepBadge();
+  updateModalRepBtn();
+  // Atualiza grid
+  if (btnEl) {
+    var inRep = idx < 0;
+    btnEl.textContent = inRep ? "✓ Adicionado" : "+ Repertório";
+    btnEl.classList.toggle("added", inRep);
+  }
+}
+
+function renderRepList() {
+  var list = document.getElementById("rep-list");
+  var empty = document.getElementById("rep-empty");
+  list.innerHTML = "";
+
+  if (!repertorio.length) {
+    empty.style.display = "block";
+    return;
+  }
+  empty.style.display = "none";
+
+  repertorio.forEach(function(song, i) {
+    var item = document.createElement("div");
+    item.className = "rep-item";
+    item.draggable = true;
+    item.dataset.idx = i;
+    item.innerHTML =
+      '<span class="drag-handle">&#8942;&#8942;</span>' +
+      '<div style="flex:1;min-width:0">' +
+        '<div class="rep-name">' + escHtml(song.name) + '</div>' +
+        '<div class="rep-cat">' + escHtml(song.category === "_raiz" ? song.section : (song.category || "")) + '</div>' +
+      '</div>' +
+      '<button class="btn-remove" title="Remover">&#10005;</button>';
+
+    item.querySelector(".btn-remove").addEventListener("click", function() {
+      repertorio.splice(i, 1);
+      renderRepList();
+      updateRepBadge();
+      refreshGridBtns();
+    });
+
+    // Drag & drop para reordenar
+    item.addEventListener("dragstart", function(e) {
+      e.dataTransfer.setData("text/plain", i);
+      setTimeout(function() { item.classList.add("dragging"); }, 0);
+    });
+    item.addEventListener("dragend", function() { item.classList.remove("dragging"); clearDragOver(); });
+    item.addEventListener("dragover", function(e) {
+      e.preventDefault();
+      clearDragOver();
+      item.classList.add("drag-over");
+    });
+    item.addEventListener("drop", function(e) {
+      e.preventDefault();
+      var from = parseInt(e.dataTransfer.getData("text/plain"));
+      var to = parseInt(item.dataset.idx);
+      if (from !== to) {
+        var moved = repertorio.splice(from, 1)[0];
+        repertorio.splice(to, 0, moved);
+        renderRepList();
+      }
+    });
+
+    list.appendChild(item);
+  });
+}
+
+function clearDragOver() {
+  document.querySelectorAll(".rep-item.drag-over").forEach(function(el) { el.classList.remove("drag-over"); });
+}
+
+function updateRepBadge() {
+  var badge = document.getElementById("rep-badge");
+  badge.textContent = repertorio.length;
+  badge.classList.toggle("show", repertorio.length > 0);
+  document.getElementById("rep-count").textContent = repertorio.length + " música" + (repertorio.length !== 1 ? "s" : "");
+}
+
+function refreshGridBtns() {
+  // Atualiza todos os botões de "adicionar" no grid
+  document.querySelectorAll(".song-card").forEach(function(card) {
+    // Reidentifica pela posição — mais simples re-renderizar
+  });
+  // Re-renderiza a view atual
+  if (searchActive) {
+    var q = document.getElementById("search-box").value.trim();
+    doSearch(q);
+  } else if (currentCategory) {
+    var songs = (library[currentCategory.section] || {})[currentCategory.cat] || [];
+    renderSongGrid(songs);
+  }
+}
+
+// ─── Exportação ─────────────────────────────────────────────────────────────
+async function exportRepertorio() {
+  if (!repertorio.length) { showToast("O repertório está vazio."); return; }
+
+  var title = document.getElementById("rep-title-input").value.trim() || "Repertório";
+  showToast("Carregando cifras para exportar…", 5000);
+
+  // Busca texto de cada música (com transposição atual se for a do modal)
+  var songs = [];
+  for (var i = 0; i < repertorio.length; i++) {
+    var s = repertorio[i];
+    var text = "";
+    if (s.text) {
+      text = s.text;
+    } else {
+      try {
+        var r = await fetch(s.fileId
+          ? "/api/cifra?fileId=" + encodeURIComponent(s.fileId) + "&mimeType=" + encodeURIComponent(s.mimeType || "")
+          : "/api/cifra?path=" + encodeURIComponent(s.path));
+        var data = await r.json();
+        text = data.text || "";
+      } catch(e) {
+        text = "[Erro ao carregar]";
+      }
+    }
+    songs.push({ name: s.name, text: text });
+  }
+
+  var resp = await fetch("/api/export", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ songs: songs, title: title })
+  });
+  var html = await resp.text();
+  var blob = new Blob([html], { type: "text/html" });
+  var url = URL.createObjectURL(blob);
+  window.open(url, "_blank");
+  showToast("Exportação gerada!");
+}
+
+// ─── Busca ──────────────────────────────────────────────────────────────────
+function doSearch(q) {
+  if (!q) {
+    searchActive = false;
+    if (currentCategory) {
+      var songs = (library[currentCategory.section] || {})[currentCategory.cat] || [];
+      renderSongGrid(songs);
+    } else {
+      document.getElementById("song-grid").style.display = "none";
+      document.getElementById("empty-state").style.display = "flex";
+      document.getElementById("empty-msg").textContent = "Selecione uma categoria ou busque uma música.";
+    }
+    return;
+  }
+  searchActive = true;
+  var ql = q.toLowerCase();
+  var results = allSongs.filter(function(s) { return s.name.toLowerCase().includes(ql); });
+  renderSongGrid(results);
+}
+
+// ─── Upload / Drag & Drop de arquivo ────────────────────────────────────────
+function handleFileUpload(file) {
+  if (!file) return;
+  var ext = file.name.split(".").pop().toLowerCase();
+  if (!["docx","doc","pdf","txt"].includes(ext)) {
+    showToast("Formato não suportado: ." + ext);
+    return;
+  }
+  var fd = new FormData();
+  fd.append("file", file);
+  showToast("Carregando " + file.name + "…", 4000);
+  fetch("/api/upload", { method: "POST", body: fd })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data.error) { showToast("Erro: " + data.error); return; }
+      openModal({ name: data.name || file.name, text: data.text, category: null });
+    })
+    .catch(function() { showToast("Falha ao carregar arquivo."); });
+}
+
+// ─── Inicialização ───────────────────────────────────────────────────────────
+function init() {
+  buildNoteButtons();
+  initImportModal();
+
+  // Carrega biblioteca
+  fetch("/api/library")
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      library = data;
+      allSongs = [];
+      Object.keys(library).forEach(function(sec) {
+        Object.keys(library[sec]).forEach(function(cat) {
+          allSongs = allSongs.concat(library[sec][cat]);
+        });
+      });
+      renderSidebar();
+      document.getElementById("empty-state").style.display = "flex";
+      document.getElementById("song-grid").style.display = "none";
+    })
+    .catch(function() {
+      document.getElementById("empty-msg").textContent = "Não foi possível carregar a biblioteca. Verifique CIFRAS_ROOT.";
+      document.getElementById("empty-state").style.display = "flex";
+    });
+
+  // Busca
+  var searchBox = document.getElementById("search-box");
+  var searchTimer;
+  searchBox.addEventListener("input", function() {
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(function() { doSearch(searchBox.value.trim()); }, 200);
+  });
+  searchBox.addEventListener("keydown", function(e) {
+    if (e.key === "Escape") { searchBox.value = ""; doSearch(""); }
+  });
+
+  // Modal close
+  document.getElementById("modal-close").addEventListener("click", closeModal);
+  document.getElementById("modal-overlay").addEventListener("click", function(e) {
+    if (e.target === this) closeModal();
+  });
+  document.addEventListener("keydown", function(e) {
+    if (e.key === "Escape") closeModal();
+  });
+
+  // Transposição
+  document.getElementById("btn-tp-down").addEventListener("click", function() { applyTranspose(currentSemitone - 1); });
+  document.getElementById("btn-tp-up").addEventListener("click", function() { applyTranspose(currentSemitone + 1); });
+  document.getElementById("btn-tp-reset").addEventListener("click", function() { applyTranspose(0); });
+
+  // Botão repertório no modal
+  document.getElementById("btn-modal-add").addEventListener("click", function() {
+    if (!currentModal) return;
+    toggleRepertorio(currentModal, null);
+    updateModalRepBtn();
+    refreshGridBtns();
+  });
+
+  // Painel repertório
+  document.getElementById("btn-rep-toggle").addEventListener("click", function() {
+    repOpen = !repOpen;
+    document.getElementById("rep-panel").classList.toggle("open", repOpen);
+  });
+  document.getElementById("btn-rep-clear").addEventListener("click", function() {
+    if (!repertorio.length) return;
+    if (confirm("Limpar o repertório?")) {
+      repertorio = [];
+      renderRepList();
+      updateRepBadge();
+      refreshGridBtns();
+    }
+  });
+  document.getElementById("btn-rep-export").addEventListener("click", exportRepertorio);
+
+  // Upload — botão
+  document.getElementById("btn-upload").addEventListener("click", function() {
+    document.getElementById("file-input").click();
+  });
+  document.getElementById("file-input").addEventListener("change", function() {
+    handleFileUpload(this.files[0]);
+    this.value = "";
+  });
+
+  // Upload — drag & drop na janela
+  var dropOverlay = document.getElementById("drop-overlay");
+  var dragCounter = 0;
+  window.addEventListener("dragenter", function(e) {
+    if (e.dataTransfer.types.includes("Files")) {
+      dragCounter++;
+      dropOverlay.classList.add("show");
+    }
+  });
+  window.addEventListener("dragleave", function() {
+    dragCounter--;
+    if (dragCounter <= 0) { dragCounter = 0; dropOverlay.classList.remove("show"); }
+  });
+  window.addEventListener("dragover", function(e) { e.preventDefault(); });
+  window.addEventListener("drop", function(e) {
+    e.preventDefault();
+    dragCounter = 0;
+    dropOverlay.classList.remove("show");
+    var file = e.dataTransfer.files[0];
+    if (file) handleFileUpload(file);
+  });
+}
+
+// ─── Modal de Importação ────────────────────────────────────────────────────
+var importSections = {};   // { section: [categories] }
+var importCifraText = "";  // texto buscado/colado
+
+function openImportModal() {
+  document.getElementById("import-overlay").classList.add("open");
+  document.getElementById("import-error").textContent = "";
+  document.getElementById("import-meta-wrap").style.display = "none";
+  document.getElementById("btn-import-save").style.display = "none";
+  document.getElementById("import-preview-wrap").style.display = "none";
+  document.getElementById("import-url-input").value = "";
+  document.getElementById("import-textarea").value = "";
+  importCifraText = "";
+  loadImportSections();
+}
+
+function closeImportModal() {
+  document.getElementById("import-overlay").classList.remove("open");
+}
+
+function loadImportSections() {
+  if (Object.keys(importSections).length) { populateImportSection(); return; }
+  fetch("/api/sections")
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      importSections = data;
+      populateImportSection();
+    });
+}
+
+function populateImportSection() {
+  var sel = document.getElementById("import-section");
+  sel.innerHTML = '<option value="">Selecione...</option>';
+  Object.keys(importSections).forEach(function(s) {
+    var opt = document.createElement("option");
+    opt.value = s; opt.textContent = s;
+    sel.appendChild(opt);
+  });
+}
+
+function onImportSectionChange() {
+  var section = document.getElementById("import-section").value;
+  var catSel = document.getElementById("import-category");
+  catSel.innerHTML = '<option value="_raiz">Geral</option>';
+  var cats = (importSections[section] || []).filter(function(c) { return c !== "_raiz"; });
+  cats.forEach(function(c) {
+    var opt = document.createElement("option");
+    opt.value = c; opt.textContent = c;
+    catSel.appendChild(opt);
+  });
+}
+
+function showImportResult(data) {
+  importCifraText = data.text || "";
+  document.getElementById("import-title").value = data.title || "";
+  document.getElementById("import-artist").value = data.artist || "";
+  document.getElementById("import-key").value = data.key || "";
+
+  var metaWrap = document.getElementById("import-meta-wrap");
+  metaWrap.style.display = "flex";
+
+  var previewWrap = document.getElementById("import-preview-wrap");
+  var preview = document.getElementById("import-preview");
+  if (importCifraText) {
+    preview.textContent = importCifraText.slice(0, 1200) + (importCifraText.length > 1200 ? "\n…" : "");
+    previewWrap.style.display = "flex";
+  } else {
+    previewWrap.style.display = "none";
+  }
+
+  document.getElementById("btn-import-save").style.display = "inline-block";
+  document.getElementById("import-error").textContent = "";
+}
+
+async function fetchImportUrl() {
+  var url = document.getElementById("import-url-input").value.trim();
+  if (!url) { document.getElementById("import-error").textContent = "Informe uma URL."; return; }
+  setImportLoading(true);
+  try {
+    var resp = await fetch("/api/import/preview", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ url: url })
+    });
+    var data = await resp.json();
+    if (data.error) throw new Error(data.error);
+    showImportResult(data);
+  } catch(e) {
+    document.getElementById("import-error").textContent = e.message;
+  } finally {
+    setImportLoading(false);
+  }
+}
+
+function previewImportText() {
+  var text = document.getElementById("import-textarea").value.trim();
+  if (!text) { document.getElementById("import-error").textContent = "Cole uma cifra primeiro."; return; }
+  showImportResult({ title: "", artist: "", key: "", text: text });
+}
+
+async function saveImport() {
+  var title = document.getElementById("import-title").value.trim();
+  var section = document.getElementById("import-section").value;
+  if (!title) { document.getElementById("import-error").textContent = "Informe o título."; return; }
+  if (!section) { document.getElementById("import-error").textContent = "Selecione a seção."; return; }
+
+  setImportLoading(true);
+  try {
+    var resp = await fetch("/api/import/save", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        title: title,
+        artist: document.getElementById("import-artist").value.trim(),
+        key: document.getElementById("import-key").value.trim(),
+        section: section,
+        category: document.getElementById("import-category").value || "_raiz",
+        text: importCifraText
+      })
+    });
+    var data = await resp.json();
+    if (data.error) throw new Error(data.error);
+    showToast(title + " salvo com sucesso!");
+    closeImportModal();
+    // Recarrega biblioteca para aparecer na sidebar
+    importSections = {};
+    fetch("/api/library").then(function(r){ return r.json(); }).then(function(d){
+      library = d;
+      allSongs = [];
+      Object.keys(library).forEach(function(sec) {
+        Object.keys(library[sec]).forEach(function(cat) { allSongs = allSongs.concat(library[sec][cat]); });
+      });
+      renderSidebar();
+    });
+  } catch(e) {
+    document.getElementById("import-error").textContent = e.message;
+  } finally {
+    setImportLoading(false);
+  }
+}
+
+function setImportLoading(on) {
+  document.getElementById("import-loading").style.display = on ? "inline" : "none";
+  document.getElementById("btn-import-fetch").disabled = on;
+  document.getElementById("btn-import-save").disabled = on;
+}
+
+function initImportModal() {
+  document.getElementById("btn-import").addEventListener("click", openImportModal);
+  document.getElementById("import-close").addEventListener("click", closeImportModal);
+  document.getElementById("import-overlay").addEventListener("click", function(e) {
+    if (e.target === this) closeImportModal();
+  });
+
+  // Tabs
+  document.querySelectorAll(".import-tab").forEach(function(tab) {
+    tab.addEventListener("click", function() {
+      document.querySelectorAll(".import-tab").forEach(function(t) { t.classList.remove("active"); });
+      document.querySelectorAll(".import-panel").forEach(function(p) { p.classList.remove("active"); });
+      tab.classList.add("active");
+      document.getElementById("import-panel-" + tab.dataset.tab).classList.add("active");
+      document.getElementById("import-error").textContent = "";
+    });
+  });
+
+  document.getElementById("btn-import-fetch").addEventListener("click", fetchImportUrl);
+  document.getElementById("import-url-input").addEventListener("keydown", function(e) {
+    if (e.key === "Enter") fetchImportUrl();
+  });
+  document.getElementById("btn-import-preview-text").addEventListener("click", previewImportText);
+  document.getElementById("btn-import-save").addEventListener("click", saveImport);
+  document.getElementById("import-section").addEventListener("change", onImportSectionChange);
+}
+
+document.addEventListener("DOMContentLoaded", init);
+</script>
+</body>
+</html>
