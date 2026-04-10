@@ -74,7 +74,61 @@ def export_gdoc_as_text(service, file_id):
     return content.decode("utf-8", errors="replace") if isinstance(content, bytes) else content
 
 
+# ─── Repertórios (JSON no Drive) ─────────────────────────────────────────────
+
+REPERTORIOS_FILENAME = "_repertorios.json"
+
+def _get_or_create_json_file(service, name, parent_id):
+    """Retorna file_id de um arquivo JSON, criando-o vazio se não existir."""
+    from googleapiclient.http import MediaIoBaseUpload
+    resp = (
+        service.files()
+        .list(
+            q=f"name='{name}' and '{parent_id}' in parents and trashed=false",
+            fields="files(id)",
+        )
+        .execute()
+    )
+    files = resp.get("files", [])
+    if files:
+        return files[0]["id"]
+    metadata = {"name": name, "parents": [parent_id]}
+    media = MediaIoBaseUpload(io.BytesIO(b"{}"), mimetype="application/json")
+    f = service.files().create(body=metadata, media_body=media, fields="id").execute()
+    return f.get("id")
+
+
+def load_repertorios(service, root_folder_id):
+    """Carrega o dict de repertórios do Drive. Retorna (data, file_id)."""
+    import json
+    file_id = _get_or_create_json_file(service, REPERTORIOS_FILENAME, root_folder_id)
+    try:
+        content = download_bytes(service, file_id)
+        return json.loads(content.decode("utf-8") or "{}"), file_id
+    except Exception:
+        return {}, file_id
+
+
+def save_repertorios(service, file_id, data):
+    """Salva o dict de repertórios no Drive."""
+    import json
+    from googleapiclient.http import MediaIoBaseUpload
+    content = json.dumps(data, ensure_ascii=False, indent=2).encode("utf-8")
+    media = MediaIoBaseUpload(io.BytesIO(content), mimetype="application/json")
+    service.files().update(fileId=file_id, media_body=media).execute()
+
+
 # ─── Upload ──────────────────────────────────────────────────────────────────
+
+def update_md_content(service, file_id, content):
+    """Atualiza o conteúdo de um arquivo .md existente no Drive."""
+    from googleapiclient.http import MediaIoBaseUpload
+
+    media = MediaIoBaseUpload(
+        io.BytesIO(content.encode("utf-8")), mimetype="text/markdown"
+    )
+    service.files().update(fileId=file_id, media_body=media).execute()
+
 
 def upload_md(service, name, content, folder_id):
     """Cria um arquivo .md na pasta especificada. Retorna o file_id."""

@@ -1,6 +1,9 @@
+import json
 import os
 import re
 import tempfile
+import threading
+import time
 from datetime import date
 from pathlib import Path
 
@@ -11,6 +14,10 @@ load_dotenv()
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("FLASK_SECRET_KEY", "dev-insecure-key-troque-no-env")
+
+# Confia nos headers X-Forwarded-Proto/Host do ngrok/proxy reverso
+from werkzeug.middleware.proxy_fix import ProxyFix
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
 
 CIFRAS_ROOT = os.environ.get("CIFRAS_ROOT", str(Path.home() / "OneDrive" / "Cifras"))
 CIFRAS_FOLDER_ID = os.environ.get("CIFRAS_FOLDER_ID", "")
@@ -128,6 +135,20 @@ def _strip_frontmatter(text):
     return text
 
 
+def _parse_frontmatter(text):
+    """Retorna (body, meta_dict) extraindo YAML frontmatter simples."""
+    meta = {"artist": "", "key": "", "title": ""}
+    if text.startswith("---"):
+        parts = text.split("---", 2)
+        if len(parts) >= 3:
+            for line in parts[1].splitlines():
+                if ":" in line:
+                    k, _, v = line.partition(":")
+                    meta[k.strip().lower()] = v.strip().strip('"').strip("'")
+            return parts[2].strip(), meta
+    return text, meta
+
+
 # ---------------------------------------------------------------------------
 # Extração de texto — por caminho local
 # ---------------------------------------------------------------------------
@@ -143,6 +164,29 @@ def extract_text(path):
 # ---------------------------------------------------------------------------
 # Biblioteca local
 # ---------------------------------------------------------------------------
+
+def _md_meta(path):
+    """Lê apenas o frontmatter de um .md sem carregar o corpo inteiro."""
+    try:
+        with open(path, encoding="utf-8", errors="replace") as fh:
+            head = fh.read(1024)
+        _, meta = _parse_frontmatter(head)
+        return meta
+    except Exception:
+        return {"artist": "", "key": "", "title": ""}
+
+
+def _song_entry(f, section, category, read_meta=False):
+    entry = {"name": f.stem, "path": str(f), "section": section, "category": category,
+             "artist": "", "key": ""}
+    if read_meta and f.suffix.lower() == ".md":
+        meta = _md_meta(f)
+        entry["artist"] = meta.get("artist", "")
+        entry["key"] = meta.get("key", "")
+        if meta.get("title"):
+            entry["name"] = meta["title"]
+    return entry
+
 
 def scan_library_local():
     root = Path(CIFRAS_ROOT)
@@ -161,15 +205,13 @@ def scan_library_local():
                     library[sname][item.name] = songs
             elif item.suffix.lower() in SUPPORTED_EXTENSIONS:
                 library[sname].setdefault("_raiz", [])
-                library[sname]["_raiz"].append(
-                    {"name": item.stem, "path": str(item), "section": sname, "category": "_raiz"}
-                )
+                library[sname]["_raiz"].append(_song_entry(item, sname, "_raiz", read_meta=False))
     return library
 
 
 def _collect_local(folder, section, category):
     return [
-        {"name": f.stem, "path": str(f), "section": section, "category": category}
+        _song_entry(f, section, category, read_meta=False)
         for f in sorted(folder.iterdir())
         if f.is_file() and f.suffix.lower() in SUPPORTED_EXTENSIONS
     ]
@@ -177,6 +219,157 @@ def _collect_local(folder, section, category):
 
 def flatten_songs(library):
     return [song for cats in library.values() for songs in cats.values() for song in songs]
+
+
+# ---------------------------------------------------------------------------
+# Repertórios (persistidos em arquivo JSON)
+# ---------------------------------------------------------------------------
+
+REPERTORIOS_LOCAL = Path(__file__).parent / "_repertorios.json"
+_rep_lock = threading.Lock()
+
+def _load_reps_local():
+    try:
+        return json.loads(REPERTORIOS_LOCAL.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+
+def _save_reps_local(data):
+    REPERTORIOS_LOCAL.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+
+def _load_reps():
+    if _use_drive():
+        import drive as drv
+        data, _ = drv.load_repertorios(get_service(), CIFRAS_FOLDER_ID)
+        return data
+    return _load_reps_local()
+
+def _save_reps(data):
+    if _use_drive():
+        import drive as drv
+        svc = get_service()
+        _, file_id = drv.load_repertorios(svc, CIFRAS_FOLDER_ID)
+        drv.save_repertorios(svc, file_id, data)
+    else:
+        _save_reps_local(data)
+
+
+@app.route("/api/repertorios", methods=["GET"])
+@login_required
+def api_reps_list():
+    try:
+        return jsonify(_load_reps())
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/repertorios", methods=["POST"])
+@login_required
+def api_reps_create():
+    from datetime import datetime
+    data = request.get_json(force=True)
+    name = data.get("name", "").strip()
+    songs = data.get("songs", [])
+    if not name:
+        return jsonify({"error": "Nome obrigatório"}), 400
+    rep_id = "rpt_" + os.urandom(6).hex()
+    now = datetime.utcnow().isoformat()
+    rep = {"id": rep_id, "name": name, "songs": songs, "created_at": now, "updated_at": now}
+    with _rep_lock:
+        reps = _load_reps()
+        reps[rep_id] = rep
+        _save_reps(reps)
+    return jsonify(rep), 201
+
+
+@app.route("/api/repertorios/<rep_id>", methods=["PUT"])
+@login_required
+def api_reps_update(rep_id):
+    from datetime import datetime
+    data = request.get_json(force=True)
+    with _rep_lock:
+        reps = _load_reps()
+        if rep_id not in reps:
+            return jsonify({"error": "Não encontrado"}), 404
+        if "name" in data:
+            reps[rep_id]["name"] = data["name"].strip() or reps[rep_id]["name"]
+        if "songs" in data:
+            reps[rep_id]["songs"] = data["songs"]
+        reps[rep_id]["updated_at"] = datetime.utcnow().isoformat()
+        _save_reps(reps)
+    return jsonify(reps[rep_id])
+
+
+@app.route("/api/repertorios/<rep_id>", methods=["DELETE"])
+@login_required
+def api_reps_delete(rep_id):
+    with _rep_lock:
+        reps = _load_reps()
+        if rep_id not in reps:
+            return jsonify({"error": "Não encontrado"}), 404
+        del reps[rep_id]
+        _save_reps(reps)
+    return jsonify({"ok": True})
+
+
+# ---------------------------------------------------------------------------
+# Views tracking (persistido em views.json com lock para concorrência)
+# ---------------------------------------------------------------------------
+
+VIEWS_FILE = Path(__file__).parent / "views.json"
+_views_lock = threading.Lock()   # protege contra threads simultâneas no mesmo processo
+
+def _load_views():
+    """Leitura simples, sem lock (usada apenas para popular a listagem)."""
+    try:
+        return json.loads(VIEWS_FILE.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+
+def _increment_view(key: str) -> int:
+    """Incrementa atomicamente o contador de uma música. Retorna o novo valor."""
+    with _views_lock:
+        views = _load_views()
+        views[key] = views.get(key, 0) + 1
+        VIEWS_FILE.write_text(json.dumps(views, ensure_ascii=False), encoding="utf-8")
+        return views[key]
+
+def _song_key(data):
+    return data.get("fileId") or data.get("path", "")
+
+
+# ---------------------------------------------------------------------------
+# Cache de biblioteca (evita re-scan a cada request)
+# ---------------------------------------------------------------------------
+
+_library_cache = {"data": None, "ts": 0}
+_cache_lock = threading.Lock()
+CACHE_TTL = 120  # segundos — re-escaneia se a última leitura foi há mais de 2 min
+
+def _get_library():
+    """Retorna a biblioteca escaneada, usando cache quando possível."""
+    now = time.monotonic()
+    with _cache_lock:
+        if _library_cache["data"] is None or (now - _library_cache["ts"]) > CACHE_TTL:
+            try:
+                if _use_drive():
+                    import drive
+                    data = drive.scan_library(get_service(), CIFRAS_FOLDER_ID)
+                else:
+                    data = scan_library_local()
+                _library_cache["data"] = data
+                _library_cache["ts"] = now
+            except Exception as e:
+                app.logger.error("Erro ao escanear biblioteca: %s", e)
+                # Se já tinha cache antigo, retorna ele em vez de falhar
+                if _library_cache["data"] is not None:
+                    return _library_cache["data"]
+                raise
+        return _library_cache["data"]
+
+def invalidate_library_cache():
+    with _cache_lock:
+        _library_cache["data"] = None
 
 
 # ---------------------------------------------------------------------------
@@ -204,6 +397,27 @@ def _esc(s):
     )
 
 
+_CHORD_WORD_RE = re.compile(r'^[A-G][b#]?(?:m|maj|min|dim|aug|sus|add|[0-9]|/[A-G][b#]?)*$')
+
+def _is_chord_line(line: str) -> bool:
+    words = line.strip().split()
+    if not words:
+        return False
+    matches = sum(1 for w in words if _CHORD_WORD_RE.match(re.sub(r'[()[\]]', '', w)))
+    return matches / len(words) >= 0.5
+
+
+def _render_cifra_html(text: str) -> str:
+    """Converte texto de cifra em HTML com linhas de acordes coloridas."""
+    lines = []
+    for line in text.split("\n"):
+        if _is_chord_line(line):
+            lines.append('<span class="chord-line">' + _esc(line) + '</span>')
+        else:
+            lines.append(_esc(line))
+    return "\n".join(lines)
+
+
 def _mime_to_ext(mime):
     return {
         "application/vnd.openxmlformats-officedocument.wordprocessingml.document": ".docx",
@@ -228,23 +442,100 @@ def index():
 @app.route("/api/library")
 @login_required
 def api_library():
-    if _use_drive():
-        import drive
-        library = drive.scan_library(get_service(), CIFRAS_FOLDER_ID)
-    else:
-        library = scan_library_local()
-    return jsonify(library)
+    try:
+        return jsonify(_get_library())
+    except Exception as e:
+        err = str(e)
+        cause = str(e.__cause__) if getattr(e, "__cause__", None) else ""
+        full = (err + " " + cause).lower()
+        app.logger.error("api_library falhou: %s | causa: %s", err, cause)
+        _AUTH_SIGNALS = ("invalid_grant", "token has been expired", "sessão expirada",
+                         "unauthorized", "401", "revoked", "invalid_token")
+        if any(s in full for s in _AUTH_SIGNALS):
+            session.clear()
+            return jsonify({"error": "Sessão expirada", "login_url": "/login"}), 401
+        return jsonify({"error": f"Erro ao carregar biblioteca: {err}"}), 500
 
 
 @app.route("/api/songs")
 @login_required
 def api_songs():
-    if _use_drive():
+    views = _load_views()
+    songs = []
+    for s in flatten_songs(_get_library()):
+        # Lê frontmatter lazy: só para .md locais sem metadados ainda
+        if not s.get("artist") and not s.get("key") and s.get("path","").endswith(".md"):
+            meta = _md_meta(s["path"])
+            s["artist"] = meta.get("artist", "")
+            s["key"] = meta.get("key", "")
+            if meta.get("title"):
+                s["name"] = meta["title"]
+        s["views"] = views.get(_song_key(s), 0)
+        songs.append(s)
+    return jsonify(songs)
+
+
+@app.route("/api/track_view", methods=["POST"])
+@login_required
+def api_track_view():
+    data = request.get_json(force=True)
+    key = _song_key(data)
+    if not key:
+        return jsonify({"error": "fileId ou path obrigatório"}), 400
+    new_count = _increment_view(key)
+    return jsonify({"views": new_count})
+
+
+@app.route("/api/save_content", methods=["POST"])
+@login_required
+def api_save_content():
+    """Salva o conteúdo editado (com ou sem transposição), preservando frontmatter."""
+    data = request.get_json(force=True)
+    new_body = data.get("text", "").strip()
+    file_id = data.get("fileId", "").strip()
+    path = data.get("path", "").strip()
+
+    if not new_body:
+        return jsonify({"error": "Texto vazio"}), 400
+
+    if file_id:
         import drive
-        library = drive.scan_library(get_service(), CIFRAS_FOLDER_ID)
-    else:
-        library = scan_library_local()
-    return jsonify(flatten_songs(library))
+        svc = get_service()
+        try:
+            raw = drive.download_bytes(svc, file_id).decode("utf-8", errors="replace")
+        except Exception:
+            raw = ""
+        if raw.startswith("---"):
+            parts = raw.split("---", 2)
+            frontmatter = "---" + parts[1] + "---\n\n" if len(parts) >= 3 else ""
+        else:
+            frontmatter = ""
+        try:
+            drive.update_md_content(svc, file_id, frontmatter + new_body)
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
+        return jsonify({"ok": True})
+
+    if path:
+        try:
+            abs_path = Path(path).resolve()
+            root = Path(CIFRAS_ROOT).resolve()
+            if root not in abs_path.parents and abs_path != root:
+                return jsonify({"error": "Caminho não permitido"}), 403
+        except Exception:
+            return jsonify({"error": "Caminho inválido"}), 400
+        if not abs_path.exists() or abs_path.suffix.lower() != ".md":
+            return jsonify({"error": "Arquivo não encontrado ou não é .md"}), 404
+        original = abs_path.read_text(encoding="utf-8")
+        if original.startswith("---"):
+            parts = original.split("---", 2)
+            frontmatter = "---" + parts[1] + "---\n\n" if len(parts) >= 3 else ""
+        else:
+            frontmatter = ""
+        abs_path.write_text(frontmatter + new_body, encoding="utf-8")
+        return jsonify({"ok": True})
+
+    return jsonify({"error": "Informe fileId ou path"}), 400
 
 
 @app.route("/api/cifra")
@@ -273,7 +564,12 @@ def api_cifra():
     if not Path(path).exists():
         return jsonify({"error": "Arquivo não encontrado"}), 404
 
-    return jsonify({"text": extract_text(path)})
+    p = Path(path)
+    if p.suffix.lower() == ".md":
+        raw = p.read_text(encoding="utf-8", errors="replace")
+        body, meta = _parse_frontmatter(raw)
+        return jsonify({"text": body, "artist": meta.get("artist",""), "key": meta.get("key","")})
+    return jsonify({"text": extract_text(path), "artist": "", "key": ""})
 
 
 @app.route("/api/upload", methods=["POST"])
@@ -304,12 +600,13 @@ def api_export():
 <meta charset="UTF-8">
 <title>{_esc(title)}</title>
 <style>
-  body {{ font-family: monospace; max-width: 900px; margin: 40px auto; padding: 0 20px; }}
-  h1 {{ border-bottom: 2px solid #333; padding-bottom: 8px; }}
-  .meta {{ color: #666; font-size: .85em; margin-bottom: 40px; }}
-  .song {{ page-break-inside: avoid; margin-bottom: 48px; }}
-  .song h2 {{ font-size: 1.1em; border-left: 4px solid #555; padding-left: 10px; }}
-  pre {{ white-space: pre-wrap; word-break: break-word; font-size: .9em; line-height: 1.6; }}
+  body {{ font-family: monospace; max-width: 900px; margin: 40px auto; padding: 0 20px; background: #f4f6fb; color: #1a1d2e; }}
+  h1 {{ border-bottom: 2px solid #dde1f0; padding-bottom: 8px; font-size: 1.4em; }}
+  .meta {{ color: #6b7280; font-size: .85em; margin-bottom: 40px; }}
+  .song {{ page-break-inside: avoid; margin-bottom: 48px; background: #fff; border: 1px solid #dde1f0; border-radius: 8px; padding: 20px 24px; }}
+  .song h2 {{ font-size: 1.05em; font-weight: 700; border-left: 4px solid #4a6cf7; padding-left: 10px; margin-bottom: 14px; }}
+  pre {{ white-space: pre-wrap; word-break: break-word; font-size: .9em; line-height: 1.75; margin: 0; }}
+  .chord-line {{ color: #1d4ed8; font-weight: 700; }}
   @media print {{ .song {{ page-break-inside: avoid; }} }}
 </style>
 </head>
@@ -321,7 +618,7 @@ def api_export():
     for s in songs:
         parts.append(
             f'<div class="song"><h2>{_esc(s.get("name",""))}</h2>'
-            f'<pre>{_esc(s.get("text",""))}</pre></div>\n'
+            f'<pre>{_render_cifra_html(s.get("text",""))}</pre></div>\n'
         )
     parts.append("</body></html>")
     return Response("".join(parts), mimetype="text/html; charset=utf-8")
@@ -393,6 +690,67 @@ def api_import_save():
         dest_file = dest_dir / (safe_name + ".md")
         dest_file.write_text(content, encoding="utf-8")
         return jsonify({"ok": True, "path": str(dest_file)})
+
+
+@app.route("/api/save_tone", methods=["POST"])
+@login_required
+def api_save_tone():
+    data = request.get_json(force=True)
+    new_text = data.get("text", "").strip()
+    file_id = data.get("fileId", "").strip()
+    path = data.get("path", "").strip()
+
+    if not new_text:
+        return jsonify({"error": "Texto vazio"}), 400
+
+    if file_id:
+        # Drive: baixa o arquivo original para preservar frontmatter
+        import drive
+        svc = get_service()
+        try:
+            raw = drive.download_bytes(svc, file_id)
+            original = raw.decode("utf-8", errors="replace")
+        except Exception:
+            original = ""
+
+        # Preserva o bloco frontmatter se existir
+        if original.startswith("---"):
+            parts = original.split("---", 2)
+            frontmatter = "---" + parts[1] + "---\n\n" if len(parts) >= 3 else ""
+        else:
+            frontmatter = ""
+
+        content = frontmatter + new_text
+        try:
+            drive.update_md_content(svc, file_id, content)
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
+        return jsonify({"ok": True})
+
+    elif path:
+        # Local: valida path dentro de CIFRAS_ROOT
+        try:
+            abs_path = Path(path).resolve()
+            root = Path(CIFRAS_ROOT).resolve()
+            if root not in abs_path.parents and abs_path != root:
+                return jsonify({"error": "Caminho não permitido"}), 403
+        except Exception:
+            return jsonify({"error": "Caminho inválido"}), 400
+
+        if not abs_path.exists() or abs_path.suffix.lower() != ".md":
+            return jsonify({"error": "Arquivo não encontrado ou não é .md"}), 404
+
+        original = abs_path.read_text(encoding="utf-8")
+        if original.startswith("---"):
+            parts = original.split("---", 2)
+            frontmatter = "---" + parts[1] + "---\n\n" if len(parts) >= 3 else ""
+        else:
+            frontmatter = ""
+
+        abs_path.write_text(frontmatter + new_text, encoding="utf-8")
+        return jsonify({"ok": True})
+
+    return jsonify({"error": "Informe fileId ou path"}), 400
 
 
 @app.route("/api/sections")

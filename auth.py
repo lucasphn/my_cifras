@@ -61,7 +61,11 @@ def _client_config():
 
 def _make_flow():
     flow = Flow.from_client_config(_client_config(), scopes=SCOPES)
-    flow.redirect_uri = url_for("auth.callback", _external=True)
+    external_url = os.environ.get("EXTERNAL_URL", "").rstrip("/")
+    if external_url:
+        flow.redirect_uri = external_url + "/oauth/callback"
+    else:
+        flow.redirect_uri = url_for("auth.callback", _external=True)
     return flow
 
 
@@ -95,8 +99,13 @@ def get_service():
     """Retorna Google Drive service autenticado com o usuário da sessão atual."""
     creds = get_credentials()
     if creds and creds.expired and creds.refresh_token:
-        creds.refresh(Request())
-        _save_creds(creds)
+        try:
+            creds.refresh(Request())
+            _save_creds(creds)
+        except Exception:
+            session.clear()
+            from flask import abort
+            abort(401)
     return build("drive", "v3", credentials=creds, cache_discovery=False)
 
 
