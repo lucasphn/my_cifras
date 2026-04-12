@@ -1849,6 +1849,7 @@ input { font: inherit; }
       <div id="rep-footer">
         <button class="btn" id="btn-rep-clear">Limpar</button>
         <button class="btn btn-accent" id="btn-rep-export">&#128196; Exportar</button>
+        <button class="btn btn-accent" id="btn-rep-pdf">&#128247; PDF</button>
       </div>
     </div>
   </div>
@@ -3085,7 +3086,7 @@ function setExportProgress(pct, label) {
   document.getElementById("export-prog-label").textContent = label || (Math.round(pct) + "%");
 }
 
-async function exportRepertorio() {
+async function exportRepertorio(autoPrint) {
   if (!repertorio.length) { showToast("O repertório está vazio."); return; }
 
   var title = document.getElementById("rep-title-input").value.trim() || "Repertório";
@@ -3131,7 +3132,7 @@ async function exportRepertorio() {
   var resp = await fetch("/api/export", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ songs: songs, title: title })
+    body: JSON.stringify({ songs: songs, title: title, print: !!autoPrint })
   });
   var html = await resp.text();
   setExportProgress(100, "Pronto!");
@@ -3767,7 +3768,8 @@ function init() {
       renderSavedReps();
     }
   });
-  document.getElementById("btn-rep-export").addEventListener("click", exportRepertorio);
+  document.getElementById("btn-rep-export").addEventListener("click", function() { exportRepertorio(false); });
+  document.getElementById("btn-rep-pdf").addEventListener("click", function() { exportRepertorio(true); });
   loadSavedReps();
 
   // ─── Bottom nav mobile ────────────────────────────────────────────────────

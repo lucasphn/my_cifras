@@ -824,6 +824,7 @@ def api_export():
     data = request.get_json(force=True)
     songs = data.get("songs", [])
     title = data.get("title", "Repertório")
+    auto_print = data.get("print", False)
     today = date.today().strftime("%d/%m/%Y")
 
     # Inline logo SVG
@@ -1005,6 +1006,7 @@ def api_export():
 
 <footer class="doc-footer">My Cifras · mycifras.app</footer>
 
+{'<script>window.onload=function(){window.print();}</script>' if auto_print else ''}
 </body>
 </html>"""
 
