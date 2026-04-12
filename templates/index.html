@@ -2168,7 +2168,7 @@ function _makeHomeCard(song, cls) {
     '<div class="home-card-tags">' +
       '<span class="hc-cat">' + escHtml(catLabel) + '</span>' +
       (song.key ? '<span class="hc-key">' + escHtml(song.key) + '</span>' : '') +
-      '<span class="hc-views' + (views > 0 ? ' has-views' : '') + '">👁 ' + views + '</span>' +
+      (views > 0 ? '<span class="hc-views has-views">👁 ' + views + '</span>' : '') +
     '</div>' +
     '<div class="home-card-actions">' +
       '<button class="btn-hc-add' + (inRep ? ' added' : '') + '">' + (inRep ? '✓ Adicionado' : '+ Repertório') + '</button>' +
