@@ -1811,17 +1811,7 @@ function detectBaseNote(text) {
 }
 
 // ─── Utilitários ───────────────────────────────────────────────────────────
-function toPascalCase(str) {
-  return str.replace(/[-_]/g, ' ').split(' ').map(function(word) {
-    if (!word) return '';
-    return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
-  }).join(' ');
-}
-
-// Remove prefixo numérico de ordenação (ex: "00 Adoração" → "Adoração", "01 Missas" → "Missas")
-function cleanLabel(str) {
-  return toPascalCase(str.replace(/^\d+\s+/, ''));
-}
+function cleanLabel(str) { return str; }
 
 function escHtml(s) {
   return String(s)
