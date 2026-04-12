@@ -2535,7 +2535,7 @@ async function reloadLibrary() {
 // ─── Song operations ────────────────────────────────────────────────────────
 
 function startRenameSong(card, song) {
-  var nameDiv = card.querySelector(".song-name");
+  var nameDiv = card.querySelector(".song-name") || card.querySelector(".home-card-name");
   var inp = document.createElement("input");
   inp.type = "text"; inp.value = song.name; inp.maxLength = 120;
   inp.style.cssText = "width:100%;background:var(--surface2);border:1px solid var(--primary);border-radius:6px;padding:4px 8px;font-size:.85rem;color:var(--text);outline:none;margin-bottom:4px";
@@ -2546,7 +2546,11 @@ function startRenameSong(card, song) {
 
   function cancel() {
     if (_saving) return;
-    renderSongGrid((library[currentCategory.section]||{})[currentCategory.cat]||[]);
+    if (currentCategory && currentCategory.section) {
+      renderSongGrid((library[currentCategory.section]||{})[currentCategory.cat]||[]);
+    } else {
+      renderHomeTable(allSongs);
+    }
   }
 
   async function confirm() {
@@ -2576,12 +2580,9 @@ function startRenameSong(card, song) {
 }
 
 function confirmDeleteSong(card, song) {
-  var nameDiv = card.querySelector(".song-name");
+  var nameDiv = card.querySelector(".song-name") || card.querySelector(".home-card-name");
   var origText = nameDiv.textContent;
   nameDiv.innerHTML = '<span style="font-size:.78rem;color:#f87171">Excluir <strong>' + escHtml(origText) + '</strong>?</span>';
-  var actions = card.querySelector(".btn-add-song");
-  var origActionsHtml = actions.outerHTML;
-  actions.outerHTML; // just reference
   var confirmBtn = document.createElement("button");
   confirmBtn.textContent = "Sim, excluir";
   confirmBtn.style.cssText = "background:#ef4444;color:#fff;border:none;border-radius:6px;padding:4px 10px;font-size:.78rem;cursor:pointer;margin-right:4px";
@@ -2591,8 +2592,11 @@ function confirmDeleteSong(card, song) {
   card.appendChild(confirmBtn);
   card.appendChild(cancelBtn);
   cancelBtn.addEventListener("click", function() {
-    var songs = (library[currentCategory.section]||{})[currentCategory.cat]||[];
-    renderSongGrid(songs);
+    if (currentCategory && currentCategory.section) {
+      renderSongGrid((library[currentCategory.section]||{})[currentCategory.cat]||[]);
+    } else {
+      renderHomeTable(allSongs);
+    }
   });
   confirmBtn.addEventListener("click", async function() {
     var body = {};
