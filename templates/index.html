@@ -2168,7 +2168,7 @@ function _makeHomeCard(song, cls) {
     '<div class="home-card-tags">' +
       '<span class="hc-cat">' + escHtml(catLabel) + '</span>' +
       (song.key ? '<span class="hc-key">' + escHtml(song.key) + '</span>' : '') +
-      (views > 0 ? '<span class="hc-views has-views">👁 ' + views + '</span>' : '') +
+      '<span class="hc-views' + (views > 0 ? ' has-views' : '') + '">👁 ' + views + '</span>' +
     '</div>' +
     '<div class="home-card-actions">' +
       '<button class="btn-hc-add' + (inRep ? ' added' : '') + '">' + (inRep ? '✓ Adicionado' : '+ Repertório') + '</button>' +
@@ -2237,25 +2237,28 @@ function renderHomeTable(songs) {
   if (!songs.length) { wrap.style.display = "none"; return; }
 
   var sorted = songs.slice().sort(function(a, b) { return (b.views||0) - (a.views||0); });
-  var topSongs = sorted.filter(function(s) { return (s.views||0) > 0; }).slice(0, 8);
+  var withViews = sorted.filter(function(s) { return (s.views||0) > 0; });
+  var topSongs = withViews.length ? withViews.slice(0, 8)
+                                  : songs.slice().sort(function(a,b){ return a.name.localeCompare(b.name,"pt"); }).slice(0, 8);
+  var hasViews = withViews.length > 0;
 
   // Seção "Mais tocadas"
   var topSection = document.getElementById("home-top-section");
   var topGrid = document.getElementById("home-top-grid");
+  var topHeader = topSection.querySelector("h2");
+  topHeader.textContent = hasViews ? "🔥 Mais tocadas" : "🎵 Destaques";
   topGrid.innerHTML = "";
-  if (topSongs.length) {
-    topSongs.forEach(function(song, i) {
-      var card = _makeHomeCard(song, "home-card home-top-card");
+  topSongs.forEach(function(song, i) {
+    var card = _makeHomeCard(song, "home-card home-top-card");
+    if (hasViews) {
       var rank = document.createElement("span");
       rank.className = "home-top-rank";
       rank.textContent = "#" + (i + 1);
       card.insertBefore(rank, card.firstChild);
-      topGrid.appendChild(card);
-    });
-    topSection.style.display = "block";
-  } else {
-    topSection.style.display = "none";
-  }
+    }
+    topGrid.appendChild(card);
+  });
+  topSection.style.display = "block";
 
   // Grid geral (ordenado A-Z)
   var allGrid = document.getElementById("home-all-grid");
