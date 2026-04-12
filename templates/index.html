@@ -1420,24 +1420,16 @@ input { font: inherit; }
   }
   #rep-panel.mobile-open { transform: translateY(0); }
 
-  /* Drag handle do drawer de repertório */
-  #rep-drag-handle {
+  /* Botão fechar repertório no mobile */
+  #btn-rep-close {
     display: flex; align-items: center; justify-content: center;
-    width: 100%; padding: 10px 0 6px;
-    cursor: pointer; flex-shrink: 0;
-    background: var(--surface);
-    border-radius: 22px 22px 0 0;
-    border-bottom: 1px solid var(--border);
+    width: 28px; height: 28px; margin-left: 6px; flex-shrink: 0;
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 50%; font-size: .85rem; color: var(--text-muted);
+    cursor: pointer; touch-action: manipulation;
     -webkit-tap-highlight-color: transparent;
-    touch-action: manipulation;
   }
-  #rep-drag-pill {
-    width: 40px; height: 4px;
-    background: var(--primary);
-    opacity: .5;
-    border-radius: 99px;
-  }
-  #rep-drag-handle:active #rep-drag-pill { opacity: .9; }
+  #btn-rep-close:active { background: var(--primary-light); color: var(--primary); }
 
   /* Modal — sobe do rodapé, botão fechar bem visível */
   #modal-overlay { align-items: flex-end; }
@@ -1596,7 +1588,7 @@ input { font: inherit; }
 
 /* ── Rep panel: playlist feel ─────────────────────────────────────────────── */
 #rep-panel { border-left-color: var(--border-subtle); }
-#rep-drag-handle { display: none; }
+#btn-rep-close { display: none; }
 .rep-item {
   border-color: transparent;
   background: var(--surface);
@@ -1831,14 +1823,12 @@ input { font: inherit; }
 
     <!-- Repertório -->
     <div id="rep-panel">
-      <div id="rep-drag-handle" title="Fechar repertório">
-        <div id="rep-drag-pill"></div>
-      </div>
       <!-- Saved repertórios list -->
       <div id="saved-reps-section">
         <div id="saved-reps-header">
           <span class="section-label">Meus Repertórios</span>
           <button class="btn-sm" id="btn-rep-new">+ Novo</button>
+          <button id="btn-rep-close" title="Fechar">✕</button>
         </div>
         <div id="saved-reps-list"></div>
         <div id="saved-reps-empty">Nenhum repertório salvo.</div>
@@ -3825,11 +3815,20 @@ function init() {
       mbnSetActive("mbn-rep");
     }
   });
-  document.getElementById("rep-drag-handle").addEventListener("click", function() {
-    var repPanel = document.getElementById("rep-panel");
-    repPanel.classList.remove("mobile-open");
+  document.getElementById("btn-rep-close").addEventListener("click", function() {
+    document.getElementById("rep-panel").classList.remove("mobile-open");
     sidebarOverlay.classList.remove("show");
     mbnSetActive("mbn-home");
+  });
+
+  // Fechar rep-panel ao clicar no overlay (mobile)
+  sidebarOverlay.addEventListener("click", function() {
+    var repPanel = document.getElementById("rep-panel");
+    if (repPanel.classList.contains("mobile-open")) {
+      repPanel.classList.remove("mobile-open");
+      sidebarOverlay.classList.remove("show");
+      mbnSetActive("mbn-home");
+    }
   });
 
   document.getElementById("mbn-present").addEventListener("click", function() {
