@@ -370,6 +370,67 @@
       color: var(--text-muted); font-size: 1rem; margin-bottom: 2rem;
     }
 
+    /* ── QUOTE BANNER ── */
+    .quote-banner {
+      position: relative;
+      overflow: hidden;
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      padding: 5rem 1.5rem;
+      text-align: center;
+    }
+    .quote-banner::before {
+      content: '';
+      position: absolute; inset: 0;
+      background:
+        radial-gradient(ellipse 80% 60% at 20% 50%, rgba(91,75,138,.18) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 40% at 80% 50%, rgba(212,175,55,.08) 0%, transparent 60%);
+      pointer-events: none;
+    }
+    .quote-inner {
+      position: relative;
+      max-width: 760px;
+      margin: 0 auto;
+    }
+    .quote-mark {
+      display: block;
+      font-size: 5rem;
+      line-height: .6;
+      color: var(--accent);
+      opacity: .4;
+      font-family: Georgia, serif;
+      margin-bottom: 1rem;
+      user-select: none;
+    }
+    .quote-text {
+      font-size: clamp(1.2rem, 3vw, 1.75rem);
+      font-weight: 600;
+      line-height: 1.5;
+      letter-spacing: -.02em;
+      color: var(--text);
+      margin-bottom: 1.75rem;
+    }
+    .quote-text em {
+      font-style: normal;
+      color: var(--accent);
+    }
+    .quote-divider {
+      width: 48px; height: 2px;
+      background: linear-gradient(90deg, transparent, var(--accent), transparent);
+      margin: 0 auto 1.25rem;
+    }
+    .quote-author {
+      font-size: .85rem;
+      font-weight: 700;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+    }
+    .quote-author span {
+      color: var(--accent);
+    }
+
     /* ── FOOTER ── */
     footer {
       border-top: 1px solid var(--border);
@@ -604,6 +665,19 @@
         Entrar com Google
       </button>
     </a>
+  </div>
+</section>
+
+<!-- QUOTE BANNER -->
+<section class="quote-banner">
+  <div class="quote-inner">
+    <span class="quote-mark">"</span>
+    <p class="quote-text">
+      O canto exige, acima de tudo,<br>
+      uma profunda <em>vida espiritual</em>
+    </p>
+    <div class="quote-divider"></div>
+    <p class="quote-author">— Papa <span>Leão XIV</span></p>
   </div>
 </section>
 

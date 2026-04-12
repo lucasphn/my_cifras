@@ -465,6 +465,67 @@ input { font: inherit; }
   font-size: .78rem; color: var(--text-muted); font-weight: 500;
 }
 
+/* Quote banner na home */
+.home-quote {
+  position: relative;
+  overflow: hidden;
+  background: var(--primary);
+  border-radius: 16px;
+  padding: 2.5rem 2.75rem;
+  margin-bottom: 2.25rem;
+}
+.home-quote::after {
+  content: '\201C';
+  position: absolute;
+  right: 1.5rem; top: -1.5rem;
+  font-size: 9rem;
+  line-height: 1;
+  font-family: Georgia, serif;
+  color: rgba(255,255,255,.07);
+  user-select: none;
+  pointer-events: none;
+}
+.home-quote-tag {
+  display: inline-block;
+  font-size: .68rem;
+  font-weight: 700;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--accent);
+  background: rgba(212,175,55,.15);
+  border: 1px solid rgba(212,175,55,.3);
+  border-radius: 100px;
+  padding: .2rem .75rem;
+  margin-bottom: 1rem;
+}
+.home-quote-text {
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: rgba(255,255,255,.95);
+  line-height: 1.55;
+  letter-spacing: -.01em;
+  margin-bottom: 1.25rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.home-quote-divider {
+  width: 36px;
+  height: 2px;
+  background: linear-gradient(90deg, var(--accent), transparent);
+  margin-bottom: .9rem;
+}
+.home-quote-author {
+  font-size: .78rem;
+  font-weight: 700;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,.5);
+}
+.home-quote-author span {
+  color: var(--accent);
+}
+
 /* Top músicas */
 #home-top-section { margin-bottom: 2rem; }
 #home-top-grid {
@@ -1700,6 +1761,12 @@ input { font: inherit; }
     <div id="main">
       <!-- Tela inicial: tabela de músicas mais acessadas -->
       <div id="home-table-wrap" style="display:none">
+        <div class="home-quote">
+          <div class="home-quote-tag">Inspiração</div>
+          <p class="home-quote-text">"O canto exige, acima de tudo, uma profunda vida espiritual"</p>
+          <div class="home-quote-divider"></div>
+          <p class="home-quote-author">— Papa <span>Leão XIV</span></p>
+        </div>
         <div id="home-top-section" style="display:none">
           <div class="home-section-header">
             <h2>🔥 Mais tocadas</h2>
