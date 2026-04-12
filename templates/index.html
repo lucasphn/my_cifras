@@ -1153,6 +1153,221 @@ input { font: inherit; }
   25%  { opacity: 1; }
   100% { opacity: 0; transform: translate(22px,-36px) scale(1.3); }
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   POLISH — overrides incrementais de hierarquia e UX
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Variáveis extras ─────────────────────────────────────────────────────── */
+:root {
+  --transition: 150ms ease;
+  --border-subtle: rgba(91,75,138,.12);
+  --surface-hover: #faf9fd;
+}
+
+/* ── Header: mais clean, search mais destacado ────────────────────────────── */
+#header {
+  border-bottom: 1px solid var(--border-subtle);
+  box-shadow: none;
+}
+#header-brand { border-right-color: var(--border-subtle); }
+#search-box {
+  padding: 8px 18px;
+  font-size: 0.92em;
+  background: var(--surface);
+  border-color: var(--border-subtle);
+  box-shadow: var(--shadow-sm);
+}
+#search-box:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(91,75,138,.12);
+  background: var(--surface);
+}
+
+/* Botões do header: menos barulho visual */
+.btn {
+  border-color: var(--border-subtle);
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  transition: background var(--transition), color var(--transition),
+              box-shadow var(--transition), border-color var(--transition),
+              transform var(--transition);
+}
+.btn:hover { transform: translateY(-1px); box-shadow: var(--shadow-sm); }
+.btn:active { transform: scale(.97); box-shadow: none; }
+.btn-accent:active { transform: scale(.97); }
+
+/* ── Sidebar: mais leve, hover fluido ─────────────────────────────────────── */
+#sidebar { border-right-color: var(--border-subtle); }
+.sidebar-cat {
+  transition: color var(--transition), background var(--transition),
+              transform var(--transition), border-left-color var(--transition);
+  padding-left: 18px;
+}
+.sidebar-cat:hover {
+  transform: translateX(2px);
+  background: rgba(91,75,138,.06);
+}
+.sidebar-cat.active { transform: translateX(2px); }
+.sidebar-cat .count { border: none; }
+
+/* ── Song cards: premium hover ────────────────────────────────────────────── */
+.song-card {
+  border-color: var(--border-subtle);
+  transition: transform 200ms cubic-bezier(.34,1.3,.64,1),
+              box-shadow 200ms ease,
+              border-color 200ms ease;
+}
+.song-card:hover {
+  transform: translateY(-3px) scale(1.015);
+  box-shadow: 0 8px 24px rgba(91,75,138,.14), 0 2px 6px rgba(91,75,138,.08);
+  border-color: rgba(91,75,138,.28);
+}
+.song-card:active { transform: scale(.99); box-shadow: var(--shadow-sm); }
+.song-card .song-name { font-size: 0.92em; letter-spacing: -0.01em; }
+
+/* Botão + no card: ícone-like, discreto, microinteraction */
+.song-card .btn-add-song {
+  padding: 4px 10px;
+  font-size: 0.75em;
+  border-color: transparent;
+  background: var(--primary-light);
+  color: var(--primary);
+  transition: background var(--transition), transform var(--transition),
+              box-shadow var(--transition);
+}
+.song-card .btn-add-song:hover {
+  background: rgba(91,75,138,.18);
+  transform: scale(1.05);
+}
+.song-card .btn-add-song:active { transform: scale(.95); }
+.song-card .btn-add-song.added {
+  background: rgba(22,163,74,.1);
+  border-color: transparent;
+  color: var(--success);
+}
+
+/* ── Tabela home: lista moderna ───────────────────────────────────────────── */
+#home-table { border-collapse: separate; border-spacing: 0; }
+#home-table thead th {
+  padding: 13px 16px;
+  border-bottom-width: 1px;
+  border-bottom-color: var(--border-subtle);
+  background: var(--surface);
+  box-shadow: none;
+  font-size: 0.7em;
+  letter-spacing: 0.12em;
+}
+#home-table tbody td {
+  padding: 13px 16px;
+  border-bottom-color: var(--border-subtle);
+  vertical-align: middle;
+}
+#home-table tbody tr { transition: background 120ms ease; }
+#home-table tbody tr:hover { background: var(--surface-hover); }
+#home-table tbody tr:last-child td { border-bottom: none; }
+#home-table .td-name {
+  font-size: 0.92em;
+  letter-spacing: -0.01em;
+}
+#home-table .td-cat {
+  font-size: 0.72em;
+  padding: 3px 10px;
+  background: var(--primary-light);
+  border-radius: 99px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+.btn-tbl {
+  border-color: transparent;
+  background: var(--primary-light);
+  color: var(--primary);
+  transition: background var(--transition), transform var(--transition);
+}
+.btn-tbl:hover { background: rgba(91,75,138,.16); border-color: transparent; transform: scale(1.03); }
+.btn-tbl:active { transform: scale(.97); }
+.btn-tbl.btn-tbl-open {
+  background: var(--primary);
+  box-shadow: 0 2px 6px rgba(91,75,138,.3);
+}
+
+/* ── Rep panel: playlist feel ─────────────────────────────────────────────── */
+#rep-panel { border-left-color: var(--border-subtle); }
+.rep-item {
+  border-color: transparent;
+  background: var(--surface);
+  border-radius: 10px;
+  margin: 2px 4px;
+  padding: 10px 10px;
+  transition: background var(--transition), box-shadow var(--transition),
+              transform var(--transition);
+}
+.rep-item:hover {
+  background: var(--surface-hover);
+  box-shadow: 0 2px 8px rgba(91,75,138,.08);
+  transform: translateX(2px);
+}
+.rep-item .rep-name { font-size: 0.87em; font-weight: 600; }
+.rep-item .drag-handle { color: rgba(91,75,138,.25); font-size: 0.9em; }
+.rep-item:hover .drag-handle { color: rgba(91,75,138,.5); }
+.rep-item .btn-remove { opacity: 0; transition: opacity var(--transition), color var(--transition); }
+.rep-item:hover .btn-remove { opacity: 1; }
+
+/* Empty state mais amigável */
+#rep-empty {
+  padding: 32px 16px;
+  font-size: 0.85em;
+  line-height: 1.7;
+  color: var(--text-muted);
+}
+#rep-empty::before {
+  content: "♪";
+  display: block;
+  font-size: 2em;
+  margin-bottom: 8px;
+  opacity: 0.35;
+}
+
+/* Saved reps: hover mais suave */
+.saved-rep-item {
+  transition: background var(--transition), border-color var(--transition),
+              transform var(--transition);
+}
+.saved-rep-item:hover { transform: translateX(2px); }
+.saved-rep-item.active { transform: translateX(2px); }
+
+/* ── Modal: mais premium ──────────────────────────────────────────────────── */
+#modal {
+  box-shadow: 0 20px 60px rgba(60,40,100,.2), 0 4px 16px rgba(60,40,100,.1);
+}
+#modal-header { padding: 16px 20px; }
+#modal-title { font-size: 1.05em; letter-spacing: -0.01em; }
+
+/* ── Views badge: sem borda ───────────────────────────────────────────────── */
+.views-badge { border: none; background: var(--primary-light); }
+.views-badge.has-views { background: rgba(91,75,138,.12); }
+
+/* ── btn-sm: consistente com sistema ─────────────────────────────────────── */
+.btn-sm {
+  transition: background var(--transition), transform var(--transition);
+}
+.btn-sm:hover { transform: scale(1.03); }
+.btn-sm:active { transform: scale(.97); }
+
+/* ── Presenter topbar: coesa ─────────────────────────────────────────────── */
+#presenter-topbar { border-bottom-color: var(--border-subtle); }
+#presenter-nav { border-top-color: var(--border-subtle); }
+
+/* ── Dots de navegação no presenter ─────────────────────────────────────── */
+.pres-dot { transition: background 200ms ease, transform 200ms ease; }
+.pres-dot:hover { transform: scale(1.5); background: rgba(91,75,138,.4); }
+
+/* ── Bottom nav: feedback de toque ──────────────────────────────────────── */
+.mbn-btn {
+  transition: color var(--transition), background var(--transition);
+  -webkit-tap-highlight-color: transparent;
+}
+.mbn-btn:active { background: var(--primary-light); color: var(--primary); transform: scale(.94); }
 </style>
 </head>
 <body>
