@@ -981,11 +981,31 @@ def api_export():
     text-align: center;
   }}
 
+  /* ── Botão voltar mobile ── */
+  .btn-back {{
+    display: none;
+    position: fixed; bottom: 24px; right: 20px;
+    background: #5b4b8a; color: #fff;
+    border: none; border-radius: 50px;
+    padding: .65rem 1.2rem;
+    font-family: 'Sora', system-ui, sans-serif;
+    font-size: .85rem; font-weight: 700;
+    box-shadow: 0 4px 16px rgba(91,75,138,.4);
+    cursor: pointer; z-index: 999;
+    text-decoration: none;
+    touch-action: manipulation;
+  }}
+  @media (max-width: 768px) {{
+    body {{ padding: 24px 16px 100px; }}
+    .btn-back {{ display: inline-flex; align-items: center; gap: .4rem; }}
+  }}
+
   /* ── Print ── */
   @media print {{
     body {{ background: #fff; padding: 24px 20px; }}
     .song {{ border: 1px solid #ddd; box-shadow: none; margin-bottom: 20px; }}
     .doc-footer {{ margin-top: 32px; }}
+    .btn-back {{ display: none !important; }}
   }}
 </style>
 </head>
@@ -1005,6 +1025,8 @@ def api_export():
 {"".join(_song_card(s) for s in songs)}
 
 <footer class="doc-footer">My Cifras · mycifras.app</footer>
+
+<a class="btn-back" onclick="window.close(); history.back(); return false;" href="#">← Voltar</a>
 
 {'<script>window.onload=function(){window.print();}</script>' if auto_print else ''}
 </body>
