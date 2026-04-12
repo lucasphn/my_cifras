@@ -373,6 +373,234 @@ def invalidate_library_cache():
 
 
 # ---------------------------------------------------------------------------
+# Pastas (criar, renomear, excluir categorias)
+# ---------------------------------------------------------------------------
+
+@app.route("/api/folders", methods=["POST"])
+@login_required
+def api_folder_create():
+    """Cria nova categoria dentro de uma seção."""
+    data = request.get_json(force=True)
+    section = (data.get("section") or "").strip()
+    name = (data.get("name") or "").strip()
+    if not section or not name:
+        return jsonify({"error": "section e name obrigatórios"}), 400
+
+    if _use_drive():
+        import drive as drv
+        svc = get_service()
+        section_id = drv.find_folder_by_name(svc, section, CIFRAS_FOLDER_ID)
+        if not section_id:
+            return jsonify({"error": f"Seção '{section}' não encontrada"}), 404
+        if drv.find_folder_by_name(svc, name, section_id):
+            return jsonify({"error": "Categoria já existe"}), 409
+        drv.create_folder(svc, name, section_id)
+    else:
+        folder_path = Path(CIFRAS_ROOT) / section / name
+        if not (Path(CIFRAS_ROOT) / section).exists():
+            return jsonify({"error": f"Seção '{section}' não encontrada"}), 404
+        if folder_path.exists():
+            return jsonify({"error": "Categoria já existe"}), 409
+        folder_path.mkdir(parents=False)
+
+    invalidate_library_cache()
+    return jsonify({"ok": True, "section": section, "name": name}), 201
+
+
+@app.route("/api/folders/<path:section>/<path:category>", methods=["PUT"])
+@login_required
+def api_folder_rename(section, category):
+    """Renomeia uma categoria."""
+    data = request.get_json(force=True)
+    new_name = (data.get("newName") or "").strip()
+    if not new_name:
+        return jsonify({"error": "newName obrigatório"}), 400
+
+    if _use_drive():
+        import drive as drv
+        svc = get_service()
+        section_id = drv.find_folder_by_name(svc, section, CIFRAS_FOLDER_ID)
+        if not section_id:
+            return jsonify({"error": "Seção não encontrada"}), 404
+        folder_id = drv.find_folder_by_name(svc, category, section_id)
+        if not folder_id:
+            return jsonify({"error": "Categoria não encontrada"}), 404
+        if drv.find_folder_by_name(svc, new_name, section_id):
+            return jsonify({"error": "Já existe categoria com esse nome"}), 409
+        drv.rename_folder(svc, folder_id, new_name)
+    else:
+        old_path = Path(CIFRAS_ROOT) / section / category
+        new_path = Path(CIFRAS_ROOT) / section / new_name
+        if not old_path.exists():
+            return jsonify({"error": "Categoria não encontrada"}), 404
+        if new_path.exists():
+            return jsonify({"error": "Já existe categoria com esse nome"}), 409
+        old_path.rename(new_path)
+
+    invalidate_library_cache()
+    return jsonify({"ok": True, "newName": new_name})
+
+
+@app.route("/api/folders/<path:section>/<path:category>", methods=["DELETE"])
+@login_required
+def api_folder_delete(section, category):
+    """Exclui uma categoria — apenas se estiver vazia."""
+    if _use_drive():
+        import drive as drv
+        svc = get_service()
+        section_id = drv.find_folder_by_name(svc, section, CIFRAS_FOLDER_ID)
+        if not section_id:
+            return jsonify({"error": "Seção não encontrada"}), 404
+        folder_id = drv.find_folder_by_name(svc, category, section_id)
+        if not folder_id:
+            return jsonify({"error": "Categoria não encontrada"}), 404
+        if not drv.is_folder_empty(svc, folder_id):
+            return jsonify({"error": "A pasta não está vazia"}), 409
+        drv.delete_folder(svc, folder_id)
+    else:
+        folder_path = Path(CIFRAS_ROOT) / section / category
+        if not folder_path.exists():
+            return jsonify({"error": "Categoria não encontrada"}), 404
+        if any(folder_path.iterdir()):
+            return jsonify({"error": "A pasta não está vazia"}), 409
+        folder_path.rmdir()
+
+    invalidate_library_cache()
+    return jsonify({"ok": True})
+
+
+# ---------------------------------------------------------------------------
+# Operações em arquivos de cifra (renomear, excluir, copiar, mover)
+# ---------------------------------------------------------------------------
+
+@app.route("/api/songs/delete", methods=["POST"])
+@login_required
+def api_song_delete():
+    data = request.get_json(force=True)
+    file_id = (data.get("fileId") or "").strip()
+    path = (data.get("path") or "").strip()
+    if file_id:
+        import drive as drv
+        drv.trash_file(get_service(), file_id)
+    elif path:
+        if not is_safe_path(path):
+            return jsonify({"error": "Caminho não permitido"}), 403
+        p = Path(path)
+        if not p.exists():
+            return jsonify({"error": "Arquivo não encontrado"}), 404
+        p.unlink()
+    else:
+        return jsonify({"error": "fileId ou path obrigatório"}), 400
+    invalidate_library_cache()
+    return jsonify({"ok": True})
+
+
+@app.route("/api/songs/rename", methods=["POST"])
+@login_required
+def api_song_rename():
+    data = request.get_json(force=True)
+    file_id = (data.get("fileId") or "").strip()
+    path = (data.get("path") or "").strip()
+    new_name = (data.get("newName") or "").strip()
+    if not new_name:
+        return jsonify({"error": "newName obrigatório"}), 400
+    if file_id:
+        import drive as drv
+        svc = get_service()
+        current = drv.get_file_name(svc, file_id)
+        ext = Path(current).suffix or ".md"
+        drv.rename_file(svc, file_id, new_name + ext)
+    elif path:
+        if not is_safe_path(path):
+            return jsonify({"error": "Caminho não permitido"}), 403
+        p = Path(path)
+        if not p.exists():
+            return jsonify({"error": "Arquivo não encontrado"}), 404
+        new_path = p.parent / (new_name + p.suffix)
+        if new_path.exists():
+            return jsonify({"error": "Já existe arquivo com esse nome"}), 409
+        p.rename(new_path)
+    else:
+        return jsonify({"error": "fileId ou path obrigatório"}), 400
+    invalidate_library_cache()
+    return jsonify({"ok": True})
+
+
+@app.route("/api/songs/copy", methods=["POST"])
+@login_required
+def api_song_copy():
+    import shutil
+    data = request.get_json(force=True)
+    file_id = (data.get("fileId") or "").strip()
+    path = (data.get("path") or "").strip()
+    target_section = (data.get("targetSection") or "").strip()
+    target_category = (data.get("targetCategory") or "").strip()
+    if not target_section:
+        return jsonify({"error": "targetSection obrigatório"}), 400
+    if file_id:
+        import drive as drv
+        svc = get_service()
+        target_id = drv.resolve_folder(svc, target_section, target_category or None, CIFRAS_FOLDER_ID)
+        fname = drv.get_file_name(svc, file_id)
+        drv.copy_file(svc, file_id, fname, target_id)
+    elif path:
+        if not is_safe_path(path):
+            return jsonify({"error": "Caminho não permitido"}), 403
+        src = Path(path)
+        if not src.exists():
+            return jsonify({"error": "Arquivo não encontrado"}), 404
+        dest_dir = Path(CIFRAS_ROOT) / target_section / target_category if target_category else Path(CIFRAS_ROOT) / target_section
+        if not dest_dir.exists():
+            return jsonify({"error": "Pasta destino não encontrada"}), 404
+        dest = dest_dir / src.name
+        if dest.exists():
+            return jsonify({"error": "Já existe arquivo com esse nome no destino"}), 409
+        shutil.copy2(str(src), str(dest))
+    else:
+        return jsonify({"error": "fileId ou path obrigatório"}), 400
+    invalidate_library_cache()
+    return jsonify({"ok": True})
+
+
+@app.route("/api/songs/move", methods=["POST"])
+@login_required
+def api_song_move():
+    import shutil
+    data = request.get_json(force=True)
+    file_id = (data.get("fileId") or "").strip()
+    path = (data.get("path") or "").strip()
+    source_section = (data.get("sourceSection") or "").strip()
+    source_category = (data.get("sourceCategory") or "").strip()
+    target_section = (data.get("targetSection") or "").strip()
+    target_category = (data.get("targetCategory") or "").strip()
+    if not target_section:
+        return jsonify({"error": "targetSection obrigatório"}), 400
+    if file_id:
+        import drive as drv
+        svc = get_service()
+        source_id = drv.resolve_folder(svc, source_section, source_category or None, CIFRAS_FOLDER_ID)
+        target_id = drv.resolve_folder(svc, target_section, target_category or None, CIFRAS_FOLDER_ID)
+        drv.move_file(svc, file_id, source_id, target_id)
+    elif path:
+        if not is_safe_path(path):
+            return jsonify({"error": "Caminho não permitido"}), 403
+        src = Path(path)
+        if not src.exists():
+            return jsonify({"error": "Arquivo não encontrado"}), 404
+        dest_dir = Path(CIFRAS_ROOT) / target_section / target_category if target_category else Path(CIFRAS_ROOT) / target_section
+        if not dest_dir.exists():
+            return jsonify({"error": "Pasta destino não encontrada"}), 404
+        dest = dest_dir / src.name
+        if dest.exists():
+            return jsonify({"error": "Já existe arquivo com esse nome no destino"}), 409
+        shutil.move(str(src), str(dest))
+    else:
+        return jsonify({"error": "fileId ou path obrigatório"}), 400
+    invalidate_library_cache()
+    return jsonify({"ok": True})
+
+
+# ---------------------------------------------------------------------------
 # Segurança
 # ---------------------------------------------------------------------------
 
@@ -598,35 +826,189 @@ def api_export():
     title = data.get("title", "Repertório")
     today = date.today().strftime("%d/%m/%Y")
 
-    parts = [
-        f"""<!DOCTYPE html>
+    # Inline logo SVG
+    logo_path = Path(__file__).parent / "static" / "brand" / "logo-mono-dark.svg"
+    try:
+        logo_svg = logo_path.read_text(encoding="utf-8")
+        # Remove XML comments to keep it clean inline
+        import re as _re
+        logo_svg = _re.sub(r'<!--.*?-->', '', logo_svg, flags=_re.DOTALL).strip()
+    except Exception:
+        logo_svg = ""
+
+    def _song_card(s):
+        name = _esc(s.get("name", ""))
+        category = s.get("category", "")
+        key = s.get("key", "")
+        badges = ""
+        if category:
+            badges += f'<span class="badge badge-cat">{_esc(category)}</span>'
+        if key:
+            badges += f'<span class="badge badge-key">{_esc(key)}</span>'
+        header_right = f'<div class="song-badges">{badges}</div>' if badges else ""
+        cifra_html = _render_cifra_html(s.get("text", ""))
+        return (
+            f'<div class="song">'
+            f'  <div class="song-header">'
+            f'    <h2>{name}</h2>'
+            f'    {header_right}'
+            f'  </div>'
+            f'  <pre>{cifra_html}</pre>'
+            f'</div>\n'
+        )
+
+    n = len(songs)
+    song_word = "música" if n == 1 else "músicas"
+
+    html = f"""<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{_esc(title)}</title>
 <style>
-  body {{ font-family: monospace; max-width: 900px; margin: 40px auto; padding: 0 20px; background: #f4f6fb; color: #1a1d2e; }}
-  h1 {{ border-bottom: 2px solid #dde1f0; padding-bottom: 8px; font-size: 1.4em; }}
-  .meta {{ color: #6b7280; font-size: .85em; margin-bottom: 40px; }}
-  .song {{ page-break-inside: avoid; margin-bottom: 48px; background: #fff; border: 1px solid #dde1f0; border-radius: 8px; padding: 20px 24px; }}
-  .song h2 {{ font-size: 1.05em; font-weight: 700; border-left: 4px solid #4a6cf7; padding-left: 10px; margin-bottom: 14px; }}
-  pre {{ white-space: pre-wrap; word-break: break-word; font-size: .9em; line-height: 1.75; margin: 0; }}
-  .chord-line {{ color: #1d4ed8; font-weight: 700; }}
-  @media print {{ .song {{ page-break-inside: avoid; }} }}
+  @import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap');
+
+  *, *::before, *::after {{ box-sizing: border-box; margin: 0; padding: 0; }}
+
+  body {{
+    font-family: 'Sora', system-ui, sans-serif;
+    background: #f7f6fc;
+    color: #1a1528;
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 48px 32px 80px;
+  }}
+
+  /* ── Header ── */
+  .doc-header {{
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    border-bottom: 2px solid #e2dff5;
+    padding-bottom: 20px;
+    margin-bottom: 10px;
+  }}
+  .doc-header .logo {{ display: flex; align-items: center; }}
+  .doc-header .logo svg {{ height: 36px; width: auto; }}
+  .doc-meta {{
+    text-align: right;
+    font-size: .8em;
+    color: #7a6fa8;
+    line-height: 1.6;
+  }}
+  .doc-title {{
+    font-size: 1.5em;
+    font-weight: 800;
+    letter-spacing: -.03em;
+    color: #1a1528;
+    margin: 18px 0 4px;
+  }}
+  .doc-subtitle {{
+    font-size: .82em;
+    color: #9186b8;
+    margin-bottom: 40px;
+  }}
+
+  /* ── Song card ── */
+  .song {{
+    background: #fff;
+    border: 1px solid #e4e0f4;
+    border-radius: 12px;
+    padding: 22px 26px 26px;
+    margin-bottom: 28px;
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }}
+  .song-header {{
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #ede9fa;
+  }}
+  .song h2 {{
+    font-size: 1em;
+    font-weight: 700;
+    color: #1a1528;
+    letter-spacing: -.01em;
+    padding-left: 10px;
+    border-left: 3px solid #5b4b8a;
+  }}
+  .song-badges {{ display: flex; gap: 6px; flex-shrink: 0; }}
+  .badge {{
+    font-size: .72em;
+    font-weight: 600;
+    padding: 2px 9px;
+    border-radius: 99px;
+    white-space: nowrap;
+  }}
+  .badge-cat {{
+    background: rgba(91, 75, 138, .1);
+    color: #5b4b8a;
+    border: 1px solid rgba(91, 75, 138, .2);
+  }}
+  .badge-key {{
+    background: rgba(212, 175, 55, .12);
+    color: #9a7a10;
+    border: 1px solid rgba(212, 175, 55, .3);
+  }}
+
+  /* ── Cifra body ── */
+  pre {{
+    font-family: 'JetBrains Mono', 'Courier New', monospace;
+    font-size: .82em;
+    line-height: 1.8;
+    white-space: pre-wrap;
+    word-break: break-word;
+    color: #2e2645;
+  }}
+  .chord-line {{
+    color: #5b4b8a;
+    font-weight: 700;
+  }}
+
+  /* ── Footer ── */
+  .doc-footer {{
+    margin-top: 56px;
+    padding-top: 16px;
+    border-top: 1px solid #e2dff5;
+    font-size: .75em;
+    color: #b0a8cc;
+    text-align: center;
+  }}
+
+  /* ── Print ── */
+  @media print {{
+    body {{ background: #fff; padding: 24px 20px; }}
+    .song {{ border: 1px solid #ddd; box-shadow: none; margin-bottom: 20px; }}
+    .doc-footer {{ margin-top: 32px; }}
+  }}
 </style>
 </head>
 <body>
-<h1>{_esc(title)}</h1>
-<p class="meta">Gerado em {today} · {len(songs)} música(s)</p>
-"""
-    ]
-    for s in songs:
-        parts.append(
-            f'<div class="song"><h2>{_esc(s.get("name",""))}</h2>'
-            f'<pre>{_render_cifra_html(s.get("text",""))}</pre></div>\n'
-        )
-    parts.append("</body></html>")
-    return Response("".join(parts), mimetype="text/html; charset=utf-8")
+
+<header class="doc-header">
+  <div class="logo">{logo_svg}</div>
+  <div class="doc-meta">
+    {_esc(today)}<br>
+    {n} {song_word}
+  </div>
+</header>
+
+<h1 class="doc-title">{_esc(title)}</h1>
+<p class="doc-subtitle">Repertório gerado pelo My Cifras</p>
+
+{"".join(_song_card(s) for s in songs)}
+
+<footer class="doc-footer">My Cifras · mycifras.app</footer>
+
+</body>
+</html>"""
+
+    return Response(html, mimetype="text/html; charset=utf-8")
 
 
 # ---------------------------------------------------------------------------

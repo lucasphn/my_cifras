@@ -1,0 +1,78 @@
+/* ─────────────────────────────────────────────
+   MY CIFRAS — Brand Tokens
+   Versão 1.0 · Abril 2026
+   ───────────────────────────────────────────── */
+
+:root {
+  /* Cores principais */
+  --brand-primary:     #6457e8;   /* roxo principal — fundo do ícone, botões */
+  --brand-primary-dim: rgba(100, 87, 232, 0.15); /* hover suave, backgrounds */
+  --brand-primary-glow:rgba(100, 87, 232, 0.35); /* box-shadow, glows */
+  --brand-primary-light: #8b7ff0; /* "my" no wordmark, texto secundário de marca */
+  --brand-primary-dark:  #4a3fd4; /* estados hover/pressed */
+
+  --brand-accent:      #f0c040;   /* dourado — ponto do wordmark, destaques */
+  --brand-accent-dim:  rgba(240, 192, 64, 0.12);
+
+  /* Backgrounds */
+  --brand-bg:          #0b0a12;   /* fundo principal dark */
+  --brand-surface:     #13111e;   /* cards, modais */
+  --brand-surface2:    #1c1929;   /* sidebar, painéis */
+  --brand-surface3:    #231f34;   /* hover states */
+
+  /* Texto */
+  --brand-text:        #ede9ff;   /* texto principal */
+  --brand-text-muted:  #8880a8;   /* texto secundário */
+  --brand-text-dim:    #5a5578;   /* placeholders, desabilitados */
+
+  /* Bordas */
+  --brand-border:      rgba(255, 255, 255, 0.07);
+  --brand-border-accent: rgba(100, 87, 232, 0.3);
+}
+
+/* ─────────────────────────────────────────────
+   ARQUIVOS DE LOGO
+   ───────────────────────────────────────────── */
+
+/*
+  logo-dark.svg        → fundo escuro (#0b0a12, #13111e)       — usar no header da landing e app
+  logo-light.svg       → fundo claro (#f5f4ff, #ffffff)         — materiais impressos, e-mail
+  icon.svg             → ícone isolado 52x52                    — avatar, app icon
+  favicon.svg          → ícone 32x32 para <link rel="icon">    — tab do browser
+  logo-mono-white.svg  → monocromático branco                  — sobre fotos escuras, banners
+  logo-mono-dark.svg   → monocromático roxo                    — impressão em 1 cor, fundo branco
+*/
+
+/* ─────────────────────────────────────────────
+   USO NO HTML
+   ───────────────────────────────────────────── */
+
+/*
+  Favicon (no <head>):
+  <link rel="icon" type="image/svg+xml" href="/static/brand/favicon.svg">
+
+  Logo no header (dark):
+  <img src="/static/brand/logo-dark.svg" alt="My Cifras" height="36">
+
+  Logo inline via SVG (recomendado no nav para controle de cor):
+  copie o conteúdo de logo-dark.svg diretamente no HTML
+*/
+
+/* ─────────────────────────────────────────────
+   REGRAS DE USO
+   ───────────────────────────────────────────── */
+
+/*
+  ✅ USAR:
+  - Sempre manter proporção do logo (não distorcer)
+  - Espaço mínimo ao redor = altura do ícone em cada lado
+  - Tamanho mínimo do logo horizontal: 120px de largura
+  - Tamanho mínimo do ícone isolado: 24px
+
+  ❌ EVITAR:
+  - Não alterar as cores individualmente
+  - Não usar logo-dark em fundo claro (usar logo-light)
+  - Não reposicionar "my" e "Cifras." independentemente
+  - Não aplicar sombra ou efeitos sobre o ícone
+  - Não usar versão colorida sobre foto — usar mono-white
+*/

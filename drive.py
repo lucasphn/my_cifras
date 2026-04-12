@@ -150,6 +150,85 @@ def upload_md(service, name, content, folder_id):
 
 # ─── Pastas ──────────────────────────────────────────────────────────────────
 
+def get_file_name(service, file_id):
+    """Retorna o nome real (com extensão) do arquivo no Drive."""
+    f = service.files().get(fileId=file_id, fields="name").execute()
+    return f.get("name", "")
+
+
+def trash_file(service, file_id):
+    """Move arquivo para a lixeira do Drive."""
+    service.files().update(fileId=file_id, body={"trashed": True}).execute()
+
+
+def rename_file(service, file_id, new_name_with_ext):
+    """Renomeia arquivo no Drive."""
+    service.files().update(fileId=file_id, body={"name": new_name_with_ext}).execute()
+
+
+def copy_file(service, file_id, new_name, target_folder_id):
+    """Copia arquivo para outra pasta no Drive."""
+    body = {"name": new_name, "parents": [target_folder_id]}
+    return service.files().copy(fileId=file_id, body=body, fields="id").execute()
+
+
+def move_file(service, file_id, source_folder_id, target_folder_id):
+    """Move arquivo entre pastas no Drive."""
+    service.files().update(
+        fileId=file_id,
+        addParents=target_folder_id,
+        removeParents=source_folder_id,
+        fields="id",
+    ).execute()
+
+
+def find_folder_by_name(service, name, parent_id):
+    """Retorna file_id de uma pasta pelo nome dentro do parent, ou None."""
+    resp = (
+        service.files()
+        .list(
+            q=(
+                f"name='{name}' and '{parent_id}' in parents "
+                f"and mimeType='{FOLDER_MIME}' and trashed=false"
+            ),
+            fields="files(id)",
+        )
+        .execute()
+    )
+    files = resp.get("files", [])
+    return files[0]["id"] if files else None
+
+
+def create_folder(service, name, parent_id):
+    """Cria nova pasta. Retorna {id, name}."""
+    metadata = {"name": name, "mimeType": FOLDER_MIME, "parents": [parent_id]}
+    return service.files().create(body=metadata, fields="id,name").execute()
+
+
+def rename_folder(service, folder_id, new_name):
+    """Renomeia pasta."""
+    service.files().update(fileId=folder_id, body={"name": new_name}).execute()
+
+
+def is_folder_empty(service, folder_id):
+    """Retorna True se a pasta não tiver nenhum item não-trashado."""
+    resp = (
+        service.files()
+        .list(
+            q=f"'{folder_id}' in parents and trashed=false",
+            fields="files(id)",
+            pageSize=1,
+        )
+        .execute()
+    )
+    return len(resp.get("files", [])) == 0
+
+
+def delete_folder(service, folder_id):
+    """Move pasta para a lixeira do Drive."""
+    service.files().update(fileId=folder_id, body={"trashed": True}).execute()
+
+
 def get_or_create_folder(service, name, parent_id):
     """Retorna ID da pasta existente ou cria uma nova."""
     resp = (
