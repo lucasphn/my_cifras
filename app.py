@@ -433,10 +433,15 @@ def _mime_to_ext(mime):
 # ---------------------------------------------------------------------------
 
 @app.route("/")
-@login_required
 def index():
-    user = current_user()
-    return render_template("index.html", user=user)
+    # Modo local (sem OAuth): vai direto para o app
+    if not is_oauth_configured():
+        return render_template("index.html", user={})
+    # OAuth configurado: se autenticado vai para o app, senão mostra landing
+    if session.get("token"):
+        user = current_user()
+        return render_template("index.html", user=user)
+    return render_template("landing.html")
 
 
 @app.route("/api/library")
