@@ -902,7 +902,7 @@ input { font: inherit; }
 }
 #modal-title { flex: 1; font-weight: 600; font-size: 1em; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 #modal-meta { font-size: 0.78em; color: var(--text-muted); white-space: nowrap; }
-#btn-modal-back { display: none; }
+#btn-modal-back-footer { display: none; }
 #modal-close { font-size: 1.2em; color: var(--text-muted); padding: 4px 8px; border-radius: 5px; }
 #modal-close:hover { color: var(--text); background: var(--surface2); }
 
@@ -1366,10 +1366,13 @@ input { font: inherit; }
   #user-badge { padding: 2px; border: none; background: transparent; gap: 0; }
   #user-badge img { width: 28px; height: 28px; }
 
-  /* Evita double-tap em todos os elementos interativos */
-  button, a, .home-card, .song-card, .sidebar-cat, .p-sidebar-item {
+  /* Elimina delay de 300ms (double-tap) em TODOS os elementos */
+  * {
     touch-action: manipulation;
-    -webkit-tap-highlight-color: transparent;
+  }
+  /* Restaura scroll vertical para containers roláveis */
+  body, #main, #sidebar, #modal-body, #rep-panel, #saved-reps-list, #rep-list {
+    touch-action: pan-y;
   }
 
   /* Body vira coluna */
@@ -1441,21 +1444,16 @@ input { font: inherit; }
     display: flex; align-items: center; justify-content: center;
     flex-shrink: 0;
   }
-  /* Botão voltar — só mobile */
-  #btn-modal-back {
-    display: flex; align-items: center; justify-content: center;
-    width: 32px; height: 32px; font-size: 1.1rem;
-    color: var(--text-muted); background: transparent;
-    border: none; border-radius: 50%; flex-shrink: 0;
-    touch-action: manipulation; -webkit-tap-highlight-color: transparent;
-  }
-  #btn-modal-back:active { background: var(--primary-light); color: var(--primary); }
+  /* Botão voltar no footer do modal */
+  #btn-modal-back-footer { display: flex; }
+
   #transpose-toolbar { gap: 6px; padding: 8px 12px; overflow-x: auto; flex-wrap: nowrap; }
   .tp-notes { display: none; }
 
-  /* Busca — scroll para o grid sem zoom */
+  /* font-size >= 16px evita zoom automático do iOS no campo de busca */
+  #search-box { font-size: 16px; }
+  /* Após fechar teclado, reseta scroll */
   #song-grid { scroll-margin-top: 8px; }
-  #search-box { font-size: 16px; } /* >= 16px evita zoom automático do iOS */
 
   /* Presenter no mobile */
   #presenter-topbar { padding: 0 10px; gap: 5px; height: 50px; }
@@ -1880,7 +1878,6 @@ input { font: inherit; }
         <button class="modal-vctrl" id="btn-modal-zoom-in" title="Aumentar fonte (+)">A+</button>
         <button class="modal-vctrl" id="btn-modal-fullscreen" title="Tela cheia (F)">&#11035;</button>
       </div>
-      <button id="btn-modal-back" title="Voltar">&#8592;</button>
       <button id="modal-close" title="Fechar (Esc)">&#10005;</button>
     </div>
     <div id="transpose-toolbar">
@@ -1899,6 +1896,7 @@ input { font: inherit; }
       <textarea id="cifra-edit" spellcheck="false" placeholder="Edite a cifra aqui..."></textarea>
     </div>
     <div id="modal-footer">
+      <button class="btn" id="btn-modal-back-footer" title="Voltar">&#8592; Voltar</button>
       <button class="btn btn-accent" id="btn-modal-add">+ Repertório</button>
       <span style="flex:1"></span>
       <button class="btn" id="btn-edit-toggle" title="Editar cifra">&#9998; Editar</button>
@@ -3497,11 +3495,13 @@ function doSearch(q) {
            (s.artist || "").toLowerCase().includes(ql);
   });
   renderSongGrid(results);
-  // Scroll para o grid no mobile (evita ficar "preso" no campo de busca)
+  // Fecha teclado virtual (iOS: reseta viewport zoom) e rola para resultados
+  var sb = document.getElementById("search-box");
+  sb.blur();
   setTimeout(function() {
     var grid = document.getElementById("song-grid");
     if (grid) grid.scrollIntoView({ behavior: "smooth", block: "start" });
-  }, 50);
+  }, 100);
 }
 
 // ─── Upload / Drag & Drop de arquivo ────────────────────────────────────────
@@ -3664,7 +3664,7 @@ function init() {
 
   // Modal close
   document.getElementById("modal-close").addEventListener("click", closeModal);
-  document.getElementById("btn-modal-back").addEventListener("click", closeModal);
+  document.getElementById("btn-modal-back-footer").addEventListener("click", closeModal);
   document.getElementById("modal-overlay").addEventListener("click", function(e) {
     if (e.target === this) closeModal();
   });
