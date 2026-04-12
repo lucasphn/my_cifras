@@ -1811,7 +1811,7 @@ function detectBaseNote(text) {
 }
 
 // ─── Utilitários ───────────────────────────────────────────────────────────
-function cleanLabel(str) { return str.replace(/^\d+\s+/, ''); }
+function cleanLabel(str) { return str.replace(/^\d+\s+/, '').replace(/^[-\s]+|[-\s]+$/g, ''); }
 
 function escHtml(s) {
   return String(s)
