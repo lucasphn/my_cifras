@@ -1366,13 +1366,14 @@ input { font: inherit; }
   #user-badge { padding: 2px; border: none; background: transparent; gap: 0; }
   #user-badge img { width: 28px; height: 28px; }
 
-  /* Elimina delay de 300ms (double-tap) em TODOS os elementos */
-  * {
-    touch-action: manipulation;
-  }
-  /* Restaura scroll vertical para containers roláveis */
-  body, #main, #sidebar, #modal-body, #rep-panel, #saved-reps-list, #rep-list {
-    touch-action: pan-y;
+  /* Elimina delay 300ms iOS: touch-action + cursor:pointer (iOS Safari checa cursor) */
+  * { touch-action: manipulation; }
+  button, a, [onclick],
+  .home-card, .song-card, .sidebar-cat, .sidebar-section-title,
+  .mbn-btn, .btn, .btn-sm, .btn-accent,
+  .btn-hc-open, .btn-hc-add, .btn-song-ops, .btn-cat-menu, .btn-folder-add,
+  #btn-home, #btn-menu-toggle, #search-box {
+    cursor: pointer;
   }
 
   /* Body vira coluna */
@@ -1435,9 +1436,18 @@ input { font: inherit; }
   }
   #btn-rep-close:active { background: var(--primary-light); color: var(--primary); }
 
-  /* Modal — sobe do rodapé, botão fechar bem visível */
-  #modal-overlay { align-items: flex-end; }
-  #modal { width: 100vw; border-radius: 22px 22px 0 0; max-height: 95vh; }
+  /* Modal — ocupa tela cheia no mobile, header sempre visível */
+  #modal-overlay { align-items: stretch; padding: 0; }
+  #modal {
+    width: 100vw; height: 100%;
+    border-radius: 0; max-height: 100%;
+    border: none;
+  }
+  #modal-header {
+    position: sticky; top: 0; z-index: 2;
+    background: var(--surface);
+    padding-top: max(14px, env(safe-area-inset-top));
+  }
   #modal-close {
     width: 36px; height: 36px; font-size: 1.1rem;
     background: var(--surface2); border-radius: 50%;
