@@ -902,6 +902,7 @@ input { font: inherit; }
 }
 #modal-title { flex: 1; font-weight: 600; font-size: 1em; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 #modal-meta { font-size: 0.78em; color: var(--text-muted); white-space: nowrap; }
+#btn-modal-back { display: none; }
 #modal-close { font-size: 1.2em; color: var(--text-muted); padding: 4px 8px; border-radius: 5px; }
 #modal-close:hover { color: var(--text); background: var(--surface2); }
 
@@ -1440,8 +1441,21 @@ input { font: inherit; }
     display: flex; align-items: center; justify-content: center;
     flex-shrink: 0;
   }
+  /* Botão voltar — só mobile */
+  #btn-modal-back {
+    display: flex; align-items: center; justify-content: center;
+    width: 32px; height: 32px; font-size: 1.1rem;
+    color: var(--text-muted); background: transparent;
+    border: none; border-radius: 50%; flex-shrink: 0;
+    touch-action: manipulation; -webkit-tap-highlight-color: transparent;
+  }
+  #btn-modal-back:active { background: var(--primary-light); color: var(--primary); }
   #transpose-toolbar { gap: 6px; padding: 8px 12px; overflow-x: auto; flex-wrap: nowrap; }
   .tp-notes { display: none; }
+
+  /* Busca — scroll para o grid sem zoom */
+  #song-grid { scroll-margin-top: 8px; }
+  #search-box { font-size: 16px; } /* >= 16px evita zoom automático do iOS */
 
   /* Presenter no mobile */
   #presenter-topbar { padding: 0 10px; gap: 5px; height: 50px; }
@@ -1866,6 +1880,7 @@ input { font: inherit; }
         <button class="modal-vctrl" id="btn-modal-zoom-in" title="Aumentar fonte (+)">A+</button>
         <button class="modal-vctrl" id="btn-modal-fullscreen" title="Tela cheia (F)">&#11035;</button>
       </div>
+      <button id="btn-modal-back" title="Voltar">&#8592;</button>
       <button id="modal-close" title="Fechar (Esc)">&#10005;</button>
     </div>
     <div id="transpose-toolbar">
@@ -3482,6 +3497,11 @@ function doSearch(q) {
            (s.artist || "").toLowerCase().includes(ql);
   });
   renderSongGrid(results);
+  // Scroll para o grid no mobile (evita ficar "preso" no campo de busca)
+  setTimeout(function() {
+    var grid = document.getElementById("song-grid");
+    if (grid) grid.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, 50);
 }
 
 // ─── Upload / Drag & Drop de arquivo ────────────────────────────────────────
@@ -3644,6 +3664,7 @@ function init() {
 
   // Modal close
   document.getElementById("modal-close").addEventListener("click", closeModal);
+  document.getElementById("btn-modal-back").addEventListener("click", closeModal);
   document.getElementById("modal-overlay").addEventListener("click", function(e) {
     if (e.target === this) closeModal();
   });
