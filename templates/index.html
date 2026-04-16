@@ -3505,9 +3505,6 @@ function doSearch(q) {
            (s.artist || "").toLowerCase().includes(ql);
   });
   renderSongGrid(results);
-  // Fecha teclado virtual (iOS: reseta viewport zoom) e rola para resultados
-  var sb = document.getElementById("search-box");
-  sb.blur();
   setTimeout(function() {
     var grid = document.getElementById("song-grid");
     if (grid) grid.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -3666,7 +3663,7 @@ function init() {
   var searchTimer;
   searchBox.addEventListener("input", function() {
     clearTimeout(searchTimer);
-    searchTimer = setTimeout(function() { doSearch(searchBox.value.trim()); }, 200);
+    searchTimer = setTimeout(function() { doSearch(searchBox.value.trim()); }, 500);
   });
   searchBox.addEventListener("keydown", function(e) {
     if (e.key === "Escape") { searchBox.value = ""; doSearch(""); }
