@@ -6,9 +6,9 @@ Contexto e instruções para o Claude Code trabalhar neste projeto.
 
 ## O que é este projeto
 
-**My Cifras** é uma aplicação web para músicos (litúrgicos e gospel) gerenciarem cifras e montarem repertórios.
-Roda com Flask, autentica via OAuth 2.0 com Google e armazena as cifras no Google Drive.
-Também suporta modo local (sem autenticação) para desenvolvimento.
+**My Cifras** é uma aplicação web para grupos de música litúrgica e gospel gerenciarem um acervo centralizado de cifras e montarem repertórios.
+
+Roda com Flask, autentica via OAuth 2.0 com Google e lê/grava exclusivamente no **Google Drive** — a pasta raiz (`CIFRAS_FOLDER_ID`) é um repositório central compartilhado com todos os músicos do grupo.
 
 Stack: **Python 3.10+ · Flask · HTML/CSS/JS puro · python-docx · PyMuPDF · Google Drive API · OAuth 2.0 · Docker · Gunicorn**
 
@@ -20,7 +20,7 @@ Stack: **Python 3.10+ · Flask · HTML/CSS/JS puro · python-docx · PyMuPDF · 
 my_cifras_pc_owner/
 ├── app.py                  ← servidor Flask, rotas, extração de texto, repertórios, export
 ├── auth.py                 ← OAuth 2.0 com Google, login_required, get_service
-├── drive.py                ← operações Google Drive (list, download, upload, JSON, pastas, arquivos)
+├── drive.py                ← operações Google Drive (list, download, upload, JSON, pastas, arquivos, busca)
 ├── scraper.py              ← scraping de cifras por URL (CifraClub etc.)
 ├── migrate.py              ← script de migração: .docx/.pdf/.txt → .md
 ├── requirements.txt
@@ -37,10 +37,11 @@ my_cifras_pc_owner/
 │   └── brand/              ← logos SVG do My Cifras
 │       ├── favicon.svg
 │       ├── icon.svg
-│       ├── logo-dark.svg       ← para fundos escuros (landing, login)
-│       ├── logo-light.svg      ← para fundos claros (header do app)
-│       ├── logo-mono-dark.svg  ← monocromático roxo (export HTML, impressão)
-│       └── logo-mono-white.svg ← monocromático branco (banners escuros)
+│       ├── logo-dark.svg           ← para fundos escuros (landing, login)
+│       ├── logo-light.svg          ← para fundos claros (header do app)
+│       ├── logo-mono-dark.svg      ← monocromático roxo (export HTML, impressão)
+│       ├── logo-mono-white.svg     ← monocromático branco (banners escuros)
+│       └── apple-touch-icon.png    ← ícone 180×180 para atalho iOS
 ├── assets/
 │   └── mycifras-logo/      ← arquivos fonte dos logos + brand-tokens.css
 └── CLAUDE.md
@@ -51,7 +52,7 @@ my_cifras_pc_owner/
 - **Rotas e lógica de servidor** → `app.py`
 - **Autenticação OAuth** → `auth.py` (Blueprint Flask `auth`)
 - **Operações Drive** → `drive.py` (funções puras, recebem `service` como parâmetro)
-- **Repertórios JSON** → `drive.py` (`load_repertorios`, `save_repertorios`) ou `_repertorios.json` local
+- **Repertórios JSON** → `drive.py` (`load_repertorios`, `save_repertorios`) — arquivo `_repertorios.json` no Drive
 - **Extração de texto** (.docx, .pdf, .txt, .md) → funções `_*_from_bytes` em `app.py`
 - **Scraping de URL** → `scraper.py`
 - **UI, estilos e interatividade do app** → `templates/index.html` (tudo junto)
@@ -61,27 +62,15 @@ my_cifras_pc_owner/
 
 ---
 
-## Modos de operação
-
-| Variável `.env` | Modo |
-|---|---|
-| Sem `GOOGLE_CLIENT_ID` | **Local** — sem autenticação, lê de `CIFRAS_ROOT` |
-| Com OAuth + `CIFRAS_FOLDER_ID` | **Drive** — login obrigatório, lê/grava no Google Drive |
-
-O switch é automático — basta configurar ou não as variáveis.
-
----
-
 ## Variáveis de ambiente (.env)
 
 ```env
-# Modo local
-CIFRAS_ROOT=C:\Users\...\OneDrive\Cifras
-
-# OAuth 2.0
+# OAuth 2.0 (obrigatório)
 GOOGLE_CLIENT_ID=...apps.googleusercontent.com
 GOOGLE_CLIENT_SECRET=GOCSPX-...
-CIFRAS_FOLDER_ID=<id-da-pasta-raiz-no-drive>
+
+# Repositório central de cifras no Drive
+CIFRAS_FOLDER_ID=<id-da-pasta-raiz-compartilhada>
 
 # Flask
 FLASK_SECRET_KEY=<string-aleatoria-longa>
@@ -90,6 +79,8 @@ FLASK_SECRET_KEY=<string-aleatoria-longa>
 EXTERNAL_URL=https://meu-app.onrender.com
 ```
 
+**O app requer Drive.** Não existe modo de operação local — `GOOGLE_CLIENT_ID` e `CIFRAS_FOLDER_ID` são obrigatórios.
+
 ---
 
 ## Rotas da API
@@ -97,7 +88,7 @@ EXTERNAL_URL=https://meu-app.onrender.com
 | Método | Rota | Descrição |
 |---|---|---|
 | GET | `/` | Landing page pública (`landing.html`) |
-| GET | `/app` | App principal (requer login se OAuth ativo) |
+| GET | `/app` | App principal (requer login OAuth) |
 | GET | `/login` | Tela de login |
 | GET | `/login/google` | Inicia fluxo OAuth |
 | GET | `/oauth/callback` | Callback OAuth do Google |
@@ -105,12 +96,12 @@ EXTERNAL_URL=https://meu-app.onrender.com
 | GET | `/api/me` | Dados do usuário logado |
 | GET | `/api/library` | Estrutura completa da biblioteca (JSON) |
 | GET | `/api/songs` | Lista plana de todas as músicas |
-| GET | `/api/cifra?path=` | Texto de arquivo local |
-| GET | `/api/cifra?fileId=&mimeType=` | Texto de arquivo no Drive |
+| GET | `/api/cifra?fileId=&mimeType=` | Texto de arquivo no Drive — retorna `{ text, key, name, title, tags }` |
+| GET | `/api/search/content?q=` | Busca full-text no Drive (`fullText contains`) |
 | POST | `/api/upload` | Upload de arquivo avulso, retorna texto |
 | POST | `/api/export` | Recebe lista de músicas, retorna HTML elegante com logo inline |
 | POST | `/api/import/preview` | Scraping de URL ou texto colado → `{ title, artist, key, text }` |
-| POST | `/api/import/save` | Salva cifra como .md (Drive ou local) |
+| POST | `/api/import/save` | Salva cifra como .md no Drive |
 | GET | `/api/sections` | Seções e categorias disponíveis |
 | POST | `/api/track_view` | Registra visualização de uma música |
 | GET | `/api/repertorios` | Lista todos os repertórios salvos |
@@ -124,16 +115,35 @@ EXTERNAL_URL=https://meu-app.onrender.com
 | POST | `/api/songs/copy` | Copia arquivo para outra categoria |
 | POST | `/api/songs/move` | Move arquivo para outra categoria |
 | POST | `/api/songs/delete` | Envia arquivo para lixeira do Drive |
+| POST | `/api/songs/update_meta` | Atualiza apenas o frontmatter YAML de um `.md` |
 
-**Segurança:** `/api/cifra?path=` valida que o path está dentro de `CIFRAS_ROOT`.
-Todas as rotas protegidas por `@login_required` quando OAuth configurado.
+Todas as rotas são protegidas por `@login_required`.
 
 ---
 
 ## Funções em drive.py
 
 ```python
-# Arquivo / pasta
+# Listagem e leitura
+list_folder(service, folder_id)               # lista { id, name, mimeType }
+scan_library(service, root_folder_id)         # escaneia estrutura completa
+download_bytes(service, file_id)              # retorna bytes raw
+export_gdoc_as_text(service, file_id)         # exporta Google Doc como texto
+
+# Busca
+search_content(service, query, root_folder_id, max_results=50)
+  # fullText contains; retorna [{ fileId, name, mimeType, excerpt }]
+  # ATENÇÃO: não usa orderBy (incompatível com fullText na Drive API)
+
+# Repertórios JSON
+load_repertorios(service, root_folder_id)     # retorna (data, file_id)
+save_repertorios(service, file_id, data)
+
+# Upload / update
+upload_md(service, name, content, folder_id) # cria .md; retorna file_id
+update_md_content(service, file_id, content) # atualiza .md existente
+
+# Arquivo
 get_file_name(service, file_id)               # retorna nome com extensão
 trash_file(service, file_id)                  # lixeira do Drive
 rename_file(service, file_id, new_name_with_ext)
@@ -141,11 +151,13 @@ copy_file(service, file_id, new_name, target_folder_id)
 move_file(service, file_id, source_folder_id, target_folder_id)
 
 # Pastas
-find_folder_by_name(service, name, parent_id) # retorna id ou None
+find_folder_by_name(service, name, parent_id)
 create_folder(service, name, parent_id)
 rename_folder(service, folder_id, new_name)
 is_folder_empty(service, folder_id)           # bool
 delete_folder(service, folder_id)
+get_or_create_folder(service, name, parent_id)
+resolve_folder(service, section, category, root_folder_id)
 ```
 
 ---
@@ -154,7 +166,7 @@ delete_folder(service, folder_id)
 
 **Paleta:**
 ```css
---primary:     #5b4b8a   /* roxo principal — botões, links, destaques */
+--primary:     #5b4b8a   /* roxo principal — botões, links, destaques, ACORDES */
 --accent:      #d4af37   /* dourado — badges, ênfases */
 --bg:          #0f0e17
 --surface:     #13111e
@@ -163,11 +175,35 @@ delete_folder(service, folder_id)
 --text-muted:  #9b97b0
 ```
 
+**Acordes** são sempre `#5b4b8a`. Nunca usar azul `#1d4ed8` para acordes.
+
 **Logos:** usar sempre o arquivo correto para o contexto:
 - `logo-dark.svg` → landing, login (fundo escuro)
 - `logo-light.svg` → header do app (fundo claro)
 - `logo-mono-dark.svg` → export HTML impresso (inline como SVG)
 - `favicon.svg` → `<link rel="icon">` em todos os templates
+- `apple-touch-icon.png` → `<link rel="apple-touch-icon">` em todos os templates (180×180)
+
+---
+
+## Formato de arquivo preferido: `.md` com frontmatter YAML
+
+```markdown
+---
+title: Além do Véu
+artist: Ministério Zoe
+key: G
+section: Gospel
+category: Adoração
+tags: []
+---
+
+G           D          Em
+Além do véu eu quero te ver
+```
+
+O frontmatter é removido automaticamente antes de exibir a cifra na UI.
+`/api/songs/update_meta` atualiza apenas o frontmatter, preservando o corpo da cifra.
 
 ---
 
@@ -194,9 +230,10 @@ delete_folder(service, folder_id)
 }
 ```
 
+O arquivo `_repertorios.json` fica na raiz de `CIFRAS_FOLDER_ID` e é compartilhado entre todos os usuários do grupo.
+
 ### Backend (`app.py`)
-- `_use_drive()` — detecta modo Drive vs local
-- `_load_reps()` / `_save_reps(data)` — abstração sobre Drive ou arquivo local
+- `_load_reps()` / `_save_reps(data)` — carrega e salva via Drive
 - `_rep_lock` (threading.Lock) — evita race conditions em escrita
 
 ### Frontend (JS em `index.html`)
@@ -226,6 +263,7 @@ Payload recebido do frontend:
 
 ## Sidebar do app
 
+- Item "Início" fixado no topo da sidebar (`#sidebar-home-item`)
 - Seções com ícones mapeados em `SECTION_ICONS`
 - Categorias com ícones em `CAT_ICONS`
 - Botão `＋` por seção: cria nova pasta inline
@@ -242,6 +280,27 @@ Payload recebido do frontend:
 - Cards com: nome, badge de categoria, badge de tom, contador de views (olhinho), botão `⋯`
 - `_makeHomeCard(song, cls)` — fábrica de card reutilizada em home e grade de categoria
 - `_songWithViews(song)` — enriquece músicas com views/key de `allSongs`
+
+---
+
+## Busca
+
+Dois modos controlados por `#search-mode-toggle`:
+- **Nome** (padrão): filtra `allSongs` localmente pelo nome
+- **Letra**: chama `GET /api/search/content?q=` → Drive `fullText contains`
+
+A busca por letra não suporta `orderBy` na Drive API — não usar `orderBy` em `search_content()`.
+
+---
+
+## Modal de cifra
+
+- Zoom, fullscreen, transposição tonal
+- Painel de metadados (`#meta-panel`): título, artista, tom, tags — editável inline
+- Modo de edição: `#modal-body.edit-mode` com `#edit-toolbar`
+  - Toolbar: Selecionar tudo (`etb-select-all`), Copiar (`etb-copy`), Duas colunas (`etb-two-col`)
+  - `_confirmLeaveEdit()` — confirma antes de sair se o conteúdo foi alterado
+- `#cifra-content.two-col { column-count: 2 }` — vista em duas colunas
 
 ---
 
@@ -262,24 +321,6 @@ Payload recebido do frontend:
 | `-` | Zoom out |
 | `F` | Toggle fullscreen |
 | `Esc` | Fechar apresentação |
-
----
-
-## Formato de arquivo preferido: `.md` com frontmatter YAML
-
-```markdown
----
-title: Além do Véu
-artist: Ministério Zoe
-key: G
-section: Gospel
-category: Adoração
-tags: []
----
-
-G           D          Em
-Além do véu eu quero te ver
-```
 
 ---
 
@@ -318,8 +359,8 @@ Roda inteiramente no cliente (JS), sem chamar o servidor.
 - Nomes em português onde fazem sentido para o domínio
 
 ### JavaScript (dentro do index.html)
-- Estado global: `library`, `allSongs`, `repertorio`, `currentModal`, `rawCifraText`, `currentSemitone`, `currentRepId`, `savedReps`, `presenterSongs`, `presenterIdx`, `_openCatMenu`, `_openSongMenu`
-- Músicas do Drive têm `fileId` + `mimeType`; locais têm `path`
+- Estado global: `library`, `allSongs`, `repertorio`, `currentModal`, `rawCifraText`, `currentSemitone`, `currentRepId`, `savedReps`, `presenterSongs`, `presenterIdx`, `_openCatMenu`, `_openSongMenu`, `_twoColMode`
+- Músicas do Drive têm `fileId` + `mimeType` (não existe mais o campo `path`)
 - `escHtml()` obrigatório ao inserir dados no DOM via innerHTML
 - Dropdowns appendados ao `document.body` com `position: fixed` + `getBoundingClientRect()`
 - `closeCatMenu()` / `closeOpenSongMenu()` chamados antes de abrir qualquer novo menu
@@ -328,18 +369,12 @@ Roda inteiramente no cliente (JS), sem chamar o servidor.
 ### CSS
 - Variáveis CSS em `:root`: `--bg`, `--surface`, `--surface2`, `--text`, `--accent`, `--border`, `--primary`
 - Classes em kebab-case: `.home-card`, `.btn-hc-open`, `.cat-dropdown`, `.song-ops-dropdown`
-- Mobile first para novos componentes via `@media (max-width: 768px)`
+- Mobile breakpoint: `@media (max-width: 1024px)` (cobre celulares e tablets de até 10")
+- iOS: evitar `:hover` com `transform` no mobile — causa duplo tap no Safari
 
 ---
 
 ## Deploy
-
-### Rodar localmente
-```bash
-pip install -r requirements.txt
-python app.py
-```
-Acesse: `http://localhost:5000`
 
 ### Docker local
 ```bash
@@ -359,5 +394,17 @@ docker run -p 8000:8000 --env-file .env my-cifras
 ## Controle de acesso (OAuth)
 
 - **Usuários de teste:** Google Cloud Console → Tela de permissão OAuth → Usuários de teste
-- **Acesso às cifras:** compartilhar a pasta no Google Drive com o e-mail de cada músico
+- **Acesso às cifras:** compartilhar a pasta central (`CIFRAS_FOLDER_ID`) no Google Drive com cada músico do grupo
 - **Token expirado (7 dias em modo teste):** app detecta `invalid_grant` e redireciona ao login
+
+---
+
+## Arquitetura futura: multi-usuário
+
+O app hoje usa um repositório central compartilhado (todos acessam o mesmo `CIFRAS_FOLDER_ID`). A evolução prevista é:
+
+1. **Fase atual:** repositório único compartilhado — todos os músicos do grupo leem e editam o mesmo Drive
+2. **Próxima fase:** repertórios por usuário — `_repertorios_{user_id}.json` em vez de arquivo compartilhado, evitando conflitos de escrita
+3. **Fase futura:** suporte a múltiplos grupos — cada grupo tem seu próprio `CIFRAS_FOLDER_ID`; o app associa o e-mail do usuário ao grupo correto via tabela de configuração
+
+Ao implementar mudanças no fluxo de dados, considerar que o `_rep_lock` atual não é suficiente para múltiplos usuários concorrentes em escrita — será necessário um mecanismo de versionamento ou CRDT no JSON.

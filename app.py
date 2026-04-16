@@ -37,6 +37,20 @@ def _use_drive():
     return is_oauth_configured() and bool(CIFRAS_FOLDER_ID)
 
 
+_AUTH_ERROR_SIGNALS = (
+    "invalid_grant", "token has been expired", "token has been revoked",
+    "unauthorized", "401", "revoked", "invalid_token",
+)
+
+def _is_auth_error(e):
+    full = (str(e) + " " + str(getattr(e, "__cause__", "") or "")).lower()
+    return any(s in full for s in _AUTH_ERROR_SIGNALS)
+
+def _auth_error_response():
+    session.clear()
+    return jsonify({"error": "Sessão expirada", "login_url": "/login"}), 401
+
+
 # ---------------------------------------------------------------------------
 # Extração de texto — por bytes
 # ---------------------------------------------------------------------------
@@ -267,6 +281,8 @@ def api_reps_list():
     try:
         return jsonify(_load_reps())
     except Exception as e:
+        if _is_auth_error(e):
+            return _auth_error_response()
         return jsonify({"error": str(e)}), 500
 
 
@@ -794,6 +810,8 @@ def api_cifra():
                 content_bytes = drive.download_bytes(get_service(), file_id)
                 text = extract_text_from_bytes(content_bytes, _mime_to_ext(mime))
         except Exception as e:
+            if _is_auth_error(e):
+                return _auth_error_response()
             return jsonify({"error": str(e)}), 500
         return jsonify({"text": text})
 
@@ -1161,11 +1179,20 @@ def api_update_meta():
         try:
             raw = drive.download_bytes(svc, file_id).decode("utf-8", errors="replace")
         except Exception as e:
+            if _is_auth_error(e):
+                return _auth_error_response()
             return jsonify({"error": f"Erro ao ler arquivo: {e}"}), 500
         patched = _patch_frontmatter(raw, new_meta)
         try:
             drive.update_md_content(svc, file_id, patched)
+            # Se o título mudou, renomeia o arquivo .md para corresponder
+            if new_meta["title"]:
+                current_name = drive.get_file_name(svc, file_id)
+                if Path(current_name).stem != new_meta["title"]:
+                    drive.rename_file(svc, file_id, new_meta["title"] + ".md")
         except Exception as e:
+            if _is_auth_error(e):
+                return _auth_error_response()
             return jsonify({"error": str(e)}), 500
         invalidate_library_cache()
         return jsonify({"ok": True})

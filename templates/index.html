@@ -1274,6 +1274,68 @@ input { font: inherit; }
 }
 #drop-overlay.show { display: flex; }
 
+/* ─── Diálogo de confirmação customizado ───────────────────────────────── */
+#confirm-overlay {
+  display: none;
+  position: fixed; inset: 0;
+  z-index: 2000;
+  background: rgba(0,0,0,.55);
+  backdrop-filter: blur(4px);
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+#confirm-overlay.open { display: flex; }
+#confirm-dialog {
+  background: var(--surface);
+  border: 1px solid rgba(91,75,138,.35);
+  border-radius: 16px;
+  padding: 1.75rem 1.5rem 1.4rem;
+  max-width: 380px;
+  width: 100%;
+  box-shadow: 0 24px 60px rgba(0,0,0,.55);
+  animation: confirm-pop .18s cubic-bezier(.34,1.4,.64,1);
+}
+@keyframes confirm-pop {
+  from { transform: scale(.92); opacity: 0; }
+  to   { transform: scale(1);   opacity: 1; }
+}
+#confirm-icon {
+  width: 40px; height: 40px;
+  background: rgba(212,175,55,.12);
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.2rem;
+  margin-bottom: 1rem;
+}
+#confirm-msg {
+  font-size: .97rem;
+  color: var(--text);
+  line-height: 1.5;
+  margin-bottom: 1.5rem;
+}
+.confirm-actions {
+  display: flex; gap: .6rem; justify-content: flex-end;
+}
+.confirm-actions button {
+  border: none; border-radius: 8px;
+  padding: .55rem 1.1rem;
+  font-size: .88rem; font-weight: 600;
+  cursor: pointer;
+  transition: background 140ms, transform 80ms;
+}
+.confirm-actions button:active { transform: scale(.97); }
+#confirm-cancel {
+  background: var(--surface2);
+  color: var(--text-muted);
+}
+#confirm-cancel:hover { background: #2a2540; color: var(--text); }
+#confirm-ok {
+  background: var(--primary);
+  color: #fff;
+}
+#confirm-ok:hover { background: #4a3a78; }
+
 /* ─── Notificação toast ──────────────────────────────────────────────────── */
 #toast {
   position: fixed;
@@ -1563,13 +1625,23 @@ input { font: inherit; }
     cursor: pointer;
   }
 
-  /* iOS/Android: remove transforms em :hover que causam double-tap */
-  .song-card:hover, .home-card:hover,
-  .sidebar-cat:hover, .sidebar-cat.active {
+  /* iOS/Android: remove transforms em :hover que causam double-tap.
+     Regra ampla: qualquer :hover com transform vira no-op em touch. */
+  .song-card:hover, .home-top-card:hover, .home-card:hover,
+  .sidebar-cat:hover, .btn:hover, .btn-sm:hover,
+  .rep-item:hover, .saved-rep-item:hover,
+  .song-card .btn-add-song:hover, .pres-dot:hover {
     transform: none;
+    box-shadow: none;
   }
   .song-card:active { transform: scale(.97); }
   .home-card:active { opacity: .85; }
+
+  /* iOS: previne zoom automático ao focar em campos de texto.
+     O Safari faz zoom quando font-size < 16px. */
+  input, textarea, select {
+    font-size: 16px !important;
+  }
 
   /* Body vira coluna */
   #body { flex-direction: column; overflow: visible; }
@@ -2100,6 +2172,12 @@ input { font: inherit; }
       <div id="modal-view-controls">
         <button class="modal-vctrl" id="btn-modal-zoom-out" title="Diminuir fonte (-)">A&#8722;</button>
         <button class="modal-vctrl" id="btn-modal-zoom-in" title="Aumentar fonte (+)">A+</button>
+        <button class="modal-vctrl" id="btn-two-col" title="Alternar 2 colunas">
+          <svg width="14" height="11" viewBox="0 0 14 11" fill="currentColor" style="display:block">
+            <rect x="0" y="0" width="6" height="11" rx="1.5"/>
+            <rect x="8" y="0" width="6" height="11" rx="1.5"/>
+          </svg>
+        </button>
         <button class="modal-vctrl" id="btn-modal-fullscreen" title="Tela cheia (F)">&#11035;</button>
       </div>
       <button id="modal-close" title="Fechar (Esc)">&#10005;</button>
@@ -2120,9 +2198,6 @@ input { font: inherit; }
         <span class="etb-label">Editar:</span>
         <button class="etb-btn" id="etb-select-all" title="Selecionar todo o texto (Ctrl+A)">&#9776; Selecionar tudo</button>
         <button class="etb-btn" id="etb-copy" title="Copiar texto">&#128203; Copiar</button>
-        <div class="etb-sep"></div>
-        <span class="etb-label">Vista:</span>
-        <button class="etb-btn" id="etb-two-col" title="Alternar visualização em 2 colunas">&#9638; 2 Colunas</button>
       </div>
       <pre id="cifra-content"></pre>
       <textarea id="cifra-edit" spellcheck="false" placeholder="Edite a cifra aqui..."></textarea>
@@ -2327,6 +2402,18 @@ input { font: inherit; }
 <!-- Toast -->
 <div id="toast"></div>
 
+<!-- Diálogo de confirmação customizado -->
+<div id="confirm-overlay">
+  <div id="confirm-dialog">
+    <div id="confirm-icon">⚠️</div>
+    <p id="confirm-msg"></p>
+    <div class="confirm-actions">
+      <button id="confirm-cancel">Cancelar</button>
+      <button id="confirm-ok">Confirmar</button>
+    </div>
+  </div>
+</div>
+
 <script>
 // ─── Estado global ──────────────────────────────────────────────────────────
 var library = {};
@@ -2446,6 +2533,12 @@ function escHtml(s) {
     .replace(/</g,"&lt;")
     .replace(/>/g,"&gt;")
     .replace(/"/g,"&quot;");
+}
+
+// Trata respostas 401 (token expirado) redirecionando ao login
+function _handleAuthExpired() {
+  showToast("Sessão expirada — redirecionando...", 2500);
+  setTimeout(function() { window.location.href = "/login"; }, 1500);
 }
 
 function showToast(msg, duration) {
@@ -2622,15 +2715,16 @@ function renderSidebar() {
   homeItem.id = "sidebar-home-item";
   homeItem.innerHTML = '<span class="sidebar-icon">&#8962;</span><span>Início</span>';
   homeItem.addEventListener("click", function() {
-    if (!_confirmLeaveEdit("Você tem alterações não salvas na cifra.\nDeseja navegar sem salvar?")) return;
-    document.querySelectorAll(".sidebar-cat").forEach(function(el) { el.classList.remove("active"); });
-    homeItem.classList.add("active");
-    currentCategory = null;
-    searchActive = false;
-    document.getElementById("search-box").value = "";
-    hideHomeTable();
-    renderHomeTable(allSongs);
-    closeSidebar();
+    _confirmLeaveEdit(function() {
+      document.querySelectorAll(".sidebar-cat").forEach(function(el) { el.classList.remove("active"); });
+      homeItem.classList.add("active");
+      currentCategory = null;
+      searchActive = false;
+      document.getElementById("search-box").value = "";
+      hideHomeTable();
+      renderHomeTable(allSongs);
+      closeSidebar();
+    }, "Você tem alterações não salvas na cifra. Deseja navegar sem salvar?");
   });
   sb.appendChild(homeItem);
 
@@ -3005,22 +3099,23 @@ document.getElementById("sfm-overlay").addEventListener("click", function(e) {
 // ── /Song operations ─────────────────────────────────────────────────────────
 
 function selectCategory(section, cat) {
-  if (!_confirmLeaveEdit("Você tem alterações não salvas na cifra.\nDeseja navegar sem salvar?")) return;
-  currentCategory = { section: section, cat: cat };
-  searchActive = false;
-  document.getElementById("search-box").value = "";
-  hideHomeTable();
-  document.getElementById("sidebar-home-item") && document.getElementById("sidebar-home-item").classList.remove("active");
-  document.querySelectorAll(".sidebar-cat").forEach(function(el) {
-    el.classList.toggle("active", el.dataset.section === section && el.dataset.cat === cat);
-  });
-  var songs = (library[section] || {})[cat] || [];
-  renderSongGrid(songs);
-  // fecha sidebar no mobile após selecionar categoria
-  if (window.innerWidth <= 1024) {
-    document.getElementById("sidebar").classList.remove("open");
-    document.getElementById("sidebar-overlay").classList.remove("show");
-  }
+  _confirmLeaveEdit(function() {
+    currentCategory = { section: section, cat: cat };
+    searchActive = false;
+    document.getElementById("search-box").value = "";
+    hideHomeTable();
+    document.getElementById("sidebar-home-item") && document.getElementById("sidebar-home-item").classList.remove("active");
+    document.querySelectorAll(".sidebar-cat").forEach(function(el) {
+      el.classList.toggle("active", el.dataset.section === section && el.dataset.cat === cat);
+    });
+    var songs = (library[section] || {})[cat] || [];
+    renderSongGrid(songs);
+    // fecha sidebar no mobile após selecionar categoria
+    if (window.innerWidth <= 1024) {
+      document.getElementById("sidebar").classList.remove("open");
+      document.getElementById("sidebar-overlay").classList.remove("show");
+    }
+  }, "Você tem alterações não salvas na cifra. Deseja navegar sem salvar?");
 }
 
 // ─── Song Grid ──────────────────────────────────────────────────────────────
@@ -3109,8 +3204,12 @@ function openModal(song) {
     fetch(song.fileId
       ? "/api/cifra?fileId=" + encodeURIComponent(song.fileId) + "&mimeType=" + encodeURIComponent(song.mimeType || "")
       : "/api/cifra?path=" + encodeURIComponent(song.path))
-      .then(function(r) { return r.json(); })
+      .then(function(r) {
+        if (r.status === 401) { _handleAuthExpired(); return null; }
+        return r.json();
+      })
       .then(function(data) {
+        if (!data) return;
         document.getElementById("modal-loading").style.display = "none";
         if (data.error) {
           rawCifraText = "[Erro: " + data.error + "]";
@@ -3133,17 +3232,18 @@ function openModal(song) {
 }
 
 function closeModal() {
-  if (!_confirmLeaveEdit()) return;
-  exitEditMode();
-  if (metaMode) closeMetaPanel();
-  // Reseta duas colunas ao fechar
-  if (_twoColMode) {
-    _twoColMode = false;
-    document.getElementById("cifra-content").classList.remove("two-col");
-    document.getElementById("etb-two-col").classList.remove("active");
-  }
-  document.getElementById("modal-overlay").classList.remove("open");
-  currentModal = null;
+  _confirmLeaveEdit(function() {
+    exitEditMode();
+    if (metaMode) closeMetaPanel();
+    // Reseta duas colunas ao fechar
+    if (_twoColMode) {
+      _twoColMode = false;
+      document.getElementById("cifra-content").classList.remove("two-col");
+      document.getElementById("btn-two-col").classList.remove("active");
+    }
+    document.getElementById("modal-overlay").classList.remove("open");
+    currentModal = null;
+  });
 }
 
 // ─── Modo Edição ─────────────────────────────────────────────────────────────
@@ -3177,9 +3277,37 @@ function _hasUnsavedEdit() {
   return current !== rawCifraText;
 }
 
-function _confirmLeaveEdit(msg) {
-  if (!_hasUnsavedEdit()) return true;
-  return confirm(msg || "Você tem alterações não salvas.\nDeseja sair sem salvar?");
+// Diálogo de confirmação customizado — callback-based
+function _confirmDialog(msg, okLabel, onConfirm) {
+  var overlay  = document.getElementById("confirm-overlay");
+  var msgEl    = document.getElementById("confirm-msg");
+  var btnOk    = document.getElementById("confirm-ok");
+  var btnCancel = document.getElementById("confirm-cancel");
+
+  msgEl.textContent = msg;
+  btnOk.textContent = okLabel || "Confirmar";
+  overlay.classList.add("open");
+
+  function cleanup() {
+    overlay.classList.remove("open");
+    btnOk.onclick    = null;
+    btnCancel.onclick = null;
+    overlay.onclick  = null;
+  }
+  btnOk.onclick    = function() { cleanup(); onConfirm(); };
+  btnCancel.onclick = cleanup;
+  overlay.onclick  = function(e) { if (e.target === overlay) cleanup(); };
+}
+
+// Se estiver em edit mode, exibe o diálogo e chama onConfirmed ao aceitar.
+// Se não estiver editando, chama onConfirmed imediatamente.
+function _confirmLeaveEdit(onConfirmed, msg) {
+  if (!editMode) { onConfirmed(); return; }
+  _confirmDialog(
+    msg || "Tem certeza que deseja sair da edição?",
+    "Sair",
+    onConfirmed
+  );
 }
 
 // ─── Toolbar do editor ───────────────────────────────────────────────────────
@@ -3188,7 +3316,7 @@ var _twoColMode = false;
 function _toggleTwoCol() {
   _twoColMode = !_twoColMode;
   document.getElementById("cifra-content").classList.toggle("two-col", _twoColMode);
-  document.getElementById("etb-two-col").classList.toggle("active", _twoColMode);
+  document.getElementById("btn-two-col").classList.toggle("active", _twoColMode);
 }
 
 function _etbSelectAll() {
@@ -3275,6 +3403,7 @@ async function saveMetadata() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
+    if (resp.status === 401) { _handleAuthExpired(); return; }
     var data = await resp.json();
     if (data.error) throw new Error(data.error);
 
@@ -3614,6 +3743,7 @@ async function exportRepertorio(autoPrint) {
 async function loadSavedReps() {
   try {
     var r = await fetch("/api/repertorios");
+    if (r.status === 401) { _handleAuthExpired(); return; }
     if (!r.ok) return;
     savedReps = await r.json();
     renderSavedReps();
@@ -4226,7 +4356,7 @@ function init() {
     if (e.key === "Escape") {
       // Se está editando e Escape foi pressionado fora do textarea, cancela edição com confirmação
       if (editMode && document.activeElement !== document.getElementById("cifra-edit")) {
-        if (_confirmLeaveEdit()) exitEditMode();
+        _confirmLeaveEdit(function() { exitEditMode(); });
       } else if (!editMode) {
         closeModal();
       }
@@ -4253,7 +4383,7 @@ function init() {
   // Editar / Salvar edição
   document.getElementById("btn-edit-toggle").addEventListener("click", function() {
     if (editMode) {
-      if (_confirmLeaveEdit("Cancelar edição? As alterações serão perdidas.")) exitEditMode();
+      _confirmLeaveEdit(function() { exitEditMode(); }, "Cancelar edição? As alterações serão perdidas.");
     } else {
       enterEditMode();
     }
@@ -4263,7 +4393,7 @@ function init() {
   // Toolbar do editor
   document.getElementById("etb-select-all").addEventListener("click", _etbSelectAll);
   document.getElementById("etb-copy").addEventListener("click", _etbCopy);
-  document.getElementById("etb-two-col").addEventListener("click", _toggleTwoCol);
+  document.getElementById("btn-two-col").addEventListener("click", _toggleTwoCol);
 
   // Metadados
   document.getElementById("btn-meta-toggle").addEventListener("click", function() {
@@ -4333,7 +4463,7 @@ function init() {
   document.getElementById("btn-rep-save").addEventListener("click", saveCurrentRep);
   document.getElementById("btn-rep-clear").addEventListener("click", function() {
     if (!repertorio.length) return;
-    if (confirm("Limpar o repertório atual?")) {
+    _confirmDialog("Limpar o repertório atual? As músicas serão removidas da lista.", "Limpar", function() {
       currentRepId = null;
       repertorio = [];
       document.getElementById("rep-title-input").value = "";
@@ -4341,7 +4471,7 @@ function init() {
       updateRepBadge();
       refreshGridBtns();
       renderSavedReps();
-    }
+    });
   });
   document.getElementById("btn-rep-export").addEventListener("click", function() { exportRepertorio(false); });
   document.getElementById("btn-rep-pdf").addEventListener("click", function() { exportRepertorio(true); });
