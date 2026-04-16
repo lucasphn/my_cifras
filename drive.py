@@ -261,6 +261,53 @@ def resolve_folder(service, section, category, root_folder_id):
     return get_or_create_folder(service, category, section_id)
 
 
+# ─── Busca full-text ─────────────────────────────────────────────────────────
+
+def search_content(service, query, root_folder_id, max_results=50):
+    """Busca arquivos dentro da pasta raiz cujo conteúdo contém `query`.
+    Retorna lista de { fileId, name, mimeType, excerpt }.
+    """
+    # Drive fullText contains busca no conteúdo indexado dos arquivos
+    safe_q = query.replace("'", "\\'")
+    q = (
+        f"fullText contains '{safe_q}' "
+        f"and '{root_folder_id}' in parents "
+        f"and trashed=false"
+    )
+    # A fullText contains não funciona com hierarquia profunda via 'in parents'.
+    # Precisamos buscar em todo o Drive limitando ao domínio da pasta raiz via
+    # uma query mais ampla e depois filtrar. Mas a API não suporta "ancestors in".
+    # Alternativa: buscar sem o filtro de parent e filtrar pelos IDs que aparecem
+    # na biblioteca já carregada no caller. Aqui fazemos a busca ampla.
+    q_broad = f"fullText contains '{safe_q}' and trashed=false and mimeType != '{FOLDER_MIME}'"
+    results = []
+    page_token = None
+    while len(results) < max_results:
+        resp = (
+            service.files()
+            .list(
+                q=q_broad,
+                fields="nextPageToken, files(id, name, mimeType)",
+                pageToken=page_token,
+                pageSize=min(max_results - len(results), 100),
+            )
+            .execute()
+        )
+        for f in resp.get("files", []):
+            if not _is_supported(f):
+                continue
+            results.append({
+                "fileId": f["id"],
+                "name": Path(f["name"]).stem,
+                "mimeType": f["mimeType"],
+                "excerpt": "",
+            })
+        page_token = resp.get("nextPageToken")
+        if not page_token:
+            break
+    return results
+
+
 # ─── Scan biblioteca ─────────────────────────────────────────────────────────
 
 def _is_supported(f):

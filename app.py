@@ -137,14 +137,21 @@ def _strip_frontmatter(text):
 
 def _parse_frontmatter(text):
     """Retorna (body, meta_dict) extraindo YAML frontmatter simples."""
-    meta = {"artist": "", "key": "", "title": ""}
+    meta = {"artist": "", "key": "", "title": "", "tags": []}
     if text.startswith("---"):
         parts = text.split("---", 2)
         if len(parts) >= 3:
             for line in parts[1].splitlines():
                 if ":" in line:
                     k, _, v = line.partition(":")
-                    meta[k.strip().lower()] = v.strip().strip('"').strip("'")
+                    key = k.strip().lower()
+                    val = v.strip().strip('"').strip("'")
+                    if key == "tags":
+                        # Parse simple YAML list: [a, b, c] or a, b, c
+                        val = val.strip("[]")
+                        meta["tags"] = [t.strip() for t in val.split(",") if t.strip()] if val else []
+                    else:
+                        meta[key] = val
             return parts[2].strip(), meta
     return text, meta
 
@@ -801,8 +808,9 @@ def api_cifra():
     if p.suffix.lower() == ".md":
         raw = p.read_text(encoding="utf-8", errors="replace")
         body, meta = _parse_frontmatter(raw)
-        return jsonify({"text": body, "artist": meta.get("artist",""), "key": meta.get("key","")})
-    return jsonify({"text": extract_text(path), "artist": "", "key": ""})
+        return jsonify({"text": body, "artist": meta.get("artist",""), "key": meta.get("key",""),
+                        "title": meta.get("title",""), "tags": meta.get("tags",[])})
+    return jsonify({"text": extract_text(path), "artist": "", "key": "", "title": "", "tags": []})
 
 
 @app.route("/api/upload", methods=["POST"])
@@ -1103,6 +1111,80 @@ def api_import_save():
         return jsonify({"ok": True, "path": str(dest_file)})
 
 
+@app.route("/api/songs/update_meta", methods=["POST"])
+@login_required
+def api_update_meta():
+    """Atualiza apenas o frontmatter YAML de um arquivo .md."""
+    data = request.get_json(force=True)
+    file_id = (data.get("fileId") or "").strip()
+    path    = (data.get("path") or "").strip()
+    new_meta = {
+        "title":  (data.get("title")  or "").strip(),
+        "artist": (data.get("artist") or "").strip(),
+        "key":    (data.get("key")    or "").strip(),
+        "tags":   data.get("tags", []),
+    }
+
+    def _patch_frontmatter(raw, new_meta):
+        """Substitui os campos de metadados no frontmatter, preserva o corpo."""
+        body = raw
+        existing = {"section": "", "category": ""}
+        if raw.startswith("---"):
+            parts = raw.split("---", 2)
+            if len(parts) >= 3:
+                for line in parts[1].splitlines():
+                    if ":" in line:
+                        k, _, v = line.partition(":")
+                        existing[k.strip().lower()] = v.strip().strip('"').strip("'")
+                body = parts[2].strip()
+
+        tags_str = ", ".join(new_meta["tags"]) if isinstance(new_meta["tags"], list) else new_meta["tags"]
+        # Normaliza tags para lista YAML
+        tags_list = [t.strip() for t in tags_str.split(",") if t.strip()] if tags_str else []
+        tags_yaml = "[" + ", ".join(tags_list) + "]"
+
+        fm = (
+            "---\n"
+            f"title: {new_meta['title']}\n"
+            f"artist: {new_meta['artist']}\n"
+            f"key: {new_meta['key']}\n"
+            f"section: {existing.get('section','')}\n"
+            f"category: {existing.get('category','')}\n"
+            f"tags: {tags_yaml}\n"
+            "---\n\n"
+        )
+        return fm + body
+
+    if file_id:
+        import drive
+        svc = get_service()
+        try:
+            raw = drive.download_bytes(svc, file_id).decode("utf-8", errors="replace")
+        except Exception as e:
+            return jsonify({"error": f"Erro ao ler arquivo: {e}"}), 500
+        patched = _patch_frontmatter(raw, new_meta)
+        try:
+            drive.update_md_content(svc, file_id, patched)
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
+        invalidate_library_cache()
+        return jsonify({"ok": True})
+
+    if path:
+        if not is_safe_path(path):
+            return jsonify({"error": "Caminho não permitido"}), 403
+        p = Path(path)
+        if not p.exists() or p.suffix.lower() != ".md":
+            return jsonify({"error": "Arquivo não encontrado ou não é .md"}), 404
+        raw = p.read_text(encoding="utf-8")
+        patched = _patch_frontmatter(raw, new_meta)
+        p.write_text(patched, encoding="utf-8")
+        invalidate_library_cache()
+        return jsonify({"ok": True})
+
+    return jsonify({"error": "fileId ou path obrigatório"}), 400
+
+
 @app.route("/api/save_tone", methods=["POST"])
 @login_required
 def api_save_tone():
@@ -1162,6 +1244,102 @@ def api_save_tone():
         return jsonify({"ok": True})
 
     return jsonify({"error": "Informe fileId ou path"}), 400
+
+
+@app.route("/api/search/content")
+@login_required
+def api_search_content():
+    """Busca full-text nas letras/conteúdo das cifras.
+    Drive: usa fullText contains via API.
+    Local: lê os arquivos .md e procura no conteúdo.
+    Retorna lista de { name, section, category, fileId/path, mimeType?, excerpt }.
+    """
+    q = request.args.get("q", "").strip()
+    if not q or len(q) < 2:
+        return jsonify({"error": "Consulta muito curta (mín. 2 caracteres)"}), 400
+
+    results = []
+
+    if _use_drive():
+        import drive as drv
+        svc = get_service()
+        try:
+            items = drv.search_content(svc, q, CIFRAS_FOLDER_ID)
+            views = _load_views()
+            # Enriquece com section/category a partir da biblioteca cacheada
+            lib = _get_library()
+            # Monta índice fileId → {section, category, name, key}
+            fid_index = {}
+            for sec, cats in lib.items():
+                for cat, songs in cats.items():
+                    for s in songs:
+                        if s.get("fileId"):
+                            fid_index[s["fileId"]] = {
+                                "section": sec,
+                                "category": cat,
+                                "name": s.get("name", ""),
+                                "key": s.get("key", ""),
+                                "artist": s.get("artist", ""),
+                            }
+            for item in items:
+                fid = item.get("fileId", "")
+                meta = fid_index.get(fid, {})
+                results.append({
+                    "fileId": fid,
+                    "name": meta.get("name") or item.get("name", ""),
+                    "section": meta.get("section", ""),
+                    "category": meta.get("category", ""),
+                    "key": meta.get("key", ""),
+                    "artist": meta.get("artist", ""),
+                    "mimeType": item.get("mimeType", ""),
+                    "excerpt": item.get("excerpt", ""),
+                    "views": views.get(fid, 0),
+                })
+        except Exception as e:
+            return jsonify({"error": f"Erro na busca: {e}"}), 500
+    else:
+        # Busca local: percorre os .md dentro de CIFRAS_ROOT
+        root = Path(CIFRAS_ROOT)
+        if not root.exists():
+            return jsonify([])
+        ql = q.lower()
+        views = _load_views()
+        for section_dir in sorted(root.iterdir()):
+            if not section_dir.is_dir():
+                continue
+            section = section_dir.name
+            for item in sorted(section_dir.rglob("*")):
+                if not item.is_file() or item.suffix.lower() not in SUPPORTED_EXTENSIONS:
+                    continue
+                rel = item.relative_to(section_dir)
+                category = rel.parts[0] if len(rel.parts) > 1 else "_raiz"
+                try:
+                    raw = item.read_text(encoding="utf-8", errors="replace")
+                except Exception:
+                    continue
+                body, meta = _parse_frontmatter(raw)
+                searchable = (body + " " + meta.get("artist", "") + " " + meta.get("title", "")).lower()
+                if ql not in searchable:
+                    continue
+                # Gera excerpt: linha que contém o termo
+                excerpt = ""
+                for line in body.splitlines():
+                    if ql in line.lower():
+                        excerpt = line.strip()[:120]
+                        break
+                path_str = str(item)
+                results.append({
+                    "path": path_str,
+                    "name": meta.get("title") or item.stem,
+                    "section": section,
+                    "category": category,
+                    "key": meta.get("key", ""),
+                    "artist": meta.get("artist", ""),
+                    "excerpt": excerpt,
+                    "views": views.get(path_str, 0),
+                })
+
+    return jsonify(results)
 
 
 @app.route("/api/sections")

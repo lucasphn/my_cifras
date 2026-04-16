@@ -73,7 +73,26 @@ input { font: inherit; }
   gap: 10px;
 }
 #header h1 { font-size: 1.05em; font-weight: 800; color: var(--primary); letter-spacing: 0.02em; white-space: nowrap; }
-#btn-home {
+/* Home na sidebar */
+#sidebar-home-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 16px;
+  font-size: 0.9em;
+  font-weight: 700;
+  color: var(--text);
+  cursor: pointer;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 4px;
+  transition: background .15s, color .15s;
+}
+#sidebar-home-item:hover { background: rgba(91,75,138,.06); color: var(--primary); }
+#sidebar-home-item.active { color: var(--primary); background: var(--primary-light); }
+#sidebar-home-item .sidebar-icon { font-size: 1.1em; }
+
+#btn-home { display: none; }
+#btn-home-hidden {
   font-size: 1.1em;
   color: var(--text-muted);
   padding: 5px 7px;
@@ -107,6 +126,63 @@ input { font: inherit; }
 }
 #search-box:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(74,108,247,.12); }
 #search-box::placeholder { color: var(--text-muted); }
+/* ── Modo de busca ── */
+#search-mode-toggle {
+  display: flex;
+  align-items: center;
+  background: var(--surface2);
+  border: 1.5px solid var(--border);
+  border-radius: 99px;
+  padding: 2px;
+  gap: 2px;
+  flex-shrink: 0;
+}
+#search-mode-toggle button {
+  background: transparent;
+  border: none;
+  border-radius: 99px;
+  color: var(--text-muted);
+  font-size: 0.75em;
+  font-weight: 600;
+  padding: 4px 10px;
+  cursor: pointer;
+  transition: background .15s, color .15s;
+  white-space: nowrap;
+}
+#search-mode-toggle button.active {
+  background: var(--primary);
+  color: #fff;
+}
+/* ── Excerpt nos resultados ── */
+.song-excerpt {
+  font-size: 0.75em;
+  color: var(--text-muted);
+  font-style: italic;
+  margin-top: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.song-excerpt mark {
+  background: rgba(212,175,55,.25);
+  color: var(--accent);
+  font-style: normal;
+  border-radius: 2px;
+  padding: 0 2px;
+}
+/* Spinner busca letra */
+#search-content-spinner {
+  display: none;
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--border);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: spin .7s linear infinite;
+  flex-shrink: 0;
+}
+#search-content-spinner.active { display: block; }
+@keyframes spin { to { transform: rotate(360deg); } }
 .btn {
   background: var(--surface);
   border: 1.5px solid var(--border);
@@ -624,6 +700,54 @@ input { font: inherit; }
 }
 .views-badge.has-views { background: var(--primary-light); border-color: rgba(91,75,138,.2); color: var(--primary); }
 
+/* ─── Painel de Metadados ────────────────────────────────────────────────── */
+#meta-panel {
+  display: none;
+  flex-direction: column;
+  gap: 14px;
+  padding: 20px 22px;
+  overflow-y: auto;
+  flex: 1;
+}
+#meta-panel.open { display: flex; }
+#modal-body.meta-mode #cifra-content { display: none; }
+#modal-body.meta-mode #cifra-edit { display: none; }
+.meta-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.meta-field label {
+  font-size: 0.75em;
+  font-weight: 700;
+  color: var(--text-muted);
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+.meta-field input {
+  background: var(--surface2);
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-size: 0.9em;
+  padding: 8px 12px;
+  outline: none;
+  transition: border-color .15s, box-shadow .15s;
+}
+.meta-field input:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(91,75,138,.12);
+}
+.meta-hint {
+  font-size: 0.72em;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+#btn-meta-toggle { }
+#btn-meta-toggle.active { color: var(--primary); border-color: var(--primary); background: var(--primary-light); }
+#btn-save-meta { display: none; background: var(--success); border-color: var(--success); color: #fff; }
+#btn-save-meta:hover { opacity: .85; }
+
 /* ─── Edit mode no modal ─────────────────────────────────────────────────── */
 #cifra-edit {
   display: none;
@@ -1024,7 +1148,7 @@ input { font: inherit; }
   flex: 1; overflow-y: auto; padding: 28px 36px;
   display: flex; flex-direction: column;
 }
-@media (max-width: 768px) { #presenter-body { padding: 18px 16px; } }
+@media (max-width: 1024px) { #presenter-body { padding: 18px 16px; } }
 #presenter-song-name {
   font-size: 1.4em; font-weight: 800; color: #5b4b8a; margin-bottom: 3px;
 }
@@ -1345,23 +1469,25 @@ input { font: inherit; }
 }
 .mbn-btn .mbn-badge.show { display: flex; }
 
-@media (max-width: 768px) {
+@media (max-width: 1024px) {
   html, body { overflow: auto; }
   #app { height: auto; min-height: 100vh; padding-bottom: 64px; }
 
   /* Bottom nav visible */
   #mobile-bottom-nav { display: flex; }
 
-  /* Header mobile: single compact row */
+  /* Header mobile: single compact row — logo oculta, search ocupa tudo */
   #header { flex-wrap: nowrap; height: var(--header-h); padding: 0 8px; gap: 4px; }
-  #header-brand { width: auto; flex-shrink: 0; border-right: none; padding: 0 4px; gap: 6px; }
+  #header-brand { width: auto; flex-shrink: 0; border-right: none; padding: 0; gap: 0; }
+  #header-brand img, #btn-home { display: none; }
   #btn-menu-toggle { display: flex; align-items: center; justify-content: center; }
   #header h1 { font-size: 0.95em; }
-  #header-main { flex: 1; padding: 0; border-top: none; gap: 6px; min-width: 0; }
-  #search-box { font-size: 0.85em; padding: 6px 12px; }
+  #header-main { flex: 1; padding: 0 4px; border-top: none; gap: 6px; min-width: 0; }
+  #search-box { font-size: 16px; padding: 7px 14px; }
+  #search-mode-toggle button { padding: 3px 7px; font-size: 0.7em; }
 
   /* Esconde botões secundários — mobile usa bottom nav */
-  #btn-import, #btn-upload, #btn-rep-toggle,
+  #btn-import,
   #user-badge .user-name, #user-badge #btn-logout { display: none; }
   #user-badge { padding: 2px; border: none; background: transparent; gap: 0; }
   #user-badge img { width: 28px; height: 28px; }
@@ -1372,9 +1498,19 @@ input { font: inherit; }
   .home-card, .song-card, .sidebar-cat, .sidebar-section-title,
   .mbn-btn, .btn, .btn-sm, .btn-accent,
   .btn-hc-open, .btn-hc-add, .btn-song-ops, .btn-cat-menu, .btn-folder-add,
-  #btn-home, #btn-menu-toggle, #search-box {
+  #btn-home, #btn-menu-toggle, #search-box,
+  #btn-search-name, #btn-search-content,
+  #btn-meta-toggle, #btn-save-meta {
     cursor: pointer;
   }
+
+  /* iOS/Android: remove transforms em :hover que causam double-tap */
+  .song-card:hover, .home-card:hover,
+  .sidebar-cat:hover, .sidebar-cat.active {
+    transform: none;
+  }
+  .song-card:active { transform: scale(.97); }
+  .home-card:active { opacity: .85; }
 
   /* Body vira coluna */
   #body { flex-direction: column; overflow: visible; }
@@ -1460,8 +1596,6 @@ input { font: inherit; }
   #transpose-toolbar { gap: 6px; padding: 8px 12px; overflow-x: auto; flex-wrap: nowrap; }
   .tp-notes { display: none; }
 
-  /* font-size >= 16px evita zoom automático do iOS no campo de busca */
-  #search-box { font-size: 16px; }
   /* Após fechar teclado, reseta scroll */
   #song-grid { scroll-margin-top: 8px; }
 
@@ -1789,12 +1923,12 @@ input { font: inherit; }
     </div>
     <div id="header-main">
       <input type="text" id="search-box" placeholder="Buscar música..." autocomplete="off">
+      <div id="search-mode-toggle">
+        <button id="btn-search-name" class="active" title="Buscar por nome">Nome</button>
+        <button id="btn-search-content" title="Buscar na letra">Letra</button>
+      </div>
+      <div id="search-content-spinner"></div>
       <button class="btn" id="btn-import" title="Importar cifra">&#43; Importar</button>
-      <button class="btn" id="btn-upload" title="Abrir arquivo">&#128194; Abrir</button>
-      <button class="btn" id="btn-rep-toggle" title="Repertório">
-        &#127926; Repertório
-        <span id="rep-badge">0</span>
-      </button>
       <input type="file" id="file-input" accept=".docx,.doc,.pdf,.txt" style="display:none">
       {% if user %}
       <div id="user-badge">
@@ -1904,11 +2038,33 @@ input { font: inherit; }
     <div id="modal-body">
       <pre id="cifra-content"></pre>
       <textarea id="cifra-edit" spellcheck="false" placeholder="Edite a cifra aqui..."></textarea>
+      <div id="meta-panel">
+        <div class="meta-field">
+          <label>Título</label>
+          <input type="text" id="meta-title" placeholder="Nome da música">
+        </div>
+        <div class="meta-field">
+          <label>Artista / Banda</label>
+          <input type="text" id="meta-artist" placeholder="ex: Padre Zezinho, Hillsong...">
+        </div>
+        <div class="meta-field">
+          <label>Tom</label>
+          <input type="text" id="meta-key" placeholder="ex: C, G, Am, F#m...">
+          <span class="meta-hint">Tom original da música (pode ser diferente do tom transposto)</span>
+        </div>
+        <div class="meta-field">
+          <label>Tags</label>
+          <input type="text" id="meta-tags" placeholder="ex: natal, quaresma, entrada">
+          <span class="meta-hint">Separadas por vírgula</span>
+        </div>
+      </div>
     </div>
     <div id="modal-footer">
       <button class="btn" id="btn-modal-back-footer" title="Voltar">&#8592; Voltar</button>
       <button class="btn btn-accent" id="btn-modal-add">+ Repertório</button>
       <span style="flex:1"></span>
+      <button class="btn" id="btn-meta-toggle" title="Editar metadados">&#9432; Metadados</button>
+      <button class="btn" id="btn-save-meta" title="Salvar metadados">&#128190; Salvar</button>
       <button class="btn" id="btn-edit-toggle" title="Editar cifra">&#9998; Editar</button>
       <button class="btn" id="btn-save-edit" title="Salvar edição">&#128190; Salvar</button>
       <button class="btn" id="btn-save-tone" style="display:none" title="Salvar cifra com o tom atual">&#9835; Salvar Tom</button>
@@ -2372,6 +2528,23 @@ document.addEventListener("click", function(e) {
 function renderSidebar() {
   var sb = document.getElementById("sidebar");
   sb.innerHTML = "";
+
+  // ── Item "Início" no topo da sidebar ──
+  var homeItem = document.createElement("div");
+  homeItem.id = "sidebar-home-item";
+  homeItem.innerHTML = '<span class="sidebar-icon">&#8962;</span><span>Início</span>';
+  homeItem.addEventListener("click", function() {
+    document.querySelectorAll(".sidebar-cat").forEach(function(el) { el.classList.remove("active"); });
+    homeItem.classList.add("active");
+    currentCategory = null;
+    searchActive = false;
+    document.getElementById("search-box").value = "";
+    hideHomeTable();
+    renderHomeTable(allSongs);
+    closeSidebar();
+  });
+  sb.appendChild(homeItem);
+
   Object.keys(library).forEach(function(section) {
     var sec = document.createElement("div");
     sec.className = "sidebar-section";
@@ -2747,14 +2920,14 @@ function selectCategory(section, cat) {
   searchActive = false;
   document.getElementById("search-box").value = "";
   hideHomeTable();
-  document.getElementById("btn-home").classList.remove("active");
+  document.getElementById("sidebar-home-item") && document.getElementById("sidebar-home-item").classList.remove("active");
   document.querySelectorAll(".sidebar-cat").forEach(function(el) {
     el.classList.toggle("active", el.dataset.section === section && el.dataset.cat === cat);
   });
   var songs = (library[section] || {})[cat] || [];
   renderSongGrid(songs);
   // fecha sidebar no mobile após selecionar categoria
-  if (window.innerWidth <= 768) {
+  if (window.innerWidth <= 1024) {
     document.getElementById("sidebar").classList.remove("open");
     document.getElementById("sidebar-overlay").classList.remove("show");
   }
@@ -2813,9 +2986,16 @@ function openModal(song) {
   document.getElementById("modal-loading").style.display = "inline";
   document.getElementById("modal-overlay").classList.add("open");
 
-  // Mostra botão editar apenas para arquivos com path ou fileId
+  // Mostra botão editar/metadados apenas para arquivos com path ou fileId
   var canEdit = !!(song.path || song.fileId);
+  var isMd = canEdit && (
+    (song.path && song.path.toLowerCase().endsWith(".md")) ||
+    (song.fileId && (!song.mimeType || song.mimeType === "text/markdown" || song.mimeType === "text/plain"))
+  );
   document.getElementById("btn-edit-toggle").style.display = canEdit ? "inline-block" : "none";
+  document.getElementById("btn-meta-toggle").style.display = isMd ? "inline-block" : "none";
+  document.getElementById("btn-save-meta").style.display = "none";
+  if (metaMode) closeMetaPanel();
 
   updateTransposeUI();
   updateModalRepBtn();
@@ -2846,9 +3026,11 @@ function openModal(song) {
           rawCifraText = "[Erro: " + data.error + "]";
         } else {
           rawCifraText = data.text;
-          // Atualiza artist/key no objeto se veio do servidor
+          // Atualiza artist/key/tags no objeto se veio do servidor
           if (data.artist !== undefined) currentModal.artist = data.artist;
-          if (data.key !== undefined) currentModal.key = data.key;
+          if (data.key    !== undefined) currentModal.key    = data.key;
+          if (data.title  !== undefined && data.title) currentModal.name = data.title;
+          if (data.tags   !== undefined) currentModal.tags   = data.tags;
         }
         applyTranspose(0);
       })
@@ -2862,6 +3044,7 @@ function openModal(song) {
 
 function closeModal() {
   exitEditMode();
+  if (metaMode) closeMetaPanel();
   document.getElementById("modal-overlay").classList.remove("open");
   currentModal = null;
 }
@@ -2888,6 +3071,117 @@ function exitEditMode() {
   document.getElementById("transpose-toolbar").style.display = "";
   // Reaplica transposição para atualizar chord-line highlights
   if (rawCifraText) applyTranspose(currentSemitone);
+}
+
+// ─── Painel de Metadados ──────────────────────────────────────────────────────
+var metaMode = false;
+
+function openMetaPanel() {
+  if (!currentModal) return;
+  // Fecha edit mode se estiver aberto
+  if (editMode) exitEditMode();
+  metaMode = true;
+  // Preenche campos com valores actuais
+  document.getElementById("meta-title").value  = currentModal.name  || "";
+  document.getElementById("meta-artist").value = currentModal.artist || "";
+  document.getElementById("meta-key").value    = currentModal.key    || "";
+  var tags = currentModal.tags;
+  document.getElementById("meta-tags").value   =
+    Array.isArray(tags) ? tags.join(", ") : (tags || "");
+
+  document.getElementById("modal-body").classList.add("meta-mode");
+  document.getElementById("meta-panel").classList.add("open");
+  document.getElementById("btn-meta-toggle").classList.add("active");
+  document.getElementById("btn-save-meta").style.display = "inline-block";
+  // Esconde botões de edição e transposição enquanto nos metadados
+  document.getElementById("btn-edit-toggle").style.display = "none";
+  document.getElementById("btn-save-tone").style.display = "none";
+  document.getElementById("transpose-toolbar").style.display = "none";
+  document.getElementById("meta-title").focus();
+}
+
+function closeMetaPanel() {
+  metaMode = false;
+  document.getElementById("modal-body").classList.remove("meta-mode");
+  document.getElementById("meta-panel").classList.remove("open");
+  document.getElementById("btn-meta-toggle").classList.remove("active");
+  document.getElementById("btn-save-meta").style.display = "none";
+  // Restaura botões
+  var canEdit = !!(currentModal && (currentModal.path || currentModal.fileId));
+  document.getElementById("btn-edit-toggle").style.display = canEdit ? "inline-block" : "none";
+  document.getElementById("transpose-toolbar").style.display = "";
+  updateTransposeUI();
+}
+
+async function saveMetadata() {
+  if (!currentModal) return;
+  var btn = document.getElementById("btn-save-meta");
+  btn.disabled = true;
+  btn.textContent = "Salvando\u2026";
+
+  var tagsRaw = document.getElementById("meta-tags").value.trim();
+  var tagsList = tagsRaw ? tagsRaw.split(",").map(function(t) { return t.trim(); }).filter(Boolean) : [];
+
+  var payload = {
+    title:  document.getElementById("meta-title").value.trim(),
+    artist: document.getElementById("meta-artist").value.trim(),
+    key:    document.getElementById("meta-key").value.trim(),
+    tags:   tagsList,
+  };
+  if (currentModal.fileId) payload.fileId = currentModal.fileId;
+  if (currentModal.path)   payload.path   = currentModal.path;
+
+  try {
+    var resp = await fetch("/api/songs/update_meta", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    var data = await resp.json();
+    if (data.error) throw new Error(data.error);
+
+    // Atualiza currentModal com os novos valores
+    if (payload.title)  { currentModal.name   = payload.title;  document.getElementById("modal-title").textContent = payload.title; }
+    if (payload.artist) currentModal.artist = payload.artist;
+    if (payload.key)    { currentModal.key    = payload.key; updateTransposeUI(); }
+    currentModal.tags = tagsList;
+
+    // Atualiza badge de metadados no cabeçalho do modal
+    var meta = [];
+    if (payload.artist) meta.push(payload.artist);
+    if (payload.key)    meta.push("Tom: " + payload.key);
+    document.getElementById("modal-meta").textContent = meta.join(" · ");
+
+    showToast("Metadados salvos!");
+    closeMetaPanel();
+    // Invalida cache para home screen mostrar dados actualizados
+    invalidate_library_cache_js();
+  } catch(e) {
+    showToast("Erro ao salvar: " + e.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "\uD83D\uDCBE Salvar";
+  }
+}
+
+function invalidate_library_cache_js() {
+  // Força reload da biblioteca na próxima navegação de categoria
+  allSongs = [];
+  library = {};
+  fetch("/api/songs").then(function(r) { return r.json(); }).then(function(songs) {
+    allSongs = songs;
+    // Atualiza o card na grid se visível
+    if (searchActive) {
+      var q = document.getElementById("search-box").value.trim();
+      if (q) doSearch(q);
+    } else if (currentCategory) {
+      // Nada a fazer — a lib será recarregada na próxima navegação
+    }
+  }).catch(function() {});
+  // Invalida o cache do servidor também
+  fetch("/api/library", { cache: "no-store" }).then(function(r) { return r.json(); }).then(function(lib) {
+    library = lib;
+  }).catch(function() {});
 }
 
 async function saveEdit() {
@@ -3482,9 +3776,33 @@ async function modalToggleFullscreen() {
 }
 
 // ─── Busca ──────────────────────────────────────────────────────────────────
+var searchMode = "name"; // "name" | "content"
+var _contentSearchTimer = null;
+
+function _setSearchMode(mode) {
+  searchMode = mode;
+  document.getElementById("btn-search-name").classList.toggle("active", mode === "name");
+  document.getElementById("btn-search-content").classList.toggle("active", mode === "content");
+  document.getElementById("search-box").placeholder =
+    mode === "name" ? "Buscar música..." : "Buscar na letra ou artista...";
+  // Re-run search with new mode if there's already a query
+  var q = document.getElementById("search-box").value.trim();
+  if (q) doSearch(q);
+}
+
+function _highlightExcerpt(excerpt, q) {
+  if (!excerpt) return "";
+  var safe = escHtml(excerpt);
+  var safeQ = escHtml(q).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  try {
+    return safe.replace(new RegExp("(" + safeQ + ")", "gi"), "<mark>$1</mark>");
+  } catch(e) { return safe; }
+}
+
 function doSearch(q) {
   if (!q) {
     searchActive = false;
+    document.getElementById("search-content-spinner").classList.remove("active");
     if (currentCategory) {
       hideHomeTable();
       var songs = (library[currentCategory.section] || {})[currentCategory.cat] || [];
@@ -3496,9 +3814,15 @@ function doSearch(q) {
     }
     return;
   }
+
+  if (searchMode === "content") {
+    doContentSearch(q);
+    return;
+  }
+
   searchActive = true;
   hideHomeTable();
-  document.getElementById("btn-home").classList.remove("active");
+  document.getElementById("sidebar-home-item") && document.getElementById("sidebar-home-item").classList.remove("active");
   var ql = q.toLowerCase();
   var results = allSongs.filter(function(s) {
     return s.name.toLowerCase().includes(ql) ||
@@ -3509,6 +3833,66 @@ function doSearch(q) {
     var grid = document.getElementById("song-grid");
     if (grid) grid.scrollIntoView({ behavior: "smooth", block: "start" });
   }, 100);
+}
+
+function doContentSearch(q) {
+  searchActive = true;
+  hideHomeTable();
+  document.getElementById("sidebar-home-item") && document.getElementById("sidebar-home-item").classList.remove("active");
+  document.getElementById("search-content-spinner").classList.add("active");
+
+  fetch("/api/search/content?q=" + encodeURIComponent(q))
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      document.getElementById("search-content-spinner").classList.remove("active");
+      if (data.error) {
+        showToast("Busca: " + data.error);
+        renderSongGrid([]);
+        return;
+      }
+      // Render results with excerpt
+      renderSongGridWithExcerpts(data, q);
+      setTimeout(function() {
+        var grid = document.getElementById("song-grid");
+        if (grid) grid.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 100);
+    })
+    .catch(function() {
+      document.getElementById("search-content-spinner").classList.remove("active");
+      showToast("Falha na busca por conteúdo.");
+      renderSongGrid([]);
+    });
+}
+
+function renderSongGridWithExcerpts(songs, q) {
+  var grid = document.getElementById("song-grid");
+  var empty = document.getElementById("empty-state");
+  grid.innerHTML = "";
+
+  if (!songs.length) {
+    grid.style.display = "none";
+    empty.style.display = "flex";
+    document.getElementById("empty-msg").textContent = "Nenhuma música encontrada na letra.";
+    return;
+  }
+
+  grid.style.display = "grid";
+  empty.style.display = "none";
+
+  songs.forEach(function(song) {
+    var enriched = _songWithViews(song);
+    var card = _makeHomeCard(enriched, "home-card");
+    // Inject excerpt below tags
+    if (song.excerpt) {
+      var exc = document.createElement("div");
+      exc.className = "song-excerpt";
+      exc.innerHTML = _highlightExcerpt(song.excerpt, q);
+      var actionsEl = card.querySelector(".home-card-actions");
+      if (actionsEl) card.insertBefore(exc, actionsEl);
+      else card.appendChild(exc);
+    }
+    grid.appendChild(card);
+  });
 }
 
 // ─── Upload / Drag & Drop de arquivo ────────────────────────────────────────
@@ -3663,11 +4047,16 @@ function init() {
   var searchTimer;
   searchBox.addEventListener("input", function() {
     clearTimeout(searchTimer);
-    searchTimer = setTimeout(function() { doSearch(searchBox.value.trim()); }, 500);
+    var delay = searchMode === "content" ? 900 : 500;
+    searchTimer = setTimeout(function() { doSearch(searchBox.value.trim()); }, delay);
   });
   searchBox.addEventListener("keydown", function(e) {
     if (e.key === "Escape") { searchBox.value = ""; doSearch(""); }
   });
+
+  // Busca: toggle Nome / Letra
+  document.getElementById("btn-search-name").addEventListener("click", function() { _setSearchMode("name"); });
+  document.getElementById("btn-search-content").addEventListener("click", function() { _setSearchMode("content"); });
 
   // Modal close
   document.getElementById("modal-close").addEventListener("click", closeModal);
@@ -3720,6 +4109,12 @@ function init() {
   });
   document.getElementById("btn-save-edit").addEventListener("click", saveEdit);
 
+  // Metadados
+  document.getElementById("btn-meta-toggle").addEventListener("click", function() {
+    if (metaMode) closeMetaPanel(); else openMetaPanel();
+  });
+  document.getElementById("btn-save-meta").addEventListener("click", saveMetadata);
+
   // Botão repertório no modal
   document.getElementById("btn-modal-add").addEventListener("click", function() {
     if (!currentModal) return;
@@ -3728,8 +4123,8 @@ function init() {
     refreshGridBtns();
   });
 
-  // Botão Home
-  document.getElementById("btn-home").addEventListener("click", function() {
+  // Botão Home (legado — a função está no sidebar-home-item)
+  document.getElementById("btn-home") && document.getElementById("btn-home").addEventListener("click", function() {
     currentCategory = null;
     searchActive = false;
     document.getElementById("search-box").value = "";
@@ -3737,7 +4132,8 @@ function init() {
     hideHomeTable();
     renderHomeTable(allSongs);
     showHomeTable();
-    document.getElementById("btn-home").classList.add("active");
+    var hi = document.getElementById("sidebar-home-item");
+    if (hi) hi.classList.add("active");
   });
 
   // Sidebar hamburguer (mobile)
@@ -3752,13 +4148,8 @@ function init() {
     if (typeof mbnSetActive === "function") mbnSetActive("mbn-home");
   });
 
-  // Painel repertório: fixo no desktop, drawer no mobile
-  function isMobile() { return window.innerWidth <= 768; }
-  document.getElementById("btn-rep-toggle").addEventListener("click", function() {
-    if (!isMobile()) return;
-    document.getElementById("rep-panel").classList.toggle("mobile-open");
-    sidebarOverlay.classList.toggle("show");
-  });
+  // Painel repertório: fixo no desktop, drawer no mobile (aberto via bottom nav)
+  function isMobile() { return window.innerWidth <= 1024; }
   // Modo Apresentação
   document.getElementById("btn-pres-prev").addEventListener("click", function() {
     if (presenterIdx > 0) { presenterIdx--; _renderPresenterSong(); }
@@ -3813,7 +4204,14 @@ function init() {
     document.getElementById("rep-panel").classList.remove("mobile-open");
     sidebarOverlay.classList.remove("show");
     // volta para home
-    document.getElementById("btn-home").click();
+    currentCategory = null; searchActive = false;
+    document.getElementById("search-box").value = "";
+    document.querySelectorAll(".sidebar-cat").forEach(function(el) { el.classList.remove("active"); });
+    var hi = document.getElementById("sidebar-home-item");
+    if (hi) hi.classList.add("active");
+    hideHomeTable();
+    renderHomeTable(allSongs);
+    showHomeTable();
   });
   document.getElementById("mbn-cats").addEventListener("click", function() {
     var sidebar = document.getElementById("sidebar");
@@ -3882,10 +4280,7 @@ function init() {
     }
   };
 
-  // Upload — botão
-  document.getElementById("btn-upload").addEventListener("click", function() {
-    document.getElementById("file-input").click();
-  });
+  // Upload — file-input (drag-and-drop ainda funciona)
   document.getElementById("file-input").addEventListener("change", function() {
     handleFileUpload(this.files[0]);
     this.value = "";
