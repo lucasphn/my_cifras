@@ -3421,8 +3421,10 @@ function clearDragOver() {
 
 function updateRepBadge() {
   var badge = document.getElementById("rep-badge");
-  badge.textContent = repertorio.length;
-  badge.classList.toggle("show", repertorio.length > 0);
+  if (badge) {
+    badge.textContent = repertorio.length;
+    badge.classList.toggle("show", repertorio.length > 0);
+  }
   document.getElementById("rep-count").textContent = repertorio.length + " música" + (repertorio.length !== 1 ? "s" : "");
 }
 
