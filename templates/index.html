@@ -1116,9 +1116,27 @@ input { font: inherit; }
 .saved-rep-item .sri-play {
   color: #5b4b8a; font-size: 0.72em; padding: 3px 6px; border-radius: 5px;
   flex-shrink: 0; opacity: 0; transition: opacity .15s, background .15s;
+  cursor: pointer;
 }
 .saved-rep-item:hover .sri-play { opacity: 1; }
 .saved-rep-item .sri-play:hover { background: rgba(91,75,138,.12); }
+
+@media (max-width: 1024px) {
+  /* No mobile o botão ▶ fica sempre visível e grande para toque fácil */
+  .saved-rep-item .sri-play {
+    opacity: 1;
+    background: var(--primary);
+    color: #fff;
+    border-radius: 50%;
+    width: 36px; height: 36px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.9em;
+    padding: 0;
+    flex-shrink: 0;
+    touch-action: manipulation;
+  }
+  .saved-rep-item .sri-play:active { background: var(--primary-hover); transform: scale(.92); }
+}
 
 /* ─── Modo Apresentação ──────────────────────────────────────────────────── */
 #presenter-overlay {
@@ -1922,10 +1940,6 @@ input { font: inherit; }
       <span class="mbn-icon">&#9836;</span>
       <span>Início</span>
     </button>
-    <button class="mbn-btn" id="mbn-cats" title="Categorias">
-      <span class="mbn-icon">&#9783;</span>
-      <span>Categorias</span>
-    </button>
     <button class="mbn-btn" id="mbn-search" title="Pesquisar">
       <span class="mbn-icon">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -1939,10 +1953,6 @@ input { font: inherit; }
       <span class="mbn-icon">&#9835;</span>
       <span>Repertório</span>
       <span class="mbn-badge" id="mbn-rep-badge"></span>
-    </button>
-    <button class="mbn-btn" id="mbn-present" title="Apresentar">
-      <span class="mbn-icon">&#9654;</span>
-      <span>Apresentar</span>
     </button>
   </div>
 </nav>
@@ -4258,21 +4268,6 @@ function init() {
     // Scroll até o topo para garantir que o campo fique visível
     window.scrollTo({ top: 0, behavior: "smooth" });
   });
-  document.getElementById("mbn-cats").addEventListener("click", function() {
-    var sidebar = document.getElementById("sidebar");
-    var repPanel = document.getElementById("rep-panel");
-    var isOpen = sidebar.classList.contains("open");
-    repPanel.classList.remove("mobile-open");
-    if (isOpen) {
-      sidebar.classList.remove("open");
-      sidebarOverlay.classList.remove("show");
-      mbnSetActive("mbn-home");
-    } else {
-      sidebar.classList.add("open");
-      sidebarOverlay.classList.add("show");
-      mbnSetActive("mbn-cats");
-    }
-  });
   document.getElementById("mbn-rep").addEventListener("click", function() {
     var repPanel = document.getElementById("rep-panel");
     var sidebar = document.getElementById("sidebar");
@@ -4304,16 +4299,6 @@ function init() {
     }
   });
 
-  document.getElementById("mbn-present").addEventListener("click", function() {
-    // Abre o primeiro repertório salvo, ou avisa se não há nenhum
-    var keys = Object.keys(savedReps);
-    if (!keys.length) { showToast("Nenhum repert\xf3rio salvo para apresentar."); return; }
-    // Se há um ativo, usa ele; senão usa o mais recente
-    var id = currentRepId || keys.sort(function(a, b) {
-      return (savedReps[b].updated_at || "") > (savedReps[a].updated_at || "") ? 1 : -1;
-    })[0];
-    openPresenter(id);
-  });
   // Sincroniza badge da bottom nav com o rep count
   var _origUpdateRepBadge = updateRepBadge;
   updateRepBadge = function() {
