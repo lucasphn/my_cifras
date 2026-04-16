@@ -5,6 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>My Cifras</title>
 <link rel="icon" type="image/svg+xml" href="/static/brand/favicon.svg">
+<link rel="apple-touch-icon" sizes="180x180" href="/static/brand/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="My Cifras">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -1469,6 +1473,7 @@ input { font: inherit; }
 }
 .mbn-btn .mbn-badge.show { display: flex; }
 
+
 @media (max-width: 1024px) {
   html, body { overflow: auto; }
   #app { height: auto; min-height: 100vh; padding-bottom: 64px; }
@@ -1590,8 +1595,28 @@ input { font: inherit; }
     display: flex; align-items: center; justify-content: center;
     flex-shrink: 0;
   }
-  /* Botão voltar no footer do modal */
-  #btn-modal-back-footer { display: flex; }
+  /* Modal header: oculta categoria, título ocupa mais espaço */
+  #modal-meta { display: none; }
+  #modal-title { font-size: 0.95em; }
+
+  /* Modal footer: remove Voltar, botões distribuídos uniformemente */
+  #btn-modal-back-footer { display: none !important; }
+  #modal-footer {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
+    gap: 6px;
+    padding: 10px 12px;
+    padding-bottom: max(10px, env(safe-area-inset-bottom));
+  }
+  #modal-footer > span[style*="flex:1"] { display: none; }
+  #modal-footer .btn {
+    padding: 9px 4px;
+    font-size: 0.75em;
+    text-align: center;
+    white-space: nowrap;
+    min-width: 0;
+  }
+  #modal-footer #modal-loading { grid-column: span 1; }
 
   #transpose-toolbar { gap: 6px; padding: 8px 12px; overflow-x: auto; flex-wrap: nowrap; }
   .tp-notes { display: none; }
@@ -1900,6 +1925,10 @@ input { font: inherit; }
     <button class="mbn-btn" id="mbn-cats" title="Categorias">
       <span class="mbn-icon">&#9783;</span>
       <span>Categorias</span>
+    </button>
+    <button class="mbn-btn" id="mbn-search" title="Pesquisar">
+      <span class="mbn-icon">&#128269;</span>
+      <span>Pesquisar</span>
     </button>
     <button class="mbn-btn" id="mbn-rep" title="Repertório">
       <span class="mbn-icon">&#9835;</span>
@@ -4212,6 +4241,17 @@ function init() {
     hideHomeTable();
     renderHomeTable(allSongs);
     showHomeTable();
+  });
+  document.getElementById("mbn-search").addEventListener("click", function() {
+    // Fecha drawers, foca no campo de busca e marca active
+    document.getElementById("sidebar").classList.remove("open");
+    document.getElementById("rep-panel").classList.remove("mobile-open");
+    sidebarOverlay.classList.remove("show");
+    mbnSetActive("mbn-search");
+    var sb = document.getElementById("search-box");
+    sb.focus();
+    // Scroll até o topo para garantir que o campo fique visível
+    window.scrollTo({ top: 0, behavior: "smooth" });
   });
   document.getElementById("mbn-cats").addEventListener("click", function() {
     var sidebar = document.getElementById("sidebar");
