@@ -752,6 +752,42 @@ input { font: inherit; }
 #btn-save-meta { display: none; background: var(--success); border-color: var(--success); color: #fff; }
 #btn-save-meta:hover { opacity: .85; }
 
+/* ─── Edit toolbar ──────────────────────────────────────────────────────── */
+#edit-toolbar {
+  display: none;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  background: var(--surface2);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+#modal-body.edit-mode #edit-toolbar { display: flex; }
+.etb-btn {
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: 7px;
+  color: var(--text);
+  font-size: 0.75em;
+  font-weight: 600;
+  padding: 4px 10px;
+  cursor: pointer;
+  transition: background .15s, border-color .15s, color .15s;
+  white-space: nowrap;
+}
+.etb-btn:hover { border-color: var(--primary); color: var(--primary); background: var(--primary-light); }
+.etb-btn.active { background: var(--primary); border-color: var(--primary); color: #fff; }
+.etb-sep { width: 1px; height: 18px; background: var(--border); flex-shrink: 0; margin: 0 2px; }
+.etb-label { font-size: 0.7em; color: var(--text-muted); font-weight: 600; margin-right: 2px; }
+
+/* Duas colunas no visualizador */
+#cifra-content.two-col {
+  column-count: 2;
+  column-gap: 2em;
+  column-rule: 1px solid var(--border);
+}
+
 /* ─── Edit mode no modal ─────────────────────────────────────────────────── */
 #cifra-edit {
   display: none;
@@ -2080,6 +2116,14 @@ input { font: inherit; }
       <button id="btn-tp-reset">&#8635; Reset</button>
     </div>
     <div id="modal-body">
+      <div id="edit-toolbar">
+        <span class="etb-label">Editar:</span>
+        <button class="etb-btn" id="etb-select-all" title="Selecionar todo o texto (Ctrl+A)">&#9776; Selecionar tudo</button>
+        <button class="etb-btn" id="etb-copy" title="Copiar texto">&#128203; Copiar</button>
+        <div class="etb-sep"></div>
+        <span class="etb-label">Vista:</span>
+        <button class="etb-btn" id="etb-two-col" title="Alternar visualização em 2 colunas">&#9638; 2 Colunas</button>
+      </div>
       <pre id="cifra-content"></pre>
       <textarea id="cifra-edit" spellcheck="false" placeholder="Edite a cifra aqui..."></textarea>
       <div id="meta-panel">
@@ -2578,6 +2622,7 @@ function renderSidebar() {
   homeItem.id = "sidebar-home-item";
   homeItem.innerHTML = '<span class="sidebar-icon">&#8962;</span><span>Início</span>';
   homeItem.addEventListener("click", function() {
+    if (!_confirmLeaveEdit("Você tem alterações não salvas na cifra.\nDeseja navegar sem salvar?")) return;
     document.querySelectorAll(".sidebar-cat").forEach(function(el) { el.classList.remove("active"); });
     homeItem.classList.add("active");
     currentCategory = null;
@@ -2960,6 +3005,7 @@ document.getElementById("sfm-overlay").addEventListener("click", function(e) {
 // ── /Song operations ─────────────────────────────────────────────────────────
 
 function selectCategory(section, cat) {
+  if (!_confirmLeaveEdit("Você tem alterações não salvas na cifra.\nDeseja navegar sem salvar?")) return;
   currentCategory = { section: section, cat: cat };
   searchActive = false;
   document.getElementById("search-box").value = "";
@@ -3087,8 +3133,15 @@ function openModal(song) {
 }
 
 function closeModal() {
+  if (!_confirmLeaveEdit()) return;
   exitEditMode();
   if (metaMode) closeMetaPanel();
+  // Reseta duas colunas ao fechar
+  if (_twoColMode) {
+    _twoColMode = false;
+    document.getElementById("cifra-content").classList.remove("two-col");
+    document.getElementById("etb-two-col").classList.remove("active");
+  }
   document.getElementById("modal-overlay").classList.remove("open");
   currentModal = null;
 }
@@ -3115,6 +3168,47 @@ function exitEditMode() {
   document.getElementById("transpose-toolbar").style.display = "";
   // Reaplica transposição para atualizar chord-line highlights
   if (rawCifraText) applyTranspose(currentSemitone);
+}
+
+// ─── Guard: confirma saída se há edição não salva ────────────────────────────
+function _hasUnsavedEdit() {
+  if (!editMode) return false;
+  var current = document.getElementById("cifra-edit").value;
+  return current !== rawCifraText;
+}
+
+function _confirmLeaveEdit(msg) {
+  if (!_hasUnsavedEdit()) return true;
+  return confirm(msg || "Você tem alterações não salvas.\nDeseja sair sem salvar?");
+}
+
+// ─── Toolbar do editor ───────────────────────────────────────────────────────
+var _twoColMode = false;
+
+function _toggleTwoCol() {
+  _twoColMode = !_twoColMode;
+  document.getElementById("cifra-content").classList.toggle("two-col", _twoColMode);
+  document.getElementById("etb-two-col").classList.toggle("active", _twoColMode);
+}
+
+function _etbSelectAll() {
+  var ta = document.getElementById("cifra-edit");
+  ta.focus();
+  ta.select();
+}
+
+async function _etbCopy() {
+  var ta = document.getElementById("cifra-edit");
+  var text = ta.value;
+  try {
+    await navigator.clipboard.writeText(text);
+    showToast("Texto copiado!");
+  } catch(e) {
+    // Fallback para dispositivos sem clipboard API
+    ta.select();
+    document.execCommand("copy");
+    showToast("Texto copiado!");
+  }
 }
 
 // ─── Painel de Metadados ──────────────────────────────────────────────────────
@@ -4129,7 +4223,14 @@ function init() {
       e.preventDefault();
       return;
     }
-    if (e.key === "Escape") closeModal();
+    if (e.key === "Escape") {
+      // Se está editando e Escape foi pressionado fora do textarea, cancela edição com confirmação
+      if (editMode && document.activeElement !== document.getElementById("cifra-edit")) {
+        if (_confirmLeaveEdit()) exitEditMode();
+      } else if (!editMode) {
+        closeModal();
+      }
+    }
     // Atalhos no modal de cifra
     if (document.getElementById("modal-overlay").classList.contains("open")) {
       var tag = (e.target || {}).tagName || "";
@@ -4151,9 +4252,18 @@ function init() {
 
   // Editar / Salvar edição
   document.getElementById("btn-edit-toggle").addEventListener("click", function() {
-    if (editMode) exitEditMode(); else enterEditMode();
+    if (editMode) {
+      if (_confirmLeaveEdit("Cancelar edição? As alterações serão perdidas.")) exitEditMode();
+    } else {
+      enterEditMode();
+    }
   });
   document.getElementById("btn-save-edit").addEventListener("click", saveEdit);
+
+  // Toolbar do editor
+  document.getElementById("etb-select-all").addEventListener("click", _etbSelectAll);
+  document.getElementById("etb-copy").addEventListener("click", _etbCopy);
+  document.getElementById("etb-two-col").addEventListener("click", _toggleTwoCol);
 
   // Metadados
   document.getElementById("btn-meta-toggle").addEventListener("click", function() {
