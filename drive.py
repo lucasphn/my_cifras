@@ -76,8 +76,9 @@ def export_gdoc_as_text(service, file_id):
 
 # ─── JSON genérico no Drive ──────────────────────────────────────────────────
 
-REPERTORIOS_FILENAME = "_repertorios.json"
-VIEWS_FILENAME       = "_views.json"
+REPERTORIOS_FILENAME  = "_repertorios.json"
+VIEWS_FILENAME        = "_views.json"
+PREFERENCES_FILENAME  = "_preferences.json"
 
 def _get_or_create_json_file(service, name, parent_id):
     """Retorna file_id de um arquivo JSON, criando-o vazio se não existir."""
@@ -137,6 +138,30 @@ def save_views(service, file_id, data):
     import json
     from googleapiclient.http import MediaIoBaseUpload
     content = json.dumps(data, ensure_ascii=False).encode("utf-8")
+    media = MediaIoBaseUpload(io.BytesIO(content), mimetype="application/json")
+    service.files().update(fileId=file_id, media_body=media).execute()
+
+
+# ─── Preferences (tons salvos por música) ───────────────────────────────────
+
+def load_preferences(service, root_folder_id):
+    """Carrega preferências de tons do Drive. Retorna (data, file_id).
+    Estrutura: { "<fileId>": { "my_key": "G", "original_key": "A", "alt_key": null } }
+    """
+    import json
+    file_id = _get_or_create_json_file(service, PREFERENCES_FILENAME, root_folder_id)
+    try:
+        content = download_bytes(service, file_id)
+        return json.loads(content.decode("utf-8") or "{}"), file_id
+    except Exception:
+        return {}, file_id
+
+
+def save_preferences(service, file_id, data):
+    """Salva preferências de tons no Drive."""
+    import json
+    from googleapiclient.http import MediaIoBaseUpload
+    content = json.dumps(data, ensure_ascii=False, indent=2).encode("utf-8")
     media = MediaIoBaseUpload(io.BytesIO(content), mimetype="application/json")
     service.files().update(fileId=file_id, media_body=media).execute()
 

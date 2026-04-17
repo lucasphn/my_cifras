@@ -398,6 +398,110 @@ def _song_key(data):
 
 
 # ---------------------------------------------------------------------------
+# Preferências de tons (persistido em _preferences.json no Drive)
+# ---------------------------------------------------------------------------
+
+_prefs_lock = threading.Lock()
+_prefs_cache = {"data": None, "file_id": None}
+
+VALID_SLOTS = {"my_key", "original_key", "alt_key"}
+
+
+def _load_prefs():
+    if _prefs_cache["data"] is not None:
+        return _prefs_cache["data"]
+    if _use_drive():
+        try:
+            data, file_id = _drive.load_preferences(get_service(), CIFRAS_FOLDER_ID)
+            _prefs_cache["data"] = data
+            _prefs_cache["file_id"] = file_id
+            return data
+        except Exception:
+            pass
+    return {}
+
+
+def _save_prefs(data):
+    with _prefs_lock:
+        if _use_drive():
+            svc = get_service()
+            if _prefs_cache["file_id"] is None:
+                _, file_id = _drive.load_preferences(svc, CIFRAS_FOLDER_ID)
+                _prefs_cache["file_id"] = file_id
+            _drive.save_preferences(svc, _prefs_cache["file_id"], data)
+        _prefs_cache["data"] = data
+
+
+@app.route("/api/preferences")
+@login_required
+def api_get_preferences():
+    """Retorna todas as preferências de tons ou as de uma música específica."""
+    file_id = request.args.get("fileId", "")
+    try:
+        prefs = _load_prefs()
+        if file_id:
+            return jsonify(prefs.get(file_id, {}))
+        return jsonify(prefs)
+    except Exception as e:
+        if _is_auth_error(e):
+            return _auth_error_response()
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/preferences", methods=["POST"])
+@login_required
+def api_save_preference():
+    """Salva/atualiza um tom em um slot. Body: { fileId, slot, key }"""
+    data = request.get_json() or {}
+    file_id = data.get("fileId", "").strip()
+    slot = data.get("slot", "").strip()
+    key = data.get("key", "").strip()
+    if not file_id or slot not in VALID_SLOTS or not key:
+        return jsonify({"error": "fileId, slot e key são obrigatórios"}), 400
+    try:
+        prefs = dict(_load_prefs())
+        song_prefs = dict(prefs.get(file_id, {}))
+        song_prefs[slot] = key
+        prefs[file_id] = song_prefs
+        _save_prefs(prefs)
+        return jsonify(song_prefs)
+    except Exception as e:
+        if _is_auth_error(e):
+            return _auth_error_response()
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/preferences", methods=["DELETE"])
+@login_required
+def api_delete_preference():
+    """Remove um slot de tom. Body: { fileId, slot } ou { fileId } para remover tudo."""
+    data = request.get_json() or {}
+    file_id = data.get("fileId", "").strip()
+    slot = data.get("slot", "").strip()
+    if not file_id:
+        return jsonify({"error": "fileId é obrigatório"}), 400
+    try:
+        prefs = dict(_load_prefs())
+        if file_id not in prefs:
+            return jsonify({})
+        song_prefs = dict(prefs[file_id])
+        if slot and slot in VALID_SLOTS:
+            song_prefs.pop(slot, None)
+        else:
+            song_prefs = {}
+        if song_prefs:
+            prefs[file_id] = song_prefs
+        else:
+            prefs.pop(file_id, None)
+        _save_prefs(prefs)
+        return jsonify(song_prefs)
+    except Exception as e:
+        if _is_auth_error(e):
+            return _auth_error_response()
+        return jsonify({"error": str(e)}), 500
+
+
+# ---------------------------------------------------------------------------
 # Cache de biblioteca (evita re-scan a cada request)
 # ---------------------------------------------------------------------------
 

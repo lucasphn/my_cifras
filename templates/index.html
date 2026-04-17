@@ -1355,6 +1355,52 @@ input { font: inherit; }
 #btn-save-tone { color: var(--success); border-color: var(--success); }
 #btn-save-tone:hover { background: var(--success); border-color: var(--success); color: #fff; }
 
+/* ─── Meus Tons ─────────────────────────────────────────────────────────── */
+#my-tones-bar {
+  padding: 8px 18px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  flex-shrink: 0;
+  background: var(--surface2);
+}
+.mt-label { font-size: .75em; color: var(--text-muted); white-space: nowrap; flex-shrink: 0; }
+.mt-slot {
+  display: inline-flex; align-items: center; gap: 4px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  padding: 3px 10px;
+  font-size: .75em;
+  cursor: pointer;
+  transition: all .15s;
+  white-space: nowrap;
+  background: var(--surface);
+  color: var(--text-muted);
+  user-select: none;
+}
+.mt-slot:hover { border-color: var(--accent); color: var(--accent); }
+.mt-slot.saved {
+  border-color: rgba(212,175,55,.5);
+  color: var(--accent);
+  background: rgba(212,175,55,.08);
+}
+.mt-slot.saved:hover { background: rgba(212,175,55,.16); }
+.mt-key-badge {
+  font-weight: 800;
+  font-size: 1em;
+  color: var(--accent);
+}
+.mt-slot .mt-del {
+  margin-left: 2px;
+  font-size: .85em;
+  opacity: .55;
+  line-height: 1;
+  padding: 0 1px;
+}
+.mt-slot .mt-del:hover { opacity: 1; color: #f87171; }
+
 /* ─── Modal: zoom e tela cheia ───────────────────────────────────────────── */
 #modal-view-controls { display: flex; align-items: center; gap: 3px; flex-shrink: 0; }
 .modal-vctrl {
@@ -2617,6 +2663,12 @@ input { font: inherit; }
       <div class="tp-notes" id="tp-note-buttons"></div>
       <button id="btn-tp-reset">&#8635; Reset</button>
     </div>
+    <div id="my-tones-bar">
+      <span class="mt-label">Meus Tons:</span>
+      <span class="mt-slot" id="mt-my-key"    data-slot="my_key">+ Meu Tom</span>
+      <span class="mt-slot" id="mt-original"  data-slot="original_key">+ Tom Inicial</span>
+      <span class="mt-slot" id="mt-alt"       data-slot="alt_key">+ Alternativo</span>
+    </div>
     <div id="modal-body">
       <div id="edit-toolbar">
         <span class="etb-label">Editar:</span>
@@ -3753,6 +3805,7 @@ function openModal(song) {
 
   updateTransposeUI();
   updateModalRepBtn();
+  loadMyTones(song.fileId || song.path || null);
 
   // Track view
   if (song.path || song.fileId) {
@@ -4465,6 +4518,116 @@ function updateTransposeUI() {
     btn.classList.toggle("active", btn.dataset.note === currentNote);
   });
 }
+
+// ─── Meus Tons ───────────────────────────────────────────────────────────────
+
+var _myTones = {};  // cache local: { <fileId>: { my_key, original_key, alt_key } }
+
+var MT_LABELS = { my_key: "Meu Tom", original_key: "Tom Inicial", alt_key: "Alternativo" };
+
+function _getCurrentKey() {
+  var active = document.querySelector("#tp-note-buttons button.active");
+  return active ? active.dataset.note : null;
+}
+
+function renderMyTones(songId) {
+  var prefs = _myTones[songId] || {};
+  ["my_key", "original_key", "alt_key"].forEach(function(slot) {
+    var el = document.getElementById(
+      slot === "my_key" ? "mt-my-key" : slot === "original_key" ? "mt-original" : "mt-alt"
+    );
+    if (!el) return;
+    var key = prefs[slot];
+    if (key) {
+      el.className = "mt-slot saved";
+      el.innerHTML =
+        escHtml(MT_LABELS[slot]) + ": " +
+        '<span class="mt-key-badge">' + escHtml(key) + "</span>" +
+        ' <span class="mt-del" data-slot="' + slot + '" title="Remover">&#10005;</span>';
+    } else {
+      el.className = "mt-slot";
+      el.innerHTML = "+ " + escHtml(MT_LABELS[slot]);
+    }
+  });
+}
+
+function loadMyTones(songId) {
+  if (!songId) { renderMyTones(null); return; }
+  if (_myTones[songId] !== undefined) { renderMyTones(songId); return; }
+  fetch("/api/preferences?fileId=" + encodeURIComponent(songId))
+    .then(function(r) { return r.ok ? r.json() : {}; })
+    .then(function(data) {
+      _myTones[songId] = data || {};
+      renderMyTones(songId);
+    }).catch(function() { renderMyTones(songId); });
+}
+
+function saveMyTone(songId, slot) {
+  var key = _getCurrentKey();
+  if (!key) { showToast("Toque um tom primeiro para salvar."); return; }
+  fetch("/api/preferences", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ fileId: songId, slot: slot, key: key })
+  }).then(function(r) { return r.ok ? r.json() : null; })
+    .then(function(data) {
+      if (!data) return;
+      _myTones[songId] = data;
+      renderMyTones(songId);
+      showToast(MT_LABELS[slot] + " salvo: " + key);
+    }).catch(function() { showToast("Erro ao salvar tom."); });
+}
+
+function deleteMyTone(songId, slot) {
+  fetch("/api/preferences", {
+    method: "DELETE",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ fileId: songId, slot: slot })
+  }).then(function(r) { return r.ok ? r.json() : null; })
+    .then(function(data) {
+      _myTones[songId] = data || {};
+      renderMyTones(songId);
+      showToast(MT_LABELS[slot] + " removido.");
+    }).catch(function() { showToast("Erro ao remover tom."); });
+}
+
+function applyMyTone(slot) {
+  var songId = currentModal && (currentModal.fileId || currentModal.path);
+  if (!songId) return;
+  var prefs = _myTones[songId] || {};
+  var key = prefs[slot];
+  if (!key) {
+    // Nenhum tom salvo: salva o atual
+    saveMyTone(songId, slot);
+    return;
+  }
+  // Tom salvo: transpõe para ele
+  var baseNote = detectBaseNote(rawCifraText);
+  if (!baseNote) { showToast("Nenhum acorde detectado."); return; }
+  var baseIdx = NOTES.indexOf(normalizeNote(baseNote));
+  var targetIdx = NOTES.indexOf(key);
+  if (targetIdx === -1) { showToast("Tom não reconhecido: " + key); return; }
+  var diff = ((targetIdx - baseIdx) + 12) % 12;
+  applyTranspose(diff);
+}
+
+// Delegação de eventos na barra de Meus Tons
+document.getElementById("my-tones-bar").addEventListener("click", function(e) {
+  var songId = currentModal && (currentModal.fileId || currentModal.path);
+  if (!songId) return;
+
+  // Clicou no × de deletar
+  var delBtn = e.target.closest(".mt-del");
+  if (delBtn) {
+    e.stopPropagation();
+    deleteMyTone(songId, delBtn.dataset.slot);
+    return;
+  }
+
+  // Clicou no chip do slot
+  var slot = e.target.closest(".mt-slot");
+  if (slot) applyMyTone(slot.dataset.slot);
+});
 
 function buildNoteButtons() {
   var container = document.getElementById("tp-note-buttons");
