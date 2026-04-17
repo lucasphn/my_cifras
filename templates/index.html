@@ -4526,8 +4526,17 @@ var _myTones = {};  // cache local: { <fileId>: { my_key, original_key, alt_key 
 var MT_LABELS = { my_key: "Meu Tom", original_key: "Tom Inicial", alt_key: "Alternativo" };
 
 function _getCurrentKey() {
+  // 1) Botão de nota ativo (já transposto)
   var active = document.querySelector("#tp-note-buttons button.active");
-  return active ? active.dataset.note : null;
+  if (active) return active.dataset.note;
+  // 2) Tom nos metadados da música atual
+  if (currentModal && currentModal.key) {
+    var n = normalizeNote(currentModal.key);
+    return n || currentModal.key;
+  }
+  // 3) Detecta da cifra
+  if (rawCifraText) return detectBaseNote(rawCifraText);
+  return null;
 }
 
 function renderMyTones(songId) {
@@ -5874,9 +5883,10 @@ function previewImportText() {
 }
 
 async function saveImport() {
-  var title = document.getElementById("import-title").value.trim();
-  var section = document.getElementById("import-section").value;
-  if (!title) { document.getElementById("import-error").textContent = "Informe o título."; return; }
+  var title    = document.getElementById("import-title").value.trim();
+  var section  = document.getElementById("import-section").value;
+  var category = document.getElementById("import-category").value || "_raiz";
+  if (!title)   { document.getElementById("import-error").textContent = "Informe o título."; return; }
   if (!section) { document.getElementById("import-error").textContent = "Selecione a seção."; return; }
 
   setImportLoading(true);
@@ -5885,28 +5895,29 @@ async function saveImport() {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        title: title,
-        artist: document.getElementById("import-artist").value.trim(),
-        key: document.getElementById("import-key").value.trim(),
-        section: section,
-        category: document.getElementById("import-category").value || "_raiz",
-        text: importCifraText
+        title:    title,
+        artist:   document.getElementById("import-artist").value.trim(),
+        key:      document.getElementById("import-key").value.trim(),
+        section:  section,
+        category: category,
+        text:     importCifraText
       })
     });
     var data = await resp.json();
     if (data.error) throw new Error(data.error);
-    showToast(title + " salvo com sucesso!");
+
     closeImportModal();
-    // Recarrega biblioteca para aparecer na sidebar
-    importSections = {};
-    fetch("/api/library").then(function(r){ return r.json(); }).then(function(d){
-      library = d;
-      allSongs = [];
-      Object.keys(library).forEach(function(sec) {
-        Object.keys(library[sec]).forEach(function(cat) { allSongs = allSongs.concat(library[sec][cat]); });
-      });
-      renderSidebar();
-    });
+
+    // Recarrega biblioteca e navega para a categoria onde a música foi salva
+    await reloadLibrary();
+    renderHomeTable(allSongs);
+    showHomeTable();
+
+    // Seleciona a categoria na sidebar para o usuário ver a música
+    var catKey = category === "_raiz" ? "_raiz" : category;
+    selectCategory(section, catKey);
+
+    showToast("\"" + title + "\" salvo com sucesso!", 3500);
   } catch(e) {
     document.getElementById("import-error").textContent = e.message;
   } finally {
