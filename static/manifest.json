@@ -1,8 +1,9 @@
 {
   "name": "My Cifras",
   "short_name": "My Cifras",
-  "description": "Acervo de cifras para grupos musicais litúrgicos e gospel",
+  "description": "Acervo pessoal de cifras para músicos litúrgicos e gospel",
   "start_url": "/app",
+  "scope": "/",
   "display": "standalone",
   "orientation": "any",
   "background_color": "#0f0e17",
