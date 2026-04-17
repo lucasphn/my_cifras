@@ -37,6 +37,7 @@ SCOPES = [
     "https://www.googleapis.com/auth/userinfo.email",
     "https://www.googleapis.com/auth/userinfo.profile",
     "https://www.googleapis.com/auth/drive",
+    "https://www.googleapis.com/auth/calendar",
 ]
 
 
@@ -95,8 +96,8 @@ def get_credentials():
     )
 
 
-def get_service():
-    """Retorna Google Drive service autenticado com o usuário da sessão atual."""
+def _get_creds_refreshed():
+    """Retorna credenciais válidas, atualizando o token se necessário."""
     creds = get_credentials()
     if creds and creds.expired and creds.refresh_token:
         try:
@@ -106,7 +107,17 @@ def get_service():
             session.clear()
             from flask import abort
             abort(401)
-    return build("drive", "v3", credentials=creds, cache_discovery=False)
+    return creds
+
+
+def get_service():
+    """Retorna Google Drive service autenticado com o usuário da sessão atual."""
+    return build("drive", "v3", credentials=_get_creds_refreshed(), cache_discovery=False)
+
+
+def get_calendar_service():
+    """Retorna Google Calendar service autenticado com o usuário da sessão atual."""
+    return build("calendar", "v3", credentials=_get_creds_refreshed(), cache_discovery=False)
 
 
 def current_user():

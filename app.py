@@ -339,23 +339,59 @@ def api_reps_delete(rep_id):
 # Views tracking (persistido em views.json com lock para concorrência)
 # ---------------------------------------------------------------------------
 
-VIEWS_FILE = Path(__file__).parent / "views.json"
-_views_lock = threading.Lock()   # protege contra threads simultâneas no mesmo processo
+_views_lock = threading.Lock()   # protege contra escrita simultânea
+_views_cache = {"data": None, "file_id": None}  # cache em memória para evitar leitura a cada request
 
 def _load_views():
-    """Leitura simples, sem lock (usada apenas para popular a listagem)."""
+    """Carrega views do Drive (com cache em memória). Thread-safe para leitura."""
+    if _views_cache["data"] is not None:
+        return _views_cache["data"]
+    if _use_drive():
+        try:
+            import drive as _drive
+            data, file_id = _drive.load_views(get_service(), CIFRAS_FOLDER_ID)
+            _views_cache["data"] = data
+            _views_cache["file_id"] = file_id
+            return data
+        except Exception:
+            return {}
+    # fallback local (modo dev sem Drive)
     try:
-        return json.loads(VIEWS_FILE.read_text(encoding="utf-8"))
+        p = Path(__file__).parent / "views.json"
+        return json.loads(p.read_text(encoding="utf-8"))
     except Exception:
         return {}
 
 def _increment_view(key: str) -> int:
-    """Incrementa atomicamente o contador de uma música. Retorna o novo valor."""
+    """Incrementa o contador de uma música e persiste no Drive. Retorna o novo valor."""
     with _views_lock:
-        views = _load_views()
-        views[key] = views.get(key, 0) + 1
-        VIEWS_FILE.write_text(json.dumps(views, ensure_ascii=False), encoding="utf-8")
-        return views[key]
+        if _use_drive():
+            try:
+                import drive as _drive
+                svc = get_service()
+                # Garante que temos o file_id
+                if _views_cache["file_id"] is None:
+                    data, file_id = _drive.load_views(svc, CIFRAS_FOLDER_ID)
+                    _views_cache["data"] = data
+                    _views_cache["file_id"] = file_id
+                views = _views_cache["data"] if _views_cache["data"] is not None else {}
+                views[key] = views.get(key, 0) + 1
+                _views_cache["data"] = views
+                _drive.save_views(svc, _views_cache["file_id"], views)
+                return views[key]
+            except Exception as e:
+                app.logger.error("Erro ao salvar view no Drive: %s", e)
+                return 0
+        else:
+            # fallback local
+            p = Path(__file__).parent / "views.json"
+            try:
+                views = json.loads(p.read_text(encoding="utf-8"))
+            except Exception:
+                views = {}
+            views[key] = views.get(key, 0) + 1
+            p.write_text(json.dumps(views, ensure_ascii=False), encoding="utf-8")
+            return views[key]
 
 def _song_key(data):
     return data.get("fileId") or data.get("path", "")
@@ -1455,6 +1491,146 @@ def api_liturgia():
 
     _liturgia_cache[cache_key] = result
     return jsonify(result)
+
+
+# ---------------------------------------------------------------------------
+# Google Calendar
+# ---------------------------------------------------------------------------
+
+CALENDAR_ID = os.environ.get("GOOGLE_CALENDAR_ID", "primary")
+
+# Palavras-chave para filtrar eventos do calendário (case-insensitive, sem acento)
+def _calendar_keywords():
+    raw = os.environ.get("CALENDAR_KEYWORDS", "").strip()
+    if not raw:
+        return []
+    import unicodedata
+    def _norm(s):
+        return unicodedata.normalize("NFD", s).encode("ascii", "ignore").decode().lower()
+    return [_norm(k.strip()) for k in raw.split(",") if k.strip()]
+
+def _event_matches_keywords(title, keywords):
+    """Retorna True se o título contém ao menos uma palavra-chave (ou se não há filtro)."""
+    if not keywords:
+        return True
+    import unicodedata
+    def _norm(s):
+        return unicodedata.normalize("NFD", s).encode("ascii", "ignore").decode().lower()
+    t = _norm(title)
+    return any(kw in t for kw in keywords)
+
+def _format_event(item):
+    start = item.get("start", {})
+    end   = item.get("end", {})
+    all_day = "dateTime" not in start
+    return {
+        "id":          item.get("id", ""),
+        "title":       item.get("summary", "(sem título)"),
+        "description": item.get("description", ""),
+        "location":    item.get("location", ""),
+        "start":       start.get("dateTime") or start.get("date") or "",
+        "end":         end.get("dateTime")   or end.get("date")   or "",
+        "allDay":      all_day,
+        "htmlLink":    item.get("htmlLink", ""),
+    }
+
+@app.route("/api/calendar")
+@login_required
+def api_calendar():
+    from datetime import datetime, timezone, timedelta
+    try:
+        from auth import get_calendar_service
+        svc = get_calendar_service()
+
+        # Aceita range customizado (FullCalendar envia start/end ao buscar eventos)
+        start_param = request.args.get("start")
+        end_param   = request.args.get("end")
+        if start_param and end_param:
+            time_min = start_param if start_param.endswith("Z") else start_param + "T00:00:00Z"
+            time_max = end_param   if end_param.endswith("Z")   else end_param   + "T00:00:00Z"
+        else:
+            dt_now = datetime.now(timezone.utc)
+            time_min = dt_now.isoformat()
+            time_max = (dt_now + timedelta(days=30)).isoformat()
+
+        result = svc.events().list(
+            calendarId=CALENDAR_ID,
+            timeMin=time_min,
+            timeMax=time_max,
+            maxResults=250,
+            singleEvents=True,
+            orderBy="startTime",
+        ).execute()
+
+        keywords = _calendar_keywords()
+        events = [
+            _format_event(item) for item in result.get("items", [])
+            if _event_matches_keywords(item.get("summary", ""), keywords)
+        ]
+        return jsonify({"events": events})
+
+    except Exception as e:
+        app.logger.error("Erro ao carregar calendário: %s", e)
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/calendar/events", methods=["POST"])
+@login_required
+def api_calendar_create():
+    from auth import get_calendar_service
+    data = request.get_json(force=True)
+    try:
+        svc = get_calendar_service()
+        body = {"summary": data.get("title", "").strip()}
+        if data.get("description"): body["description"] = data["description"]
+        if data.get("location"):    body["location"]    = data["location"]
+        if data.get("allDay"):
+            body["start"] = {"date": data["start"][:10]}
+            body["end"]   = {"date": data["end"][:10]}
+        else:
+            body["start"] = {"dateTime": data["start"], "timeZone": data.get("timeZone", "America/Sao_Paulo")}
+            body["end"]   = {"dateTime": data["end"],   "timeZone": data.get("timeZone", "America/Sao_Paulo")}
+        event = svc.events().insert(calendarId=CALENDAR_ID, body=body).execute()
+        return jsonify(_format_event(event))
+    except Exception as e:
+        app.logger.error("Erro ao criar evento: %s", e)
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/calendar/events/<event_id>", methods=["PUT"])
+@login_required
+def api_calendar_update(event_id):
+    from auth import get_calendar_service
+    data = request.get_json(force=True)
+    try:
+        svc = get_calendar_service()
+        body = {"summary": data.get("title", "").strip()}
+        if data.get("description"): body["description"] = data["description"]
+        if data.get("location"):    body["location"]    = data["location"]
+        if data.get("allDay"):
+            body["start"] = {"date": data["start"][:10]}
+            body["end"]   = {"date": data["end"][:10]}
+        else:
+            body["start"] = {"dateTime": data["start"], "timeZone": data.get("timeZone", "America/Sao_Paulo")}
+            body["end"]   = {"dateTime": data["end"],   "timeZone": data.get("timeZone", "America/Sao_Paulo")}
+        event = svc.events().update(calendarId=CALENDAR_ID, eventId=event_id, body=body).execute()
+        return jsonify(_format_event(event))
+    except Exception as e:
+        app.logger.error("Erro ao atualizar evento: %s", e)
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/calendar/events/<event_id>", methods=["DELETE"])
+@login_required
+def api_calendar_delete(event_id):
+    from auth import get_calendar_service
+    try:
+        svc = get_calendar_service()
+        svc.events().delete(calendarId=CALENDAR_ID, eventId=event_id).execute()
+        return jsonify({"ok": True})
+    except Exception as e:
+        app.logger.error("Erro ao excluir evento: %s", e)
+        return jsonify({"error": str(e)}), 500
 
 
 # ---------------------------------------------------------------------------

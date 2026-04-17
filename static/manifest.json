@@ -1,0 +1,25 @@
+{
+  "name": "My Cifras",
+  "short_name": "My Cifras",
+  "description": "Acervo de cifras para grupos musicais litúrgicos e gospel",
+  "start_url": "/app",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#0f0e17",
+  "theme_color": "#5b4b8a",
+  "lang": "pt-BR",
+  "icons": [
+    {
+      "src": "/static/brand/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/static/brand/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

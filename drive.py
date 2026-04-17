@@ -74,9 +74,10 @@ def export_gdoc_as_text(service, file_id):
     return content.decode("utf-8", errors="replace") if isinstance(content, bytes) else content
 
 
-# ─── Repertórios (JSON no Drive) ─────────────────────────────────────────────
+# ─── JSON genérico no Drive ──────────────────────────────────────────────────
 
 REPERTORIOS_FILENAME = "_repertorios.json"
+VIEWS_FILENAME       = "_views.json"
 
 def _get_or_create_json_file(service, name, parent_id):
     """Retorna file_id de um arquivo JSON, criando-o vazio se não existir."""
@@ -114,6 +115,28 @@ def save_repertorios(service, file_id, data):
     import json
     from googleapiclient.http import MediaIoBaseUpload
     content = json.dumps(data, ensure_ascii=False, indent=2).encode("utf-8")
+    media = MediaIoBaseUpload(io.BytesIO(content), mimetype="application/json")
+    service.files().update(fileId=file_id, media_body=media).execute()
+
+
+# ─── Views (JSON no Drive) ───────────────────────────────────────────────────
+
+def load_views(service, root_folder_id):
+    """Carrega o dict de views do Drive. Retorna (data, file_id)."""
+    import json
+    file_id = _get_or_create_json_file(service, VIEWS_FILENAME, root_folder_id)
+    try:
+        content = download_bytes(service, file_id)
+        return json.loads(content.decode("utf-8") or "{}"), file_id
+    except Exception:
+        return {}, file_id
+
+
+def save_views(service, file_id, data):
+    """Salva o dict de views no Drive."""
+    import json
+    from googleapiclient.http import MediaIoBaseUpload
+    content = json.dumps(data, ensure_ascii=False).encode("utf-8")
     media = MediaIoBaseUpload(io.BytesIO(content), mimetype="application/json")
     service.files().update(fileId=file_id, media_body=media).execute()
 
