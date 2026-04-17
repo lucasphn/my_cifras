@@ -926,11 +926,28 @@ input { font: inherit; }
   display: none;
   flex-direction: column;
   gap: 14px;
-  padding: 20px 22px;
+  padding: 16px 22px 20px;
   overflow-y: auto;
   flex: 1;
 }
 #meta-panel.open { display: flex; }
+#meta-panel-header {
+  display: flex; align-items: center; gap: 10px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 2px;
+}
+#btn-meta-back {
+  display: inline-flex; align-items: center; gap: 5px;
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 4px 11px;
+  font-size: .8rem; color: var(--text-muted);
+  cursor: pointer; transition: all .15s;
+}
+#btn-meta-back:hover { border-color: var(--primary); color: var(--primary); background: var(--primary-light); }
+#meta-panel-title { font-size: .82rem; font-weight: 600; color: var(--text-muted); }
 #modal-body.meta-mode #cifra-content { display: none; }
 #modal-body.meta-mode #cifra-edit { display: none; }
 .meta-field {
@@ -2678,6 +2695,10 @@ input { font: inherit; }
       <pre id="cifra-content"></pre>
       <textarea id="cifra-edit" spellcheck="false" placeholder="Edite a cifra aqui..."></textarea>
       <div id="meta-panel">
+        <div id="meta-panel-header">
+          <button id="btn-meta-back">&#8592; Voltar à cifra</button>
+          <span id="meta-panel-title">Metadados</span>
+        </div>
         <div class="meta-field">
           <label>Título</label>
           <input type="text" id="meta-title" placeholder="Nome da música">
@@ -4526,15 +4547,15 @@ var _myTones = {};  // cache local: { <fileId>: { my_key, original_key, alt_key 
 var MT_LABELS = { my_key: "Meu Tom", original_key: "Tom Inicial", alt_key: "Alternativo" };
 
 function _getCurrentKey() {
-  // 1) Botão de nota ativo (já transposto)
+  // 1) Botão de nota ativo (transposição já aplicada — fonte mais precisa)
   var active = document.querySelector("#tp-note-buttons button.active");
   if (active) return active.dataset.note;
-  // 2) Tom nos metadados da música atual
+  // 2) Extrai nota raiz do tom nos metadados: "Am"→"A", "F#m7"→"F#", "Bb"→"A#"
   if (currentModal && currentModal.key) {
-    var n = normalizeNote(currentModal.key);
-    return n || currentModal.key;
+    var m = currentModal.key.trim().match(/^([A-G][b#]?)/);
+    if (m) return normalizeNote(m[1]) || m[1];
   }
-  // 3) Detecta da cifra
+  // 3) Detecta primeiro acorde da cifra
   if (rawCifraText) return detectBaseNote(rawCifraText);
   return null;
 }
@@ -4610,11 +4631,13 @@ function applyMyTone(slot) {
     saveMyTone(songId, slot);
     return;
   }
-  // Tom salvo: transpõe para ele
+  // Tom salvo: transpõe para ele. Extrai nota raiz ("Am"→"A", "F#m"→"F#")
   var baseNote = detectBaseNote(rawCifraText);
   if (!baseNote) { showToast("Nenhum acorde detectado."); return; }
   var baseIdx = NOTES.indexOf(normalizeNote(baseNote));
-  var targetIdx = NOTES.indexOf(key);
+  var km = key.match(/^([A-G][b#]?)/);
+  var keyRoot = km ? (normalizeNote(km[1]) || km[1]) : key;
+  var targetIdx = NOTES.indexOf(keyRoot);
   if (targetIdx === -1) { showToast("Tom não reconhecido: " + key); return; }
   var diff = ((targetIdx - baseIdx) + 12) % 12;
   applyTranspose(diff);
@@ -5563,6 +5586,7 @@ function init() {
   document.getElementById("btn-meta-toggle").addEventListener("click", function() {
     if (metaMode) closeMetaPanel(); else openMetaPanel();
   });
+  document.getElementById("btn-meta-back").addEventListener("click", closeMetaPanel);
   document.getElementById("btn-save-meta").addEventListener("click", saveMetadata);
 
   // Botão repertório no modal
@@ -5907,16 +5931,18 @@ async function saveImport() {
     if (data.error) throw new Error(data.error);
 
     closeImportModal();
+    showToast("\"" + title + "\" salvo! Atualizando biblioteca...", 2000);
 
-    // Recarrega biblioteca e navega para a categoria onde a música foi salva
+    // Drive tem consistência eventual: aguarda ~1.2s antes de recarregar
+    // para garantir que o arquivo apareça na listagem da API.
+    await new Promise(function(r) { setTimeout(r, 1200); });
     await reloadLibrary();
     renderHomeTable(allSongs);
     showHomeTable();
 
-    // Seleciona a categoria na sidebar para o usuário ver a música
+    // Navega para a categoria onde a música foi salva
     var catKey = category === "_raiz" ? "_raiz" : category;
     selectCategory(section, catKey);
-
     showToast("\"" + title + "\" salvo com sucesso!", 3500);
   } catch(e) {
     document.getElementById("import-error").textContent = e.message;
