@@ -6,11 +6,11 @@ Contexto e instruções para o Claude Code trabalhar neste projeto.
 
 ## O que é este projeto
 
-**My Cifras** é uma aplicação web para grupos de música litúrgica e gospel gerenciarem um acervo centralizado de cifras e montarem repertórios.
+**My Cifras** é uma aplicação web para o **músico individual** gerenciar seu acervo pessoal de cifras, transpor tons, criar repertórios e acompanhar a liturgia diária e sua agenda de compromissos.
 
-Roda com Flask, autentica via OAuth 2.0 com Google e lê/grava exclusivamente no **Google Drive** — a pasta raiz (`CIFRAS_FOLDER_ID`) é um repositório central compartilhado com todos os músicos do grupo.
+O produto é projetado para ser vendável: resolve a dor real do músico litúrgico e gospel — encontrar e transpor cifras rapidamente, gravar o tom preferido, organizar o repertório pessoal e se localizar nas categorias de ministração e missa. O Drive do próprio usuário é o backend de armazenamento.
 
-Stack: **Python 3.10+ · Flask · HTML/CSS/JS puro · python-docx · PyMuPDF · Google Drive API · OAuth 2.0 · Docker · Gunicorn**
+Stack: **Python 3.10+ · Flask · HTML/CSS/JS puro · python-docx · PyMuPDF · Google Drive API · Google Calendar API · OAuth 2.0 · FullCalendar 6 · Docker · Gunicorn**
 
 ---
 
@@ -18,9 +18,9 @@ Stack: **Python 3.10+ · Flask · HTML/CSS/JS puro · python-docx · PyMuPDF · 
 
 ```
 my_cifras_pc_owner/
-├── app.py                  ← servidor Flask, rotas, extração de texto, repertórios, export
-├── auth.py                 ← OAuth 2.0 com Google, login_required, get_service
-├── drive.py                ← operações Google Drive (list, download, upload, JSON, pastas, arquivos, busca)
+├── app.py                  ← servidor Flask, rotas, extração de texto, repertórios, export, calendar
+├── auth.py                 ← OAuth 2.0 com Google, login_required, get_service, get_calendar_service
+├── drive.py                ← operações Google Drive (list, download, upload, JSON, pastas, arquivos, busca, views)
 ├── scraper.py              ← scraping de cifras por URL (CifraClub etc.)
 ├── migrate.py              ← script de migração: .docx/.pdf/.txt → .md
 ├── requirements.txt
@@ -34,6 +34,7 @@ my_cifras_pc_owner/
 │   ├── landing.html        ← landing page pública (rota /)
 │   └── login.html          ← tela de login OAuth
 ├── static/
+│   ├── manifest.json       ← PWA manifest (Android/iOS home screen)
 │   └── brand/              ← logos SVG do My Cifras
 │       ├── favicon.svg
 │       ├── icon.svg
@@ -41,7 +42,7 @@ my_cifras_pc_owner/
 │       ├── logo-light.svg          ← para fundos claros (header do app)
 │       ├── logo-mono-dark.svg      ← monocromático roxo (export HTML, impressão)
 │       ├── logo-mono-white.svg     ← monocromático branco (banners escuros)
-│       └── apple-touch-icon.png    ← ícone 180×180 para atalho iOS
+│       └── apple-touch-icon.png    ← ícone 180×180 para atalho iOS e Android
 ├── assets/
 │   └── mycifras-logo/      ← arquivos fonte dos logos + brand-tokens.css
 └── CLAUDE.md
@@ -53,12 +54,14 @@ my_cifras_pc_owner/
 - **Autenticação OAuth** → `auth.py` (Blueprint Flask `auth`)
 - **Operações Drive** → `drive.py` (funções puras, recebem `service` como parâmetro)
 - **Repertórios JSON** → `drive.py` (`load_repertorios`, `save_repertorios`) — arquivo `_repertorios.json` no Drive
+- **Views (contagem de visualizações)** → `drive.py` (`load_views`, `save_views`) — arquivo `_views.json` no Drive
 - **Extração de texto** (.docx, .pdf, .txt, .md) → funções `_*_from_bytes` em `app.py`
 - **Scraping de URL** → `scraper.py`
 - **UI, estilos e interatividade do app** → `templates/index.html` (tudo junto)
 - **Landing page pública** → `templates/landing.html`
 - **Transposição tonal** → JavaScript no cliente, dentro de `index.html`
 - **Modo Apresentação** → JavaScript no cliente, dentro de `index.html`
+- **PWA** → `static/manifest.json` + `<link rel="manifest">` em todos os templates
 
 ---
 
@@ -69,17 +72,41 @@ my_cifras_pc_owner/
 GOOGLE_CLIENT_ID=...apps.googleusercontent.com
 GOOGLE_CLIENT_SECRET=GOCSPX-...
 
-# Repositório central de cifras no Drive
-CIFRAS_FOLDER_ID=<id-da-pasta-raiz-compartilhada>
+# Pasta raiz de cifras do músico no Drive
+CIFRAS_FOLDER_ID=<id-da-pasta-raiz>
 
 # Flask
 FLASK_SECRET_KEY=<string-aleatoria-longa>
 
 # Deploy (Render, ngrok, etc.)
 EXTERNAL_URL=https://meu-app.onrender.com
+
+# Google Calendar
+GOOGLE_CALENDAR_ID=primary
+
+# Filtro de palavras-chave para o calendário (opcional)
+# Apenas eventos cujo título contenha ao menos uma das palavras são exibidos.
+# Deixar em branco para exibir todos os eventos.
+CALENDAR_KEYWORDS=missa,ensaio,louvor,música,repertório,liturgia,celebração,casamento
 ```
 
-**O app requer Drive.** Não existe modo de operação local — `GOOGLE_CLIENT_ID` e `CIFRAS_FOLDER_ID` são obrigatórios.
+**O app requer Drive e OAuth.** `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` e `CIFRAS_FOLDER_ID` são obrigatórios.
+
+---
+
+## Escopos OAuth
+
+```python
+SCOPES = [
+    "openid",
+    "https://www.googleapis.com/auth/userinfo.email",
+    "https://www.googleapis.com/auth/userinfo.profile",
+    "https://www.googleapis.com/auth/drive",
+    "https://www.googleapis.com/auth/calendar",   # leitura e escrita no Calendar
+]
+```
+
+**Atenção:** o escopo `calendar` (não `calendar.readonly`) é necessário para criar/editar/excluir eventos. Se o token foi gerado com o escopo antigo, o usuário precisa fazer logout + login para que o Google reemita com os escopos corretos.
 
 ---
 
@@ -103,7 +130,7 @@ EXTERNAL_URL=https://meu-app.onrender.com
 | POST | `/api/import/preview` | Scraping de URL ou texto colado → `{ title, artist, key, text }` |
 | POST | `/api/import/save` | Salva cifra como .md no Drive |
 | GET | `/api/sections` | Seções e categorias disponíveis |
-| POST | `/api/track_view` | Registra visualização de uma música |
+| POST | `/api/track_view` | Registra visualização de uma música (persiste em `_views.json` no Drive) |
 | GET | `/api/repertorios` | Lista todos os repertórios salvos |
 | POST | `/api/repertorios` | Cria novo repertório → 201 + objeto |
 | PUT | `/api/repertorios/<id>` | Atualiza repertório existente |
@@ -116,6 +143,10 @@ EXTERNAL_URL=https://meu-app.onrender.com
 | POST | `/api/songs/move` | Move arquivo para outra categoria |
 | POST | `/api/songs/delete` | Envia arquivo para lixeira do Drive |
 | POST | `/api/songs/update_meta` | Atualiza apenas o frontmatter YAML de um `.md` |
+| GET | `/api/calendar` | Lista eventos do Google Calendar (`?start=&end=`) |
+| POST | `/api/calendar/events` | Cria novo evento no Calendar |
+| PUT | `/api/calendar/events/<id>` | Atualiza evento existente |
+| DELETE | `/api/calendar/events/<id>` | Exclui evento |
 
 Todas as rotas são protegidas por `@login_required`.
 
@@ -138,6 +169,10 @@ search_content(service, query, root_folder_id, max_results=50)
 # Repertórios JSON
 load_repertorios(service, root_folder_id)     # retorna (data, file_id)
 save_repertorios(service, file_id, data)
+
+# Views JSON (persistência no Drive)
+load_views(service, root_folder_id)           # retorna (data, file_id) — arquivo _views.json
+save_views(service, file_id, data)
 
 # Upload / update
 upload_md(service, name, content, folder_id) # cria .md; retorna file_id
@@ -205,42 +240,45 @@ Além do véu eu quero te ver
 O frontmatter é removido automaticamente antes de exibir a cifra na UI.
 `/api/songs/update_meta` atualiza apenas o frontmatter, preservando o corpo da cifra.
 
+**Inferência de tom:** quando o campo `key` nos metadados estiver vazio, o frontend usa `detectBaseNote(text)` para detectar automaticamente o tom a partir da primeira linha de acordes da cifra.
+
+**Salvar tom (saveTone):** ao usar o controle de transposição e clicar "Salvar Tom", o novo tom é persistido automaticamente no frontmatter via `/api/songs/update_meta` — não apenas no localStorage.
+
 ---
 
-## Persistência de repertórios
+## Persistência de dados no Drive
 
-### Estrutura do JSON (`_repertorios.json`)
+### Repertórios (`_repertorios.json`)
 ```json
 {
   "rpt_abc123": {
     "id": "rpt_abc123",
     "name": "Missa Domingo",
-    "songs": [
-      {
-        "name": "Não Vou Parar",
-        "fileId": "...",
-        "mimeType": "text/markdown",
-        "section": "Gospel",
-        "category": "Adoração"
-      }
-    ],
+    "songs": [{ "name": "...", "fileId": "...", "mimeType": "...", "section": "...", "category": "..." }],
     "created_at": "2026-04-09T10:00:00",
     "updated_at": "2026-04-09T11:30:00"
   }
 }
 ```
 
-O arquivo `_repertorios.json` fica na raiz de `CIFRAS_FOLDER_ID` e é compartilhado entre todos os usuários do grupo.
+### Views (`_views.json`)
+```json
+{
+  "<fileId-ou-path>": <número-de-visualizações>
+}
+```
+
+Ambos os arquivos ficam na raiz de `CIFRAS_FOLDER_ID`. Em memória, `_views_cache = {"data": None, "file_id": None}` evita chamadas à Drive API a cada page load.
 
 ### Backend (`app.py`)
-- `_load_reps()` / `_save_reps(data)` — carrega e salva via Drive
-- `_rep_lock` (threading.Lock) — evita race conditions em escrita
+- `_load_reps()` / `_save_reps(data)` — carrega e salva repertórios via Drive
+- `_load_views()` / `_save_views(data)` — carrega e salva views via Drive
+- `_rep_lock` / `_views_lock` (threading.Lock) — evita race conditions em escrita
 
 ### Frontend (JS em `index.html`)
-- `savedReps` — cache local
-- `currentRepId` — ID do repertório aberto
-- `_isSaving` — flag anti-duplo POST
-- `_pendingDelete` — ID aguardando confirmação inline
+- `savedReps` — cache local de repertórios
+- `_metaStore` (localStorage key `_mc2`) — cache client-side de metadados
+- `_refreshCardsForSong(songKey, updates)` — atualiza cards visíveis sem recarregar a página
 
 ---
 
@@ -264,7 +302,7 @@ Payload recebido do frontend:
 ## Sidebar do app
 
 - Item "Início" fixado no topo da sidebar (`#sidebar-home-item`)
-- Seções com ícones mapeados em `SECTION_ICONS`
+- Seções com nomes apenas (sem ícones nas seções mães)
 - Categorias com ícones em `CAT_ICONS`
 - Botão `＋` por seção: cria nova pasta inline
 - Botão `⋯` por categoria: abre dropdown (renomear / excluir)
@@ -275,18 +313,75 @@ Payload recebido do frontend:
 ## Home screen
 
 - Banner de citação inspiracional (`.home-quote`) acima das seções de músicas
-- Seção **🔥 Mais tocadas** (músicas com views > 0, máx. 8 cards)
-- Seção **Todas as músicas** (todas em ordem A–Z)
-- Cards com: nome, badge de categoria, badge de tom, contador de views (olhinho), botão `⋯`
+- **Cards de volumetria** (`#home-stats-row`): quantidade total de músicas + uma por seção, distribuídos horizontalmente com `flex: 1` (mobile: primeiro ocupa linha inteira, demais 50%)
+- **Seção "Mais tocadas" / "Destaques"** (músicas com views > 0 ou todas se nenhuma foi tocada, máx. 8 cards)
+- Cards com: nome, badge de categoria (estilo tag dourada), badge de tom, contador de views (olhinho), botão `⋯`
 - `_makeHomeCard(song, cls)` — fábrica de card reutilizada em home e grade de categoria
 - `_songWithViews(song)` — enriquece músicas com views/key de `allSongs`
+- `_refreshCardsForSong(songKey, updates)` — atualiza cards em tempo real após salvar metadados
+
+---
+
+## Liturgia do Dia
+
+Seção na home screen que exibe a liturgia diária do dia atual (API externa).
+- Título "Liturgia do Dia" acima dos botões de atalho (não ao lado)
+- Botões de atalho (leituras, salmo, evangelho) preenchem a largura disponível
+- Controles de navegação de data à direita
+
+---
+
+## Google Calendar
+
+Seção na home screen abaixo dos destaques, com visualização FullCalendar 6.
+
+### Frontend
+- FullCalendar 6 via CDN: `https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js`
+- Vistas: mensal, semanal, diária, lista
+- Header toolbar: `left: "prev,next today"`, `center: "title"`, `right: "dayGridMonth,timeGridWeek,timeGridDay,listMonth"`
+- Tema escuro via CSS `#fc-wrap .fc-*`
+- CRUD completo: clicar em evento abre modal de edição; clicar em slot vazio abre modal de criação; drag-and-drop e resize persistem
+- `_confirmDialog()` — modal de confirmação personalizado (substitui `confirm()` do browser)
+
+### Modal de evento
+- `#event-modal-overlay` com campos: título, toggle all-day, datetime início/fim, local, descrição
+- Botão "Excluir" com confirmação antes de deletar
+
+### Backend (`app.py`)
+```python
+GET  /api/calendar?start=&end=   # lista eventos filtrados por keyword
+POST /api/calendar/events         # cria evento
+PUT  /api/calendar/events/<id>    # atualiza evento
+DELETE /api/calendar/events/<id>  # exclui evento
+```
+
+### Filtro de palavras-chave
+```python
+def _calendar_keywords():
+    raw = os.environ.get("CALENDAR_KEYWORDS", "").strip()
+    if not raw: return []
+    import unicodedata
+    def _norm(s): return unicodedata.normalize("NFD", s).encode("ascii","ignore").decode().lower()
+    return [_norm(k.strip()) for k in raw.split(",") if k.strip()]
+```
+Comparação insensível a acentos e maiúsculas. Deixar `CALENDAR_KEYWORDS` em branco exibe todos os eventos.
+
+---
+
+## PWA (Progressive Web App)
+
+- `static/manifest.json` — define nome, ícones, `display: standalone`, `start_url: /app`, `theme_color: #5b4b8a`
+- `<link rel="manifest" href="/static/manifest.json">` em todos os templates (landing, login, index)
+- `<meta name="theme-color" content="#5b4b8a">` em todos os templates
+- `apple-touch-icon.png` (180×180) para iOS
+- No Android, o Chrome exibe banner "Adicionar à tela inicial" automaticamente
 
 ---
 
 ## Busca
 
 Dois modos controlados por `#search-mode-toggle`:
-- **Nome** (padrão): filtra `allSongs` localmente pelo nome
+- **Nome** (padrão): filtra `allSongs` localmente pelo nome; campo com botão X de limpar
 - **Letra**: chama `GET /api/search/content?q=` → Drive `fullText contains`
 
 A busca por letra não suporta `orderBy` na Drive API — não usar `orderBy` em `search_content()`.
@@ -296,6 +391,7 @@ A busca por letra não suporta `orderBy` na Drive API — não usar `orderBy` em
 ## Modal de cifra
 
 - Zoom, fullscreen, transposição tonal
+- Inferência automática de tom: se `key` estiver vazio nos metadados, usa `detectBaseNote(text)` para detectar da cifra
 - Painel de metadados (`#meta-panel`): título, artista, tom, tags — editável inline
 - Modo de edição: `#modal-body.edit-mode` com `#edit-toolbar`
   - Toolbar: Selecionar tudo (`etb-select-all`), Copiar (`etb-copy`), Duas colunas (`etb-two-col`)
@@ -354,16 +450,18 @@ Roda inteiramente no cliente (JS), sem chamar o servidor.
 ### Python
 - Funções de extração retornam `str` sempre — nunca levantam exceção para o caller
 - Funções de `drive.py` recebem `service` como primeiro parâmetro (sem estado global)
-- `auth.get_service()` obtém o service autenticado da sessão Flask atual
+- `auth.get_service()` obtém o Drive service autenticado da sessão Flask atual
+- `auth.get_calendar_service()` obtém o Calendar service autenticado da sessão Flask atual
 - `invalidate_library_cache()` deve ser chamado após qualquer operação que altere pastas ou arquivos
 - Nomes em português onde fazem sentido para o domínio
 
 ### JavaScript (dentro do index.html)
-- Estado global: `library`, `allSongs`, `repertorio`, `currentModal`, `rawCifraText`, `currentSemitone`, `currentRepId`, `savedReps`, `presenterSongs`, `presenterIdx`, `_openCatMenu`, `_openSongMenu`, `_twoColMode`
+- Estado global: `library`, `allSongs`, `repertorio`, `currentModal`, `rawCifraText`, `currentSemitone`, `currentRepId`, `savedReps`, `presenterSongs`, `presenterIdx`, `_openCatMenu`, `_openSongMenu`, `_twoColMode`, `_fcInstance`
 - Músicas do Drive têm `fileId` + `mimeType` (não existe mais o campo `path`)
 - `escHtml()` obrigatório ao inserir dados no DOM via innerHTML
 - Dropdowns appendados ao `document.body` com `position: fixed` + `getBoundingClientRect()`
 - `closeCatMenu()` / `closeOpenSongMenu()` chamados antes de abrir qualquer novo menu
+- `_refreshCardsForSong(songKey, updates)` — atualiza cards visíveis sem reload de página
 - Sem frameworks — JS puro, sem npm, sem build step
 
 ### CSS
@@ -388,23 +486,35 @@ docker run -p 8000:8000 --env-file .env my-cifras
 3. Render detecta `render.yaml` automaticamente (runtime Docker, porta 8000)
 4. Configurar variáveis de ambiente no painel da Render
 5. Adicionar `EXTERNAL_URL + /oauth/callback` como URI autorizada no Google Cloud Console
+6. Adicionar `EXTERNAL_URL` no painel da Render
+
+**Nota:** a variável `CALENDAR_KEYWORDS` deve ser configurada na Render para que o filtro funcione em produção. O servidor precisa ser reiniciado após qualquer mudança de variáveis de ambiente (o `load_dotenv()` só roda na inicialização).
 
 ---
 
 ## Controle de acesso (OAuth)
 
 - **Usuários de teste:** Google Cloud Console → Tela de permissão OAuth → Usuários de teste
-- **Acesso às cifras:** compartilhar a pasta central (`CIFRAS_FOLDER_ID`) no Google Drive com cada músico do grupo
+- **Acesso às cifras:** cada músico usa sua própria pasta no Drive (`CIFRAS_FOLDER_ID` é configurada por instância do app)
 - **Token expirado (7 dias em modo teste):** app detecta `invalid_grant` e redireciona ao login
+- **Escopo Calendar:** requer `https://www.googleapis.com/auth/calendar` e precisa estar habilitado na Tela de Permissão OAuth do Google Cloud Console
 
 ---
 
-## Arquitetura futura: multi-usuário
+## Visão do produto
 
-O app hoje usa um repositório central compartilhado (todos acessam o mesmo `CIFRAS_FOLDER_ID`). A evolução prevista é:
+My Cifras é um produto voltado para o **músico individual** — não para o grupo. O valor está em:
 
-1. **Fase atual:** repositório único compartilhado — todos os músicos do grupo leem e editam o mesmo Drive
-2. **Próxima fase:** repertórios por usuário — `_repertorios_{user_id}.json` em vez de arquivo compartilhado, evitando conflitos de escrita
-3. **Fase futura:** suporte a múltiplos grupos — cada grupo tem seu próprio `CIFRAS_FOLDER_ID`; o app associa o e-mail do usuário ao grupo correto via tabela de configuração
+1. **Transposição + tom gravado**: muda o tom em 1 clique e salva no Drive para não perder
+2. **Repertórios pessoais**: montagem e organização do setlist de cada músico
+3. **Navegação litúrgica**: categorias de Missa e Ministração para localizar músicas no contexto certo
+4. **Liturgia diária**: integração com a liturgia do dia para preparar o repertório com antecedência
+5. **Agenda pessoal**: Google Calendar integrado para acompanhar ensaios, missas e outros compromissos
 
-Ao implementar mudanças no fluxo de dados, considerar que o `_rep_lock` atual não é suficiente para múltiplos usuários concorrentes em escrita — será necessário um mecanismo de versionamento ou CRDT no JSON.
+### Evolução prevista
+
+| Fase | Descrição |
+|---|---|
+| Atual | App individual — um músico, uma conta Google, uma pasta Drive |
+| Próxima | Workspace compartilhado — músico convida outros membros para colaborar no mesmo acervo |
+| Futura | Multi-workspace — suporte a N grupos/igrejas; administração de membros e permissões |

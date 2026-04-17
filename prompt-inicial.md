@@ -7,7 +7,7 @@
 
 ## PROMPT
 
-Você é um desenvolvedor Python + JavaScript experiente. Vamos construir a aplicação web **"My Cifras"** para o grupo de música litúrgica liderado por Lucas Almeida.
+Você é um desenvolvedor Python + JavaScript experiente. Vamos evoluir a aplicação web **"My Cifras"** — uma ferramenta para o **músico individual** gerenciar seu acervo pessoal de cifras, transpor tons, criar repertórios e acompanhar sua agenda litúrgica.
 
 **Antes de escrever qualquer código, leia completamente os arquivos `CLAUDE.md` e `PRD.md` nesta pasta.** Eles têm todas as especificações, convenções e regras do projeto.
 
@@ -15,9 +15,57 @@ Você é um desenvolvedor Python + JavaScript experiente. Vamos construir a apli
 
 ### Contexto
 
-Lucas lidera um grupo de música litúrgica e gospel em Jaraguá do Sul (SC). Ele e os músicos do grupo precisam de um lugar centralizado para acessar o acervo de cifras do Google Drive, transpor tons rapidamente durante ensaios, montar repertórios semanais e exportar documentos para impressão.
+**My Cifras** é um produto para o músico litúrgico e gospel. Não é um app de grupo — é uma ferramenta individual. O valor central está em:
 
-A aplicação usa um **repositório central no Google Drive** — uma pasta compartilhada com todos os músicos do grupo. Cada músico acessa com o próprio login Google; a pasta raiz das cifras é fixada no servidor via `CIFRAS_FOLDER_ID`. Não existe modo local ou sem autenticação.
+1. **Transposição + tom gravado**: mudar o tom em 1 clique e salvar automaticamente no Drive
+2. **Repertórios pessoais**: montagem e organização do setlist de cada músico
+3. **Navegação litúrgica**: categorias de Missa e Ministração para encontrar a música certa no contexto certo
+4. **Liturgia diária**: integração com a liturgia do dia para preparar o repertório com antecedência
+5. **Agenda pessoal**: Google Calendar integrado para acompanhar ensaios, missas e compromissos
+
+O produto é projetado para ser comercializável. Cada músico conecta o próprio Google Drive — não existe repositório central compartilhado.
+
+**Lucas Almeida** é músico litúrgico em Jaraguá do Sul (SC) e criador do produto.
+
+---
+
+### Estado atual do app (v3.0)
+
+O app está **em produção** na Render.com. As seguintes funcionalidades já estão implementadas e funcionando:
+
+#### Backend (`app.py` + `auth.py` + `drive.py`)
+- OAuth 2.0 completo com Google (escopos: Drive, Calendar, userinfo)
+- Todas as rotas de CRUD de cifras, pastas e repertórios
+- `/api/track_view` — visualizações persistidas em `_views.json` no Drive (não mais em arquivo local)
+- `/api/calendar` (GET), `/api/calendar/events` (POST/PUT/DELETE) — integração com Google Calendar
+- Filtro de palavras-chave via `CALENDAR_KEYWORDS` (insensível a acentos, via `unicodedata.normalize`)
+- Cache em memória para biblioteca (`library_cache`) e views (`_views_cache`)
+- `get_calendar_service()` em `auth.py`
+- `load_views()` / `save_views()` em `drive.py`
+
+#### Frontend (`templates/index.html`)
+- Sidebar com seções (sem ícones nas pastas mães) e categorias com ícones
+- Home screen com: banner inspiracional, cards de volumetria, seção "Mais tocadas/Destaques" (top 8), liturgia do dia, Google Calendar
+- Cards: nome, badge de categoria (tag dourada), badge de tom, contador de views, botão `⋯`
+- Campo de busca com botão X para limpar
+- Transposição tonal no cliente (JS puro), com **Salvar Tom** que persiste no Drive via `/api/songs/update_meta`
+- Inferência automática de tom via `detectBaseNote(text)` quando `key` está vazio nos metadados
+- `_refreshCardsForSong(songKey, updates)` — atualiza cards visíveis em tempo real após salvar metadados
+- Google Calendar com FullCalendar 6 (CDN), vistas mensal/semanal/diária/lista, CRUD completo, drag-and-drop
+- Modal de evento com campos: título, all-day toggle, datetime início/fim, local, descrição
+- `_confirmDialog()` — modal de confirmação personalizado
+- Painel de metadados editável (título, artista, tom, tags)
+- Editor inline com toolbar (selecionar tudo, copiar, duas colunas)
+- Modo Apresentação (fullscreen, keyboard navigation)
+- Export HTML elegante para impressão
+
+#### Templates adicionais
+- `landing.html` — landing page pública com copy voltado para o músico individual
+- `login.html` — tela de login OAuth
+
+#### Static
+- `static/manifest.json` — PWA para Android/iOS (display: standalone, theme_color: #5b4b8a)
+- `static/brand/` — logos SVG + `apple-touch-icon.png`
 
 ---
 
@@ -26,230 +74,44 @@ A aplicação usa um **repositório central no Google Drive** — uma pasta comp
 - **Backend:** Python 3.10+ + Flask
 - **Autenticação:** OAuth 2.0 Google (`auth.py`) — obrigatório
 - **Armazenamento:** Google Drive API v3 (`drive.py`) — único backend
+- **Calendar:** Google Calendar API v3
 - **Frontend:** HTML + CSS + JS puro em `templates/index.html` (sem frameworks, sem npm)
+- **Calendar UI:** FullCalendar 6 via CDN
 - **Deploy:** Docker + Gunicorn + Render.com
 
 ---
 
-### Tarefa 1 — Estrutura do Projeto
+### Variáveis de ambiente necessárias
 
-Crie a estrutura de arquivos:
-
-```
-my_cifras_pc_owner/
-├── app.py
-├── auth.py
-├── drive.py
-├── scraper.py
-├── requirements.txt
-├── Dockerfile
-├── render.yaml
-├── .env.example
-├── .gitignore
-├── templates/
-│   ├── index.html
-│   ├── landing.html
-│   └── login.html
-└── static/brand/         ← logos SVG (ver CLAUDE.md)
-```
-
-`requirements.txt`:
-```
-flask
-google-auth
-google-auth-oauthlib
-google-api-python-client
-python-docx
-PyMuPDF
-requests
-beautifulsoup4
-gunicorn
-```
-
-`.env.example`:
 ```env
 GOOGLE_CLIENT_ID=...apps.googleusercontent.com
 GOOGLE_CLIENT_SECRET=GOCSPX-...
-CIFRAS_FOLDER_ID=<id-da-pasta-raiz-compartilhada>
+CIFRAS_FOLDER_ID=<id-da-pasta-raiz-do-músico-no-drive>
 FLASK_SECRET_KEY=<string-aleatoria-longa>
 EXTERNAL_URL=https://meu-app.onrender.com
+GOOGLE_CALENDAR_ID=primary
+CALENDAR_KEYWORDS=missa,ensaio,louvor,música,repertório,liturgia,celebração,casamento
 ```
 
 ---
 
-### Tarefa 2 — Autenticação OAuth (`auth.py`)
+### Convenções importantes
 
-- Blueprint Flask `auth` com rotas `/login`, `/login/google`, `/oauth/callback`, `/logout`
-- `@login_required` decorator — redireciona para `/login` se não autenticado
-- `get_service()` — retorna o service Google Drive autenticado da sessão
-- Token expirado → `session.clear()` → redirect ao login
-
-**Não existe modo local.** A autenticação OAuth é obrigatória para acessar o app.
-
----
-
-### Tarefa 3 — Drive (`drive.py`)
-
-Funções puras (recebem `service` como parâmetro):
-
-```python
-# Listagem e leitura
-list_folder(service, folder_id)
-scan_library(service, root_folder_id)
-download_bytes(service, file_id)
-export_gdoc_as_text(service, file_id)
-
-# Busca full-text (Drive API)
-search_content(service, query, root_folder_id, max_results=50)
-  # ATENÇÃO: não usar orderBy com fullText — a Drive API não suporta
-
-# Repertórios JSON
-load_repertorios(service, root_folder_id)
-save_repertorios(service, file_id, data)
-
-# Upload / update
-upload_md(service, name, content, folder_id)
-update_md_content(service, file_id, content)
-
-# Arquivo
-get_file_name(service, file_id)
-trash_file(service, file_id)
-rename_file(service, file_id, new_name_with_ext)
-copy_file(service, file_id, new_name, target_folder_id)
-move_file(service, file_id, source_folder_id, target_folder_id)
-
-# Pastas
-find_folder_by_name(service, name, parent_id)
-create_folder(service, name, parent_id)
-rename_folder(service, folder_id, new_name)
-is_folder_empty(service, folder_id)
-delete_folder(service, folder_id)
-get_or_create_folder(service, name, parent_id)
-resolve_folder(service, section, category, root_folder_id)
-```
+- **Acordes** são sempre `#5b4b8a` — nunca usar `#1d4ed8` (azul)
+- **Sem frameworks JS** — JS puro, sem npm, sem build step
+- **Dropdowns** sempre appendados ao `document.body` com `position: fixed` + `getBoundingClientRect()`
+- **`invalidate_library_cache()`** deve ser chamado após qualquer operação de escrita no Drive
+- **Mobile breakpoint:** `max-width: 1024px`
+- **Evitar `:hover` com `transform`** no mobile (duplo tap no iOS Safari)
+- **`escHtml()`** obrigatório ao inserir dados no DOM via innerHTML
 
 ---
 
-### Tarefa 4 — Backend (`app.py`)
+### Próximas funcionalidades sugeridas
 
-Implemente todas as rotas do CLAUDE.md. Pontos críticos:
-
-**`/api/library`:**
-- Retorna estrutura `{ sections: [{ name, id, categories: [{ name, id, songs: [...] }] }] }`
-- Cache em memória com `invalidate_library_cache()` após operações de escrita
-
-**`/api/cifra`:**
-- Aceita apenas `?fileId=&mimeType=` (Drive)
-- Extrai texto de `.md`, `.docx`, `.pdf`, `.txt`, Google Docs
-- Remove frontmatter YAML antes de retornar
-- Retorna `{ text, key, name, title, tags }`
-
-**`/api/search/content`:**
-- GET com `?q=`
-- Chama `drive.search_content()` — Drive `fullText contains`
-- Retorna lista de `{ fileId, name, mimeType, excerpt }`
-
-**`/api/songs/update_meta`:**
-- POST com `{ fileId, meta: { title, artist, key, tags } }`
-- Baixa o arquivo `.md`, atualiza apenas o frontmatter, preserva o corpo
-- Invalida o cache de biblioteca
-
-**`/api/export`:**
-- Lê `static/brand/logo-mono-dark.svg` e inlina no HTML
-- Acordes em `#5b4b8a` (nunca azul `#1d4ed8`)
-- Layout elegante: cabeçalho com logo + data + contagem, cards por música com badges categoria/tom
-- CSS `@media print` otimizado
-
-**`/api/songs/rename|copy|move|delete`:**
-- Chamar `invalidate_library_cache()` após cada operação
-- rename: preservar extensão original
-
-**`/api/folders` (CRUD):**
-- POST: `{ section, category }` → cria pasta no Drive
-- PUT `/<section>/<category>`: `{ new_name }` → renomeia
-- DELETE `/<section>/<category>`: verifica `is_folder_empty` antes de deletar
-
----
-
-### Tarefa 5 — Frontend (`templates/index.html`)
-
-Interface completa em arquivo único (HTML + CSS + JS). Ver CLAUDE.md para variáveis CSS e convenções JS.
-
-**Layout:**
-- Header fixo com logo `logo-light.svg` e campo de busca
-- Sidebar com item "Início" no topo, seções/categorias, ícones, botões `＋` e `⋯`
-- Main: home grid ou grade de categoria
-- Painel de repertório (direita)
-
-**Home screen:**
-- Banner `.home-quote` com citação inspiracional (fundo `var(--primary)`)
-- Seção "🔥 Mais tocadas" (views > 0, máx 8)
-- Seção "Todas as músicas" (A–Z)
-- Cards via `_makeHomeCard(song, cls)`
-
-**Busca:**
-- Toggle "Nome / Letra" (`#search-mode-toggle`)
-- Busca por nome: filtro local instantâneo
-- Busca por letra: `GET /api/search/content?q=`
-
-**Sidebar:**
-- Dropdowns appendados ao `document.body` com `position: fixed` + `getBoundingClientRect()`
-- `_openCatMenu` / `_openSongMenu` com toggle
-
-**Modal de cifra:**
-- Zoom, fullscreen, transposição
-- Painel de metadados (`#meta-panel`): título, artista, tom, tags — editável
-- Modo edição com `#edit-toolbar`: Selecionar tudo, Copiar, Duas colunas
-- `_confirmLeaveEdit()` guard — avisa se conteúdo foi alterado sem salvar
-
-**Mobile (breakpoint 1024px):**
-- Drawer lateral em vez de sidebar fixa
-- Bottom nav: Início · Pesquisar · Repertório
-- Sem `transform` em `:hover` (evita duplo tap no iOS Safari)
-
-**Cards de música:**
-- Nome, badge categoria, badge tom, views (olhinho), botão `⋯`
-- Menu `⋯`: Renomear, Copiar, Mover, Excluir
-
-**Modais:**
-- Modal de cifra: zoom, fullscreen, transposição
-- Seletor de pasta (mover/copiar): lista seções e categorias do Drive
-
----
-
-### Tarefa 6 — Landing Page (`templates/landing.html`)
-
-Página escura com tema `--bg: #0f0e17`:
-- Nav fixo com `logo-dark.svg`
-- Hero com headline, CTA "Entrar com Google", preview do app mockado
-- 8 feature cards (incluindo busca por letra e metadados estruturados)
-- "Como funciona" em 3 passos (1: login Google, 2: acessa biblioteca compartilhada, 3: monte repertório)
-- CTA final
-- Banner de citação (`"O canto exige, acima de tudo, uma profunda vida espiritual" — Papa Leão XIV`)
-- Footer
-
----
-
-### Tarefa 7 — Login (`templates/login.html`)
-
-- Tema escuro, centralizado
-- Logo `logo-dark.svg`
-- Botão "Entrar com Google" com ícone SVG oficial do Google
-- Link de volta para `/`
-
----
-
-### Ordem de Execução Sugerida
-
-1. Estrutura de arquivos + `.env.example`
-2. `auth.py` com OAuth obrigatório
-3. `drive.py` com todas as funções
-4. `app.py` com todas as rotas
-5. `templates/index.html` (sidebar → home → modal → repertório → export)
-6. `templates/landing.html`
-7. `templates/login.html`
-8. Logos SVG em `static/brand/`
-9. Teste completo do fluxo Drive
+- Workspace compartilhado: músico convida outros membros para colaborar no mesmo acervo
+- Repertórios por usuário (`_rep_{user_id}.json`) para evitar conflitos de escrita simultânea
+- Planos de assinatura por workspace (SaaS)
 
 ---
 
@@ -257,9 +119,5 @@ Página escura com tema `--bg: #0f0e17`:
 
 - Toda mensagem de erro e interface em **português**
 - O app não tem modo local — OAuth e Drive são obrigatórios
-- JS puro — sem npm, sem build step, sem frameworks
-- Dropdowns nunca clipados: sempre appendar ao `document.body`
-- `invalidate_library_cache()` após qualquer escrita no Drive
-- Acordes sempre em `#5b4b8a`, nunca azul
-- Mobile breakpoint: `max-width: 1024px` (cobre tablets de 10")
-- Evitar `:hover` com `transform` no mobile (problema de duplo tap no iOS Safari)
+- Ao reiniciar o servidor, o `load_dotenv()` recarrega as variáveis de ambiente — mudanças no `.env` requerem restart
+- Token com escopo antigo (`calendar.readonly`) gera 403 `insufficientPermissions` nas rotas de Calendar — o músico precisa fazer logout + login para reemitir com o escopo `calendar` completo
