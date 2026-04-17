@@ -716,6 +716,36 @@ def _mime_to_ext(mime):
 
 
 # ---------------------------------------------------------------------------
+# Keep-alive — evita spin-down do Render free tier (idle após 15 min)
+# ---------------------------------------------------------------------------
+
+@app.route("/ping")
+def ping():
+    return "ok", 200
+
+
+def _start_keep_alive():
+    external_url = os.environ.get("EXTERNAL_URL", "").rstrip("/")
+    if not external_url:
+        return
+
+    import requests as _req
+
+    def _loop():
+        while True:
+            time.sleep(14 * 60)
+            try:
+                _req.get(external_url + "/ping", timeout=10)
+            except Exception:
+                pass
+
+    threading.Thread(target=_loop, daemon=True).start()
+
+
+_start_keep_alive()
+
+
+# ---------------------------------------------------------------------------
 # Rotas principais
 # ---------------------------------------------------------------------------
 
