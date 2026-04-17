@@ -1381,6 +1381,83 @@ def api_sections():
 
 
 # ---------------------------------------------------------------------------
+# Liturgia diária
+# ---------------------------------------------------------------------------
+
+_liturgia_cache = {}   # { "YYYY-MM-DD": { data, liturgia, cor, leituras } }
+
+_COR_MAP = {
+    "branco": "#f0ede6",
+    "verde":  "#3d7a52",
+    "roxo":   "#6b3fa0",
+    "violeta":"#6b3fa0",
+    "vermelho":"#b92b2b",
+    "rosa":   "#d4608a",
+    "preto":  "#2c2c2c",
+}
+
+def _cor_hex(cor_str):
+    return _COR_MAP.get((cor_str or "").lower().strip(), "#9b97b0")
+
+
+@app.route("/api/liturgia")
+@login_required
+def api_liturgia():
+    from datetime import datetime, date as _date
+    import requests as _req
+
+    date_str = request.args.get("date", "")
+    try:
+        d = datetime.strptime(date_str, "%Y-%m-%d").date() if date_str else _date.today()
+    except ValueError:
+        return jsonify({"error": "Formato de data inválido. Use YYYY-MM-DD"}), 400
+
+    cache_key = d.isoformat()
+    if cache_key in _liturgia_cache:
+        return jsonify(_liturgia_cache[cache_key])
+
+    try:
+        resp = _req.get(
+            "https://liturgia.up.railway.app/v2/",
+            params={"dia": d.day, "mes": d.month, "ano": d.year},
+            timeout=8,
+        )
+        resp.raise_for_status()
+        raw = resp.json()
+    except Exception as e:
+        return jsonify({"error": f"Não foi possível carregar a liturgia: {e}"}), 502
+
+    leituras = raw.get("leituras", {})
+
+    def _reading(key):
+        items = leituras.get(key) or []
+        if not items:
+            return None
+        item = items[0]
+        return {
+            "referencia": item.get("referencia", ""),
+            "titulo":     item.get("titulo", ""),
+            "texto":      item.get("texto", ""),
+            "refrao":     item.get("refrao", ""),   # salmo
+        }
+
+    cor = raw.get("cor", "")
+    result = {
+        "data":          raw.get("data", cache_key),
+        "liturgia":      raw.get("liturgia", ""),
+        "cor":           cor,
+        "corHex":        _cor_hex(cor),
+        "primeiraLeitura": _reading("primeiraLeitura"),
+        "salmo":           _reading("salmo"),
+        "segundaLeitura":  _reading("segundaLeitura"),
+        "evangelho":       _reading("evangelho"),
+    }
+
+    _liturgia_cache[cache_key] = result
+    return jsonify(result)
+
+
+# ---------------------------------------------------------------------------
 # Entry point
 # ---------------------------------------------------------------------------
 

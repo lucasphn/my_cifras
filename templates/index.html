@@ -253,7 +253,15 @@ input { font: inherit; }
 .sidebar-section-title.collapsed .arrow { transform: rotate(-90deg); }
 .sidebar-cats { overflow: hidden; }
 .sidebar-cats.collapsed { display: none; }
-.sidebar-icon { font-size: 1em; line-height: 1; flex-shrink: 0; }
+.sidebar-icon {
+  font-size: .85em;
+  line-height: 1;
+  flex-shrink: 0;
+  width: 1.2em;
+  text-align: center;
+  color: inherit;
+  font-style: normal;
+}
 .sidebar-cat {
   padding: 8px 12px 8px 14px;
   font-size: 0.875em;
@@ -545,6 +553,130 @@ input { font: inherit; }
   font-size: .78rem; color: var(--text-muted); font-weight: 500;
 }
 
+/* ─── Liturgia do Dia ───────────────────────────────────────────────────── */
+#liturgia-widget {
+  margin-bottom: 2rem;
+}
+.lit-header {
+  display: flex; align-items: center; gap: .6rem;
+  margin-bottom: 1rem; flex-wrap: wrap;
+}
+.lit-title {
+  font-size: .95rem; font-weight: 700; color: var(--text);
+  display: flex; align-items: center; gap: .4rem;
+}
+.lit-shortcuts {
+  display: flex; gap: .35rem; flex-wrap: wrap;
+}
+.lit-shortcut-btn {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  color: var(--text-muted);
+  font-size: .75rem; font-weight: 600;
+  padding: .3rem .75rem;
+  cursor: pointer;
+  transition: background 140ms, color 140ms, border-color 140ms;
+}
+.lit-shortcut-btn:hover, .lit-shortcut-btn.active {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+}
+.lit-nav {
+  margin-left: auto;
+  display: flex; align-items: center; gap: .5rem;
+}
+.lit-nav-btn {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  color: var(--text-muted);
+  font-size: 1rem; font-weight: 700;
+  width: 28px; height: 28px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  transition: background 140ms, color 140ms;
+}
+.lit-nav-btn:hover { background: var(--surface); color: var(--text); }
+#lit-date-label {
+  font-size: .78rem; color: var(--text-muted);
+  min-width: 130px; text-align: center; text-transform: capitalize;
+}
+.lit-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+.lit-celebration {
+  display: flex; align-items: center; gap: .85rem;
+  padding: 1rem 1.25rem;
+}
+.lit-cor-dot {
+  width: 12px; height: 12px;
+  border-radius: 50%; flex-shrink: 0;
+  box-shadow: 0 0 0 3px rgba(255,255,255,.08);
+}
+.lit-cor-label {
+  font-size: .68rem; font-weight: 700; letter-spacing: .5px;
+  text-transform: uppercase; color: var(--text-muted);
+  margin-bottom: .15rem;
+}
+.lit-celebration-name {
+  font-size: .92rem; font-weight: 600; color: var(--text);
+  line-height: 1.35;
+}
+.lit-reading {
+  border-top: 1px solid var(--border);
+}
+.lit-reading-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: .7rem 1.25rem;
+  cursor: pointer;
+  gap: .5rem;
+  transition: background 120ms;
+}
+.lit-reading-header:hover { background: rgba(255,255,255,.03); }
+.lit-reading-label {
+  font-size: .72rem; font-weight: 700; letter-spacing: .5px;
+  text-transform: uppercase; color: var(--text-muted);
+  flex-shrink: 0;
+}
+.lit-reading-ref {
+  font-size: .8rem; font-weight: 600;
+  color: var(--accent); margin-left: auto; flex-shrink: 0;
+}
+.lit-reading-chevron {
+  font-size: .65rem; color: var(--text-muted);
+  transition: transform .2s; flex-shrink: 0;
+  margin-left: .4rem;
+}
+.lit-reading-body {
+  display: none;
+  padding: 0 1.25rem 1rem;
+}
+.lit-reading-body.open { display: block; }
+.lit-refrao {
+  font-size: .83rem; font-weight: 600;
+  color: var(--primary);
+  border-left: 3px solid var(--primary);
+  padding: .35rem .75rem;
+  margin-bottom: .75rem;
+  background: rgba(91,75,138,.07);
+  border-radius: 0 6px 6px 0;
+  line-height: 1.45;
+}
+.lit-reading-text {
+  font-size: .84rem; line-height: 1.7;
+  color: var(--text-muted); white-space: pre-wrap;
+}
+.lit-loading, .lit-error {
+  padding: 1.5rem 1.25rem;
+  font-size: .85rem; color: var(--text-muted);
+  text-align: center;
+}
+
 /* Quote banner na home */
 .home-quote {
   position: relative;
@@ -678,23 +810,27 @@ input { font: inherit; }
   display: flex; align-items: center; gap: 2px;
 }
 .hc-views.has-views { color: var(--primary); }
+.hc-artist {
+  font-size: .74rem; color: var(--text-muted);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  margin-top: 1px;
+}
+.hc-tag {
+  background: rgba(212,175,55,.1); color: var(--accent);
+  border: 1px solid rgba(212,175,55,.2); border-radius: 99px;
+  padding: 1px 6px; font-size: .64rem; font-weight: 600;
+}
 .home-card-actions {
-  display: flex; gap: 5px; margin-top: 4px;
+  display: flex; gap: 5px; margin-top: 6px;
 }
 .btn-hc-add {
   flex: 1; background: transparent;
   border: 1px solid var(--border); border-radius: 7px;
-  padding: 4px 6px; font-size: .74rem; color: var(--text-muted);
+  padding: 5px 8px; font-size: .74rem; color: var(--text-muted);
   cursor: pointer; transition: all .15s; font-weight: 600;
 }
 .btn-hc-add:hover { border-color: var(--primary); color: var(--primary); background: var(--primary-light); }
-.btn-hc-add.added { border-color: var(--primary); color: var(--primary); background: var(--primary-light); }
-.btn-hc-open {
-  background: var(--primary); border: none; border-radius: 7px;
-  padding: 4px 12px; font-size: .74rem; color: #fff;
-  cursor: pointer; transition: background .15s; font-weight: 600;
-}
-.btn-hc-open:hover { background: var(--primary-hover); }
+.btn-hc-add.added { border-color: var(--primary); color: #fff; background: var(--primary); }
 
 .views-badge {
   display: inline-flex; align-items: center; justify-content: center;
@@ -1618,7 +1754,7 @@ input { font: inherit; }
   button, a, [onclick],
   .home-card, .song-card, .sidebar-cat, .sidebar-section-title,
   .mbn-btn, .btn, .btn-sm, .btn-accent,
-  .btn-hc-open, .btn-hc-add, .btn-song-ops, .btn-cat-menu, .btn-folder-add,
+  .btn-hc-add, .btn-song-ops, .btn-cat-menu, .btn-folder-add,
   #btn-home, #btn-menu-toggle, #search-box,
   #btn-search-name, #btn-search-content,
   #btn-meta-toggle, #btn-save-meta {
@@ -2102,12 +2238,34 @@ input { font: inherit; }
     <div id="main">
       <!-- Tela inicial: tabela de músicas mais acessadas -->
       <div id="home-table-wrap" style="display:none">
+
         <div class="home-quote">
           <div class="home-quote-tag">Inspiração</div>
           <p class="home-quote-text">"O canto exige, acima de tudo, uma profunda vida espiritual"</p>
           <div class="home-quote-divider"></div>
           <p class="home-quote-author">— Papa <span>Leão XIV</span></p>
         </div>
+
+        <!-- Liturgia do Dia -->
+        <div id="liturgia-widget">
+          <div class="lit-header">
+            <span class="lit-title">📖 Liturgia do Dia</span>
+            <div class="lit-shortcuts">
+              <button class="lit-shortcut-btn active" id="lit-btn-hoje">Hoje</button>
+              <button class="lit-shortcut-btn" id="lit-btn-sabado">Próx. Sábado</button>
+              <button class="lit-shortcut-btn" id="lit-btn-domingo">Próx. Domingo</button>
+            </div>
+            <div class="lit-nav">
+              <button class="lit-nav-btn" id="lit-prev" title="Dia anterior">&#8249;</button>
+              <span id="lit-date-label"></span>
+              <button class="lit-nav-btn" id="lit-next" title="Próximo dia">&#8250;</button>
+            </div>
+          </div>
+          <div id="lit-content">
+            <div class="lit-loading">Carregando liturgia...</div>
+          </div>
+        </div>
+
         <div id="home-top-section" style="display:none">
           <div class="home-section-header">
             <h2>🔥 Mais tocadas</h2>
@@ -2415,6 +2573,32 @@ input { font: inherit; }
 </div>
 
 <script>
+// ─── Cache local de metadados (persiste entre reloads) ──────────────────────
+var _metaStore = (function() {
+  var KEY = "_mc2";
+  var data = {};
+  try { data = JSON.parse(localStorage.getItem(KEY) || "{}"); } catch(e) {}
+  return {
+    get: function(id) { return data[id] || null; },
+    set: function(id, meta) {
+      if (!id) return;
+      data[id] = { artist: meta.artist || "", key: meta.key || "", tags: meta.tags || [] };
+      try { localStorage.setItem(KEY, JSON.stringify(data)); } catch(e) {}
+    },
+    enrich: function(songs) {
+      return songs.map(function(s) {
+        var cached = data[s.fileId || s.path || ""];
+        if (!cached) return s;
+        return Object.assign({}, s, {
+          artist: cached.artist || s.artist || "",
+          key:    cached.key    || s.key    || "",
+          tags:   cached.tags   || s.tags   || [],
+        });
+      });
+    },
+  };
+})();
+
 // ─── Estado global ──────────────────────────────────────────────────────────
 var library = {};
 var allSongs = [];
@@ -2492,35 +2676,35 @@ function cleanLabel(str) { return str.replace(/^\d+\s+/, '').replace(/^[-\s]+|[-
 
 // Ícones por seção e categoria (chave = label limpo, lowercase)
 var SECTION_ICONS = {
-  "gospel": "🎵", "missa": "⛪", "missa liturgia": "⛪"
+  "gospel": "♪", "missa": "✝", "missa liturgia": "✝"
 };
 var CAT_ICONS = {
   // Gospel
-  "adoração": "🙌", "louvor": "🎶", "entrega": "🤲", "amor de deus": "❤️",
-  "acolhida": "🫂", "fé e conversão": "✨", "vida em comunidade": "👥",
-  "pecado e salvação": "🕊️", "outras": "🎵", "outras canções": "🎵",
-  // Missa
-  "entrada": "🚪", "ato penitencial": "🙏", "glória": "✨", "salmos": "📖",
-  "aclamação": "🎺", "ofertório": "🫙", "respostas eucarísticas": "🥖",
-  "santo": "👑", "cordeiro": "🐑", "comunhão": "🍞",
-  "pós comunhão": "🙏", "final": "🚶", "mantras": "🔁",
-  "momentos especiais": "⭐", "sequências de páscoa": "🌸",
-  "sequências de pentecostes": "🔥", "cantos marianos": "🌹",
-  "tempo comum": "📅", "quaresma": "🌿", "advento": "🕯️",
-  "natal": "⭐", "páscoa": "🌸", "funeral": "🕯️", "naval": "⚓",
-  // Gospel — faltando
-  "animação": "🎉", "comunidade e vocação": "👥", "cura e libertação": "✋",
-  "diversas": "🎵", "espírito santo": "🔥", "maria": "🌹",
-  "vida em santidade": "🌟",
-  // Missa — faltando
-  "finados": "🕯️", "corpus christi": "✝️", "tempo pascal": "🌸",
+  "adoração": "✦", "louvor": "♫", "entrega": "◆", "amor de deus": "♡",
+  "acolhida": "◎", "fé e conversão": "✦", "vida em comunidade": "●",
+  "pecado e salvação": "✝", "outras": "♪", "outras canções": "♪",
+  // Missa — momentos
+  "entrada": "›", "ato penitencial": "✝", "glória": "★", "salmos": "≡",
+  "aclamação": "♦", "ofertório": "◆", "respostas eucarísticas": "≡",
+  "santo": "★", "cordeiro": "◦", "comunhão": "○",
+  "pós comunhão": "✝", "final": "‹", "mantras": "↺",
+  // Tempos litúrgicos
+  "momentos especiais": "✦", "sequências de páscoa": "◎",
+  "sequências de pentecostes": "✦", "cantos marianos": "◎",
+  "tempo comum": "○", "quaresma": "✝", "advento": "✦",
+  "natal": "★", "páscoa": "◎", "funeral": "✝", "naval": "◆",
+  // Gospel — variantes
+  "animação": "♪", "comunidade e vocação": "●", "cura e libertação": "✚",
+  "diversas": "♪", "espírito santo": "✦", "maria": "◎",
+  "vida em santidade": "★",
+  // Missa — variantes
+  "finados": "✝", "corpus christi": "✝", "tempo pascal": "◎",
   // Genérico
-  "geral": "🗂️"
+  "geral": "≡"
 };
 
 function categoryIcon(label) {
-  var key = label.toLowerCase().trim();
-  return CAT_ICONS[key] || "";
+  return "◦";
 }
 function sectionIcon(label) {
   var key = label.toLowerCase().trim();
@@ -2551,35 +2735,40 @@ function showToast(msg, duration) {
 
 // ─── Tabela Home ────────────────────────────────────────────────────────────
 function _makeHomeCard(song, cls) {
-  var inRep = repertorio.some(function(r) { return r.path === song.path && r.name === song.name; });
+  var inRep = repertorio.some(function(r) { return (r.fileId || r.path) === (song.fileId || song.path); });
   var catLabel = cleanLabel(song.category === "_raiz" ? song.section : (song.category || song.section));
   var views = song.views || 0;
+  var tags = Array.isArray(song.tags) ? song.tags.slice(0, 2) : [];
+
   var card = document.createElement("div");
   card.className = cls;
   card.dataset.songPath = song.path || "";
   card.dataset.songFileId = song.fileId || "";
+
+  var tagsHtml = tags.map(function(t) {
+    return '<span class="hc-tag">' + escHtml(t) + '</span>';
+  }).join("");
+
   card.innerHTML =
     '<div class="home-card-name">' + escHtml(song.name) + '</div>' +
+    (song.artist ? '<div class="hc-artist">' + escHtml(song.artist) + '</div>' : '') +
     '<div class="home-card-tags">' +
       '<span class="hc-cat">' + escHtml(catLabel) + '</span>' +
       (song.key ? '<span class="hc-key">' + escHtml(song.key) + '</span>' : '') +
-      (views > 0 ? '<span class="hc-views has-views">👁 ' + views + '</span>' : '') +
+      tagsHtml +
+      (views > 0 ? '<span class="hc-views has-views">&#128065; ' + views + '</span>' : '') +
     '</div>' +
     '<div class="home-card-actions">' +
       '<button class="btn-hc-add' + (inRep ? ' added' : '') + '">' + (inRep ? '✓ Adicionado' : '+ Repertório') + '</button>' +
-      '<button class="btn-hc-open">Abrir</button>' +
     '</div>' +
     '<div class="song-ops-wrap"><button class="btn-song-ops" title="Opções">⋯</button></div>';
 
   card.querySelector(".btn-hc-add").addEventListener("click", function(e) {
     e.stopPropagation();
     toggleRepertorio(song, this);
-    var nowIn = repertorio.some(function(r) { return r.path === song.path && r.name === song.name; });
+    var nowIn = repertorio.some(function(r) { return (r.fileId || r.path) === (song.fileId || song.path); });
     this.classList.toggle("added", nowIn);
     this.textContent = nowIn ? "✓ Adicionado" : "+ Repertório";
-  });
-  card.querySelector(".btn-hc-open").addEventListener("click", function(e) {
-    e.stopPropagation(); openModal(song);
   });
 
   var opsBtn = card.querySelector(".btn-song-ops");
@@ -3124,7 +3313,13 @@ function _songWithViews(song) {
   if (!key) return song;
   for (var i = 0; i < allSongs.length; i++) {
     if ((allSongs[i].fileId || allSongs[i].path || "") === key) {
-      return Object.assign({}, song, { views: allSongs[i].views || 0, key: allSongs[i].key || song.key || "" });
+      var s = allSongs[i];
+      return Object.assign({}, song, {
+        views:  s.views  || 0,
+        key:    s.key    || song.key    || "",
+        artist: s.artist || song.artist || "",
+        tags:   s.tags   || song.tags   || [],
+      });
     }
   }
   return song;
@@ -3220,6 +3415,10 @@ function openModal(song) {
           if (data.key    !== undefined) currentModal.key    = data.key;
           if (data.title  !== undefined && data.title) currentModal.name = data.title;
           if (data.tags   !== undefined) currentModal.tags   = data.tags;
+          // Persiste no cache local para reloads futuros
+          _metaStore.set(currentModal.fileId || currentModal.path, {
+            artist: currentModal.artist, key: currentModal.key, tags: currentModal.tags
+          });
         }
         applyTranspose(0);
       })
@@ -3308,6 +3507,107 @@ function _confirmLeaveEdit(onConfirmed, msg) {
     "Sair",
     onConfirmed
   );
+}
+
+// ─── Liturgia do Dia ─────────────────────────────────────────────────────────
+var _litDate  = new Date();
+var _litCache = {};
+
+function _litDateKey(d) {
+  var y = d.getFullYear();
+  var m = String(d.getMonth() + 1).padStart(2, "0");
+  var day = String(d.getDate()).padStart(2, "0");
+  return y + "-" + m + "-" + day;
+}
+
+function _litFmtLabel(d) {
+  return d.toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "short" });
+}
+
+function _litNextWeekday(weekday) {
+  var d = new Date();
+  d.setHours(0, 0, 0, 0);
+  var today = d.getDay();
+  var diff = (weekday - today + 7) % 7 || 7;
+  d.setDate(d.getDate() + diff);
+  return d;
+}
+
+function _litSetShortcutActive(id) {
+  ["lit-btn-hoje", "lit-btn-sabado", "lit-btn-domingo"].forEach(function(bid) {
+    document.getElementById(bid).classList.toggle("active", bid === id);
+  });
+}
+
+async function loadLiturgia(d, shortcutId) {
+  _litDate = d;
+  var key = _litDateKey(d);
+  document.getElementById("lit-date-label").textContent = _litFmtLabel(d);
+  if (shortcutId) _litSetShortcutActive(shortcutId);
+
+  if (_litCache[key]) { _renderLiturgia(_litCache[key]); return; }
+
+  document.getElementById("lit-content").innerHTML =
+    '<div class="lit-loading">Carregando liturgia...</div>';
+
+  try {
+    var r = await fetch("/api/liturgia?date=" + key);
+    if (r.status === 401) { _handleAuthExpired(); return; }
+    var data = await r.json();
+    if (data.error) throw new Error(data.error);
+    _litCache[key] = data;
+    _renderLiturgia(data);
+  } catch(e) {
+    document.getElementById("lit-content").innerHTML =
+      '<div class="lit-error">Não foi possível carregar a liturgia do dia.</div>';
+  }
+}
+
+function _renderLiturgia(data) {
+  var h = '<div class="lit-card">';
+
+  // Cabeçalho com cor litúrgica e nome da celebração
+  h += '<div class="lit-celebration">';
+  h += '<div class="lit-cor-dot" style="background:' + escHtml(data.corHex || "#9b97b0") + '"></div>';
+  h += '<div>';
+  h += '<div class="lit-cor-label">' + escHtml(data.cor || "") + '</div>';
+  h += '<div class="lit-celebration-name">' + escHtml(data.liturgia || "") + '</div>';
+  h += '</div></div>';
+
+  // Leituras colapsáveis
+  var sections = [
+    { key: "primeiraLeitura", label: "Primeira Leitura" },
+    { key: "salmo",           label: "Salmo Responsorial" },
+    { key: "segundaLeitura",  label: "Segunda Leitura" },
+    { key: "evangelho",       label: "Evangelho" },
+  ];
+  sections.forEach(function(s) {
+    var rd = data[s.key];
+    if (!rd) return;
+    var rid = "lit-r-" + s.key;
+    h += '<div class="lit-reading">';
+    h += '<div class="lit-reading-header" onclick="_litToggle(\'' + rid + '\')">';
+    h += '<span class="lit-reading-label">' + escHtml(s.label) + '</span>';
+    h += '<span class="lit-reading-ref">' + escHtml(rd.referencia || "") + '</span>';
+    h += '<span class="lit-reading-chevron" id="' + rid + '-ch">&#9660;</span>';
+    h += '</div>';
+    h += '<div class="lit-reading-body" id="' + rid + '">';
+    if (rd.refrao) {
+      h += '<div class="lit-refrao">' + escHtml(rd.refrao) + '</div>';
+    }
+    h += '<div class="lit-reading-text">' + escHtml(rd.texto || "") + '</div>';
+    h += '</div></div>';
+  });
+
+  h += '</div>';
+  document.getElementById("lit-content").innerHTML = h;
+}
+
+function _litToggle(id) {
+  var body = document.getElementById(id);
+  var ch   = document.getElementById(id + "-ch");
+  var open = body.classList.toggle("open");
+  if (ch) ch.style.transform = open ? "rotate(180deg)" : "";
 }
 
 // ─── Toolbar do editor ───────────────────────────────────────────────────────
@@ -3419,6 +3719,10 @@ async function saveMetadata() {
     if (payload.key)    meta.push("Tom: " + payload.key);
     document.getElementById("modal-meta").textContent = meta.join(" · ");
 
+    // Persiste no cache local para reloads futuros
+    _metaStore.set(currentModal.fileId || currentModal.path, {
+      artist: payload.artist, key: payload.key, tags: tagsList,
+    });
     showToast("Metadados salvos!");
     closeMetaPanel();
     // Invalida cache para home screen mostrar dados actualizados
@@ -3436,7 +3740,7 @@ function invalidate_library_cache_js() {
   allSongs = [];
   library = {};
   fetch("/api/songs").then(function(r) { return r.json(); }).then(function(songs) {
-    allSongs = songs;
+    allSongs = _metaStore.enrich(songs);
     // Atualiza o card na grid se visível
     if (searchActive) {
       var q = document.getElementById("search-box").value.trim();
@@ -4297,10 +4601,12 @@ function init() {
             var meta = metaMap[k] || {};
             return Object.assign(s, {
               artist: meta.artist || s.artist || "",
-              key: meta.key || s.key || "",
-              views: meta.views || 0
+              key:    meta.key    || s.key    || "",
+              tags:   meta.tags   || s.tags   || [],
+              views:  meta.views  || 0,
             });
           });
+          allSongs = _metaStore.enrich(allSongs);
           renderHomeTable(allSongs);
         }).catch(function(){});
     })
@@ -4476,6 +4782,28 @@ function init() {
   document.getElementById("btn-rep-export").addEventListener("click", function() { exportRepertorio(false); });
   document.getElementById("btn-rep-pdf").addEventListener("click", function() { exportRepertorio(true); });
   loadSavedReps();
+
+  // ─── Liturgia do Dia ─────────────────────────────────────────────────────
+  document.getElementById("lit-prev").addEventListener("click", function() {
+    var d = new Date(_litDate); d.setDate(d.getDate() - 1);
+    _litSetShortcutActive(null);
+    loadLiturgia(d);
+  });
+  document.getElementById("lit-next").addEventListener("click", function() {
+    var d = new Date(_litDate); d.setDate(d.getDate() + 1);
+    _litSetShortcutActive(null);
+    loadLiturgia(d);
+  });
+  document.getElementById("lit-btn-hoje").addEventListener("click", function() {
+    loadLiturgia(new Date(), "lit-btn-hoje");
+  });
+  document.getElementById("lit-btn-sabado").addEventListener("click", function() {
+    loadLiturgia(_litNextWeekday(6), "lit-btn-sabado");
+  });
+  document.getElementById("lit-btn-domingo").addEventListener("click", function() {
+    loadLiturgia(_litNextWeekday(0), "lit-btn-domingo");
+  });
+  loadLiturgia(new Date(), "lit-btn-hoje");
 
   // ─── Bottom nav mobile ────────────────────────────────────────────────────
   function mbnSetActive(id) {
