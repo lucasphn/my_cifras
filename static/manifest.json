@@ -2,7 +2,7 @@
   "name": "My Cifras",
   "short_name": "My Cifras",
   "description": "Acervo pessoal de cifras para músicos litúrgicos e gospel",
-  "start_url": "/app",
+  "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "orientation": "any",

@@ -115,7 +115,7 @@ SCOPES = [
 | Método | Rota | Descrição |
 |---|---|---|
 | GET | `/` | Landing page pública (`landing.html`) |
-| GET | `/app` | App principal (requer login OAuth) |
+| GET | `/` | Landing (não autenticado) ou App principal (autenticado) |
 | GET | `/login` | Tela de login |
 | GET | `/login/google` | Inicia fluxo OAuth |
 | GET | `/oauth/callback` | Callback OAuth do Google |
@@ -370,7 +370,7 @@ Comparação insensível a acentos e maiúsculas. Deixar `CALENDAR_KEYWORDS` em 
 
 ## PWA (Progressive Web App)
 
-- `static/manifest.json` — define nome, ícones, `display: standalone`, `start_url: /app`, `theme_color: #5b4b8a`
+- `static/manifest.json` — define nome, ícones, `display: standalone`, `start_url: /`, `scope: /`, `theme_color: #5b4b8a`
 - `<link rel="manifest" href="/static/manifest.json">` em todos os templates (landing, login, index)
 - `<meta name="theme-color" content="#5b4b8a">` em todos os templates
 - `apple-touch-icon.png` (180×180) para iOS
