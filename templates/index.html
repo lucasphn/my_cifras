@@ -5911,7 +5911,10 @@ function showImportResult(data) {
   importCifraText = data.text || "";
   document.getElementById("import-title").value = data.title || "";
   document.getElementById("import-artist").value = data.artist || "";
-  document.getElementById("import-key").value = data.key || "";
+  // Tonalidade: usa do scraping; se não veio, detecta pelo primeiro acorde do texto
+  var key = data.key || "";
+  if (!key && importCifraText) key = detectBaseNote(importCifraText) || "";
+  document.getElementById("import-key").value = key;
 
   var metaWrap = document.getElementById("import-meta-wrap");
   metaWrap.style.display = "flex";
@@ -5984,14 +5987,21 @@ async function saveImport() {
     closeImportModal();
     overlay.style.display = "flex";
 
-    // Drive tem consistência eventual: aguarda ~1.2s antes de recarregar
-    await new Promise(function(r) { setTimeout(r, 1200); });
-    await reloadLibrary();
+    // Drive tem consistência eventual: tenta até 4× (intervalo 1.2s) até a música aparecer
+    var savedTitle = title.toLowerCase();
+    var catKey = category === "_raiz" ? "_raiz" : category;
+    var found = false;
+    for (var attempt = 0; attempt < 4 && !found; attempt++) {
+      await new Promise(function(r) { setTimeout(r, 1200); });
+      await reloadLibrary();
+      found = allSongs.some(function(s) {
+        return s.name.toLowerCase() === savedTitle && s.section === section;
+      });
+    }
     renderHomeTable(allSongs);
     showHomeTable();
 
     // Navega para a categoria onde a música foi salva
-    var catKey = category === "_raiz" ? "_raiz" : category;
     selectCategory(section, catKey);
     showToast("\"" + title + "\" salvo com sucesso!", 3500);
   } catch(e) {
