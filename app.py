@@ -412,6 +412,7 @@ def _load_prefs():
         return _prefs_cache["data"]
     if _use_drive():
         try:
+            import drive as _drive
             data, file_id = _drive.load_preferences(get_service(), CIFRAS_FOLDER_ID)
             _prefs_cache["data"] = data
             _prefs_cache["file_id"] = file_id
@@ -422,6 +423,7 @@ def _load_prefs():
 
 
 def _save_prefs(data):
+    import drive as _drive
     with _prefs_lock:
         if _use_drive():
             svc = get_service()
