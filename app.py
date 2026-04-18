@@ -1035,23 +1035,27 @@ def api_export():
     except Exception:
         logo_svg = ""
 
-    def _song_card(s):
-        name = _esc(s.get("name", ""))
+    def _song_card(idx, s):
+        num     = idx + 1
+        name    = _esc(s.get("name", ""))
+        artist  = _esc((s.get("artist") or "").strip())
         category = s.get("category", "")
-        key = s.get("key", "")
-        badges = ""
+        key     = s.get("key", "")
+        meta_parts = []
+        if artist:
+            meta_parts.append(f'<span class="meta-artist">{artist}</span>')
         if category:
-            badges += f'<span class="badge badge-cat">{_esc(category)}</span>'
+            meta_parts.append(f'<span class="badge badge-cat">{_esc(category)}</span>')
         if key:
-            badges += f'<span class="badge badge-key">{_esc(key)}</span>'
-        header_right = f'<div class="song-badges">{badges}</div>' if badges else ""
+            meta_parts.append(f'<span class="badge badge-key">&#9835; {_esc(key)}</span>')
+        meta_row = f'<div class="song-meta">{" ".join(meta_parts)}</div>' if meta_parts else ""
         cifra_html = _render_cifra_html(s.get("text", ""))
         return (
             f'<div class="song">'
             f'  <div class="song-header">'
-            f'    <h2>{name}</h2>'
-            f'    {header_right}'
+            f'    <h2><span class="song-num">{num}.</span> {name}</h2>'
             f'  </div>'
+            f'  {meta_row}'
             f'  <pre>{cifra_html}</pre>'
             f'</div>\n'
         )
@@ -1066,77 +1070,87 @@ def api_export():
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{_esc(title)}</title>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap');
 
   *, *::before, *::after {{ box-sizing: border-box; margin: 0; padding: 0; }}
 
   body {{
-    font-family: 'Sora', system-ui, sans-serif;
-    background: #f7f6fc;
-    color: #1a1528;
+    font-family: 'Inter', system-ui, sans-serif;
+    background: #f4f2fa;
+    color: #1a1d2e;
     max-width: 860px;
     margin: 0 auto;
-    padding: 48px 32px 80px;
+    padding: 0 0 80px;
   }}
 
-  /* ── Header ── */
-  .doc-header {{
+  /* ── Cabeçalho com fundo roxo ── */
+  .doc-banner {{
+    background: #5b4b8a;
+    padding: 28px 40px 24px;
     display: flex;
     align-items: flex-end;
     justify-content: space-between;
-    border-bottom: 2px solid #e2dff5;
-    padding-bottom: 20px;
-    margin-bottom: 10px;
+    gap: 16px;
   }}
-  .doc-header .logo {{ display: flex; align-items: center; }}
-  .doc-header .logo svg {{ height: 36px; width: auto; }}
-  .doc-meta {{
-    text-align: right;
-    font-size: .8em;
-    color: #7a6fa8;
-    line-height: 1.6;
-  }}
+  .doc-banner .logo svg {{ height: 32px; width: auto; filter: brightness(10); opacity: .9; }}
+  .doc-banner-right {{ text-align: right; }}
   .doc-title {{
-    font-size: 1.5em;
+    font-size: 1.6em;
     font-weight: 800;
     letter-spacing: -.03em;
-    color: #1a1528;
-    margin: 18px 0 4px;
+    color: #fff;
+    line-height: 1.15;
   }}
   .doc-subtitle {{
-    font-size: .82em;
-    color: #9186b8;
-    margin-bottom: 40px;
+    font-size: .8em;
+    color: rgba(255,255,255,.65);
+    margin-top: 4px;
   }}
+
+  .doc-body {{ padding: 32px 40px 0; }}
 
   /* ── Song card ── */
   .song {{
     background: #fff;
     border: 1px solid #e4e0f4;
     border-radius: 12px;
-    padding: 22px 26px 26px;
-    margin-bottom: 28px;
+    padding: 20px 24px 24px;
+    margin-bottom: 24px;
     page-break-inside: avoid;
     break-inside: avoid;
   }}
   .song-header {{
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    margin-bottom: 16px;
-    padding-bottom: 12px;
+    margin-bottom: 8px;
+    padding-bottom: 10px;
     border-bottom: 1px solid #ede9fa;
   }}
   .song h2 {{
-    font-size: 1em;
+    font-size: 1.05em;
     font-weight: 700;
-    color: #1a1528;
-    letter-spacing: -.01em;
-    padding-left: 10px;
-    border-left: 3px solid #5b4b8a;
+    color: #5b4b8a;
+    letter-spacing: -.015em;
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
   }}
-  .song-badges {{ display: flex; gap: 6px; flex-shrink: 0; }}
+  .song-num {{
+    color: #d4af37;
+    font-size: .9em;
+    font-weight: 800;
+    flex-shrink: 0;
+  }}
+  .song-meta {{
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 14px;
+  }}
+  .meta-artist {{
+    font-size: .78em;
+    font-style: italic;
+    color: #7a6fa8;
+  }}
   .badge {{
     font-size: .72em;
     font-weight: 600;
@@ -1145,48 +1159,46 @@ def api_export():
     white-space: nowrap;
   }}
   .badge-cat {{
-    background: rgba(91, 75, 138, .1);
+    background: rgba(91,75,138,.1);
     color: #5b4b8a;
-    border: 1px solid rgba(91, 75, 138, .2);
+    border: 1px solid rgba(91,75,138,.2);
   }}
   .badge-key {{
-    background: rgba(212, 175, 55, .12);
+    background: rgba(212,175,55,.12);
     color: #9a7a10;
-    border: 1px solid rgba(212, 175, 55, .3);
+    border: 1px solid rgba(212,175,55,.3);
+    font-weight: 700;
   }}
 
-  /* ── Cifra body ── */
+  /* ── Cifra ── */
   pre {{
     font-family: 'JetBrains Mono', 'Courier New', monospace;
-    font-size: .82em;
-    line-height: 1.8;
+    font-size: .8em;
+    line-height: 1.75;
     white-space: pre-wrap;
     word-break: break-word;
     color: #2e2645;
   }}
-  .chord-line {{
-    color: #5b4b8a;
-    font-weight: 700;
-  }}
+  .chord-line {{ color: #5b4b8a; font-weight: 700; }}
 
   /* ── Footer ── */
   .doc-footer {{
-    margin-top: 56px;
-    padding-top: 16px;
+    margin: 40px 40px 0;
+    padding-top: 14px;
     border-top: 1px solid #e2dff5;
-    font-size: .75em;
+    font-size: .73em;
     color: #b0a8cc;
     text-align: center;
   }}
 
-  /* ── Botão voltar mobile ── */
+  /* ── Botão voltar (mobile) ── */
   .btn-back {{
     display: none;
     position: fixed; bottom: 24px; right: 20px;
     background: #5b4b8a; color: #fff;
     border: none; border-radius: 50px;
     padding: .65rem 1.2rem;
-    font-family: 'Sora', system-ui, sans-serif;
+    font-family: 'Inter', system-ui, sans-serif;
     font-size: .85rem; font-weight: 700;
     box-shadow: 0 4px 16px rgba(91,75,138,.4);
     cursor: pointer; z-index: 999;
@@ -1194,35 +1206,39 @@ def api_export():
     touch-action: manipulation;
   }}
   @media (max-width: 768px) {{
-    body {{ padding: 24px 16px 100px; }}
+    .doc-banner {{ padding: 20px; }}
+    .doc-body {{ padding: 20px 16px 0; }}
+    .doc-footer {{ margin: 32px 16px 0; }}
     .btn-back {{ display: inline-flex; align-items: center; gap: .4rem; }}
   }}
 
   /* ── Print ── */
   @media print {{
-    body {{ background: #fff; padding: 24px 20px; }}
-    .song {{ border: 1px solid #ddd; box-shadow: none; margin-bottom: 20px; }}
-    .doc-footer {{ margin-top: 32px; }}
+    body {{ background: #fff; }}
+    .doc-banner {{ -webkit-print-color-adjust: exact; print-color-adjust: exact; }}
+    .badge {{ -webkit-print-color-adjust: exact; print-color-adjust: exact; }}
+    .song {{ border: 1px solid #ddd; margin-bottom: 16px; }}
     .btn-back {{ display: none !important; }}
   }}
 </style>
 </head>
 <body>
 
-<header class="doc-header">
-  <div class="logo">{logo_svg}</div>
-  <div class="doc-meta">
-    {_esc(today)}<br>
-    {n} {song_word}
+<header class="doc-banner">
+  <div>
+    <div class="logo">{logo_svg}</div>
+  </div>
+  <div class="doc-banner-right">
+    <div class="doc-title">{_esc(title)}</div>
+    <div class="doc-subtitle">{n} {song_word} · {_esc(today)}</div>
   </div>
 </header>
 
-<h1 class="doc-title">{_esc(title)}</h1>
-<p class="doc-subtitle">Repertório gerado pelo My Cifras</p>
+<div class="doc-body">
+{"".join(_song_card(i, s) for i, s in enumerate(songs))}
+</div>
 
-{"".join(_song_card(s) for s in songs)}
-
-<footer class="doc-footer">My Cifras · mycifras.app</footer>
+<footer class="doc-footer">My Cifras · gerado em {_esc(today)}</footer>
 
 <a class="btn-back" onclick="window.close(); history.back(); return false;" href="#">← Voltar</a>
 
