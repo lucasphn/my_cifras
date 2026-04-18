@@ -3654,14 +3654,16 @@ function confirmDeleteSong(card, song) {
   cancelBtn.style.cssText = "background:none;color:var(--text-muted);border:1px solid var(--border);border-radius:6px;padding:4px 8px;font-size:.78rem;cursor:pointer";
   card.appendChild(confirmBtn);
   card.appendChild(cancelBtn);
-  cancelBtn.addEventListener("click", function() {
+  cancelBtn.addEventListener("click", function(e) {
+    e.stopPropagation();
     if (currentCategory && currentCategory.section) {
       renderSongGrid((library[currentCategory.section]||{})[currentCategory.cat]||[]);
     } else {
       renderHomeTable(allSongs);
     }
   });
-  confirmBtn.addEventListener("click", async function() {
+  confirmBtn.addEventListener("click", async function(e) {
+    e.stopPropagation();
     var body = {};
     if (song.fileId) body.fileId = song.fileId; else body.path = song.path;
     var r = await fetch("/api/songs/delete", {method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify(body)});
