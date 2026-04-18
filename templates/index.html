@@ -1298,7 +1298,9 @@ input { font: inherit; }
   gap: 12px;
   flex-shrink: 0;
 }
-#modal-title { flex: 1; font-weight: 600; font-size: 1em; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+#modal-title-wrap { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; overflow: hidden; }
+#modal-title { font-weight: 600; font-size: 1em; white-space: nowrap; text-overflow: ellipsis; overflow: hidden; }
+#modal-artist { font-size: 0.72em; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 #modal-meta { font-size: 0.78em; color: var(--text-muted); white-space: nowrap; }
 #btn-modal-back-footer { display: none; }
 #modal-close { font-size: 1.2em; color: var(--text-muted); padding: 4px 8px; border-radius: 5px; }
@@ -2650,7 +2652,10 @@ input { font: inherit; }
 <div id="modal-overlay">
   <div id="modal">
     <div id="modal-header">
-      <span id="modal-title">—</span>
+      <div id="modal-title-wrap">
+        <span id="modal-title">—</span>
+        <span id="modal-artist"></span>
+      </div>
       <span id="modal-meta"></span>
       <div id="modal-view-controls">
         <button class="modal-vctrl" id="btn-modal-zoom-out" title="Diminuir fonte (-)">A&#8722;</button>
@@ -3811,6 +3816,7 @@ function openModal(song) {
   document.getElementById("btn-modal-fullscreen").classList.remove("active");
   exitEditMode();
   document.getElementById("modal-title").textContent = song.name;
+  document.getElementById("modal-artist").textContent = song.artist || "";
   document.getElementById("modal-meta").textContent = song.category
     ? (song.category === "_raiz" ? song.section : song.category)
     : "";
@@ -3864,7 +3870,10 @@ function openModal(song) {
         } else {
           rawCifraText = data.text;
           // Atualiza artist/key/tags no objeto se veio do servidor
-          if (data.artist !== undefined) currentModal.artist = data.artist;
+          if (data.artist !== undefined) {
+            currentModal.artist = data.artist;
+            document.getElementById("modal-artist").textContent = data.artist || "";
+          }
           if (data.key    !== undefined) currentModal.key    = data.key;
           if (data.title  !== undefined && data.title) currentModal.name = data.title;
           if (data.tags   !== undefined) currentModal.tags   = data.tags;
@@ -4420,14 +4429,16 @@ async function saveMetadata() {
 
     // Atualiza currentModal com os novos valores
     if (payload.title)  { currentModal.name   = payload.title;  document.getElementById("modal-title").textContent = payload.title; }
-    if (payload.artist) currentModal.artist = payload.artist;
+    if (payload.artist !== undefined) {
+      currentModal.artist = payload.artist;
+      document.getElementById("modal-artist").textContent = payload.artist || "";
+    }
     if (payload.key)    { currentModal.key    = payload.key; updateTransposeUI(); }
     currentModal.tags = tagsList;
 
-    // Atualiza badge de metadados no cabeçalho do modal
+    // Atualiza badge de metadados no cabeçalho do modal (só tom agora, artista está no subtítulo)
     var meta = [];
-    if (payload.artist) meta.push(payload.artist);
-    if (payload.key)    meta.push("Tom: " + payload.key);
+    if (payload.key) meta.push("Tom: " + payload.key);
     document.getElementById("modal-meta").textContent = meta.join(" · ");
 
     // Persiste no cache local para reloads futuros
