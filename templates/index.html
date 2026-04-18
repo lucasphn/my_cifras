@@ -4564,13 +4564,19 @@ var _mtSavedSemitone = null;  // semitom do my_key salvo para a música atual
 var _pendingMyKeyApply = false; // true enquanto prefs carregam antes da cifra
 
 function _getCurrentKey() {
+  // Fonte primária: calcula nota atual a partir da base + semitons correntes
+  if (rawCifraText) {
+    var baseNote = detectBaseNote(rawCifraText);
+    if (baseNote) return transposeNote(baseNote, currentSemitone);
+  }
+  // Fallback: botão ativo na barra de notas
   var active = document.querySelector("#tp-note-buttons button.active");
   if (active) return active.dataset.note;
+  // Fallback: tom nos metadados
   if (currentModal && currentModal.key) {
     var m = currentModal.key.trim().match(/^([A-G][b#]?)/);
     if (m) return normalizeNote(m[1]) || m[1];
   }
-  if (rawCifraText) return detectBaseNote(rawCifraText);
   return null;
 }
 
@@ -4645,12 +4651,18 @@ function loadMyTones(songId) {
 
 function saveMyTone(songId) {
   var key = _getCurrentKey();
-  if (!key) { showToast("Toque um tom primeiro para salvar."); return; }
+  if (!key) { showToast("Tom não detectado — cifra sem acordes?"); return; }
+  var saveBtn = document.getElementById("btn-save-my-tone");
+  if (saveBtn) saveBtn.disabled = true;
   fetch("/api/preferences", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ fileId: songId, slot: "my_key", key: key })
-  }).then(function(r) { return r.ok ? r.json() : null; })
+  }).then(function(r) {
+      if (r.status === 401) { _handleAuthExpired(); return null; }
+      if (!r.ok) return r.json().then(function(e) { throw new Error(e.error || "HTTP " + r.status); });
+      return r.json();
+    })
     .then(function(data) {
       if (!data) return;
       _myTones[songId] = data;
@@ -4660,7 +4672,9 @@ function saveMyTone(songId) {
       _updateMyToneUI(songId);
       _updateSaveBtn();
       showToast("Meu Tom salvo: " + key);
-    }).catch(function() { showToast("Erro ao salvar Meu Tom."); });
+    })
+    .catch(function(e) { showToast("Erro ao salvar Meu Tom: " + (e.message || "")); })
+    .finally(function() { if (saveBtn) saveBtn.disabled = false; });
 }
 
 // Toggle: alterna entre Tom Original e Meu Tom
