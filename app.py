@@ -1301,6 +1301,80 @@ def api_import_save():
         return jsonify({"ok": True, "path": str(dest_file)})
 
 
+@app.route("/api/export/docx", methods=["POST"])
+@login_required
+def api_export_docx():
+    """Gera um arquivo .docx com as cifras do repertório."""
+    import io
+    import re as _re
+    from docx import Document
+    from docx.shared import Pt, RGBColor, Inches
+    from docx.enum.text import WD_ALIGN_PARAGRAPH
+    from flask import send_file
+
+    data = request.get_json(force=True)
+    songs = data.get("songs", [])
+    title = data.get("title", "Repertório")
+
+    doc = Document()
+
+    # Margens menores para caber mais conteúdo
+    for section in doc.sections:
+        section.top_margin    = Inches(0.8)
+        section.bottom_margin = Inches(0.8)
+        section.left_margin   = Inches(1.0)
+        section.right_margin  = Inches(1.0)
+
+    # Título do repertório
+    t = doc.add_heading(title, level=0)
+    t.alignment = WD_ALIGN_PARAGRAPH.CENTER
+
+    for i, song in enumerate(songs):
+        if i > 0:
+            doc.add_page_break()
+
+        # Nome da música
+        doc.add_heading(song.get("name", ""), level=1)
+
+        # Artista / categoria
+        artist = (song.get("artist") or "").strip()
+        category = (song.get("category") or song.get("section") or "").strip()
+        subtitle_parts = [p for p in [artist, category] if p]
+        if subtitle_parts:
+            p = doc.add_paragraph()
+            run = p.add_run(" · ".join(subtitle_parts))
+            run.font.color.rgb = RGBColor(0x88, 0x88, 0x88)
+            run.font.size = Pt(10)
+
+        # Tom
+        key = (song.get("key") or "").strip()
+        if key:
+            p = doc.add_paragraph()
+            run = p.add_run("Tom: " + key)
+            run.font.size = Pt(10)
+            run.font.bold = True
+
+        # Cifra em monospace
+        text = (song.get("text") or "").strip()
+        if text:
+            p = doc.add_paragraph()
+            run = p.add_run(text)
+            run.font.name = "Courier New"
+            run.font.size = Pt(8)
+
+    buf = io.BytesIO()
+    doc.save(buf)
+    buf.seek(0)
+
+    safe_name = _re.sub(r'[<>:"/\\|?*]', "_", title).strip() or "repertorio"
+    return send_file(
+        buf,
+        as_attachment=True,
+        download_name=safe_name + ".docx",
+        mimetype="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    )
+
+
 @app.route("/api/songs/update_meta", methods=["POST"])
 @login_required
 def api_update_meta():

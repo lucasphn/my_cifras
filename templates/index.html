@@ -1428,28 +1428,24 @@ input { font: inherit; }
 
 /* ─── Botão play nos repertórios salvos ──────────────────────────────────── */
 .saved-rep-item .sri-play {
-  color: #5b4b8a; font-size: 0.72em; padding: 3px 6px; border-radius: 5px;
-  flex-shrink: 0; opacity: 0; transition: opacity .15s, background .15s;
+  background: var(--primary);
+  color: #fff;
+  border-radius: 50%;
+  width: 30px; height: 30px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.78em;
+  padding: 0;
+  flex-shrink: 0;
+  opacity: 1;
+  transition: background .15s, transform .1s;
   cursor: pointer;
+  touch-action: manipulation;
 }
-.saved-rep-item:hover .sri-play { opacity: 1; }
-.saved-rep-item .sri-play:hover { background: rgba(91,75,138,.12); }
+.saved-rep-item .sri-play:hover { background: var(--primary-hover); }
+.saved-rep-item .sri-play:active { transform: scale(.92); }
 
 @media (max-width: 1024px) {
-  /* No mobile o botão ▶ fica sempre visível e grande para toque fácil */
-  .saved-rep-item .sri-play {
-    opacity: 1;
-    background: var(--primary);
-    color: #fff;
-    border-radius: 50%;
-    width: 36px; height: 36px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 0.9em;
-    padding: 0;
-    flex-shrink: 0;
-    touch-action: manipulation;
-  }
-  .saved-rep-item .sri-play:active { background: var(--primary-hover); transform: scale(.92); }
+  .saved-rep-item .sri-play { width: 36px; height: 36px; font-size: 0.9em; }
 }
 
 /* ─── Modo Apresentação ──────────────────────────────────────────────────── */
@@ -2641,7 +2637,7 @@ input { font: inherit; }
       <div id="rep-empty">Adicione músicas pelo<br>botão "+ Repertório" nos cards.</div>
       <div id="rep-footer">
         <button class="btn" id="btn-rep-clear">Limpar</button>
-        <button class="btn btn-accent" id="btn-rep-export">&#128196; Exportar</button>
+        <button class="btn btn-accent" id="btn-rep-docx">&#128196; .doc</button>
         <button class="btn btn-accent" id="btn-rep-pdf">&#128247; PDF</button>
       </div>
     </div>
@@ -4896,6 +4892,62 @@ function setExportProgress(pct, label) {
   document.getElementById("export-prog-label").textContent = label || (Math.round(pct) + "%");
 }
 
+async function exportDocx() {
+  if (!repertorio.length) { showToast("O repertório está vazio."); return; }
+  var title = document.getElementById("rep-title-input").value.trim() || "Repertório";
+  var overlay = document.getElementById("export-overlay");
+  document.getElementById("export-card-title").textContent = "Gerando " + title + "...";
+  setExportProgress(0, "0%");
+  overlay.classList.add("show");
+  try {
+    var songs = [];
+    var total = repertorio.length;
+    for (var i = 0; i < total; i++) {
+      var s = repertorio[i];
+      setExportProgress(Math.round((i / total) * 80), "Carregando " + (i + 1) + " de " + total + "...");
+      var text = "";
+      if (s.text) {
+        text = s.text;
+      } else {
+        try {
+          var r = await fetch(s.fileId
+            ? "/api/cifra?fileId=" + encodeURIComponent(s.fileId) + "&mimeType=" + encodeURIComponent(s.mimeType || "")
+            : "/api/cifra?path=" + encodeURIComponent(s.path));
+          var d = await r.json();
+          text = d.text || "";
+        } catch(e) { text = "[Erro ao carregar]"; }
+      }
+      songs.push({
+        name: s.name,
+        artist: s.artist || "",
+        text: text,
+        category: s.category === "_raiz" ? "" : (s.category || ""),
+        section: s.section || "",
+        key: s.key || ""
+      });
+    }
+    setExportProgress(88, "Gerando documento...");
+    var resp = await fetch("/api/export/docx", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ songs: songs, title: title })
+    });
+    if (!resp.ok) throw new Error("Erro ao gerar .docx");
+    setExportProgress(98, "Baixando...");
+    var blob = await resp.blob();
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    a.href = url; a.download = title + ".docx";
+    document.body.appendChild(a); a.click();
+    setTimeout(function() { URL.revokeObjectURL(url); a.remove(); }, 1000);
+    setExportProgress(100, "Pronto!");
+  } catch(e) {
+    showToast("Erro: " + e.message);
+  } finally {
+    setTimeout(function() { overlay.classList.remove("show"); }, 1200);
+  }
+}
+
 async function exportRepertorio(autoPrint) {
   if (!repertorio.length) { showToast("O repertório está vazio."); return; }
 
@@ -5740,7 +5792,7 @@ function init() {
       renderSavedReps();
     });
   });
-  document.getElementById("btn-rep-export").addEventListener("click", function() { exportRepertorio(false); });
+  document.getElementById("btn-rep-docx").addEventListener("click", exportDocx);
   document.getElementById("btn-rep-pdf").addEventListener("click", function() { exportRepertorio(true); });
   loadSavedReps();
 
