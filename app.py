@@ -1304,63 +1304,157 @@ def api_import_save():
 @app.route("/api/export/docx", methods=["POST"])
 @login_required
 def api_export_docx():
-    """Gera um arquivo .docx com as cifras do repertório."""
+    """Gera um arquivo .docx estilizado com as cifras do repertório."""
     import io
     import re as _re
     from docx import Document
     from docx.shared import Pt, RGBColor, Inches
     from docx.enum.text import WD_ALIGN_PARAGRAPH
+    from docx.oxml.ns import qn
+    from docx.oxml import OxmlElement
     from flask import send_file
 
+    # ── Paleta de cores do app ──────────────────────────────────────────────
+    PURPLE = RGBColor(0x5b, 0x4b, 0x8a)   # primary
+    GOLD   = RGBColor(0xd4, 0xaf, 0x37)   # accent
+    DARK   = RGBColor(0x1a, 0x1d, 0x2e)   # texto principal
+    MUTED  = RGBColor(0x88, 0x88, 0x99)   # texto secundário
+    LIGHT  = RGBColor(0xec, 0xe9, 0xf5)   # fundo suave roxo
+
+    # ── Detecta linha de acordes (mesmo critério do frontend) ───────────────
+    _CHORD_TOKEN = _re.compile(
+        r'^[A-G][b#]?(?:m|maj|min|dim|aug|sus|add|[0-9]|/[A-G][b#]?)*$'
+    )
+    def _is_chord_line(line):
+        tokens = line.strip().split()
+        return bool(tokens) and all(_CHORD_TOKEN.match(t) for t in tokens)
+
+    # ── Helpers ─────────────────────────────────────────────────────────────
+    def _tight(p, before=0, after=0):
+        fmt = p.paragraph_format
+        fmt.space_before = Pt(before)
+        fmt.space_after  = Pt(after)
+        return p
+
+    def _shade_paragraph(p, hex_fill="ece9f5"):
+        """Aplica cor de fundo a um parágrafo via XML."""
+        pPr = p._p.get_or_add_pPr()
+        shd = OxmlElement("w:shd")
+        shd.set(qn("w:val"), "clear")
+        shd.set(qn("w:color"), "auto")
+        shd.set(qn("w:fill"), hex_fill)
+        pPr.append(shd)
+
+    def _bottom_border(p, color="5b4b8a", size=6):
+        """Adiciona borda inferior a um parágrafo."""
+        pPr = p._p.get_or_add_pPr()
+        pBdr = OxmlElement("w:pBdr")
+        bottom = OxmlElement("w:bottom")
+        bottom.set(qn("w:val"), "single")
+        bottom.set(qn("w:sz"), str(size))
+        bottom.set(qn("w:space"), "1")
+        bottom.set(qn("w:color"), color)
+        pBdr.append(bottom)
+        pPr.append(pBdr)
+
+    # ── Documento ────────────────────────────────────────────────────────────
     data = request.get_json(force=True)
     songs = data.get("songs", [])
     title = data.get("title", "Repertório")
 
     doc = Document()
 
-    # Margens menores para caber mais conteúdo
-    for section in doc.sections:
-        section.top_margin    = Inches(0.8)
-        section.bottom_margin = Inches(0.8)
-        section.left_margin   = Inches(1.0)
-        section.right_margin  = Inches(1.0)
+    # Remove estilos padrão do Word para herdar só o que definimos
+    for sec in doc.sections:
+        sec.top_margin    = Inches(0.9)
+        sec.bottom_margin = Inches(0.9)
+        sec.left_margin   = Inches(1.1)
+        sec.right_margin  = Inches(1.1)
 
-    # Título do repertório
-    t = doc.add_heading(title, level=0)
-    t.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    # ── Cabeçalho do documento ──────────────────────────────────────────────
+    header_p = doc.add_paragraph()
+    _shade_paragraph(header_p, "5b4b8a")
+    _tight(header_p, before=4, after=4)
+    header_p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    run = header_p.add_run(title)
+    run.font.bold = True
+    run.font.size = Pt(18)
+    run.font.color.rgb = RGBColor(0xff, 0xff, 0xff)
+    run.font.name = "Inter"
 
+    # Subtítulo com data e contagem
+    from datetime import date as _date
+    sub_p = doc.add_paragraph()
+    _shade_paragraph(sub_p, "4a3a78")
+    _tight(sub_p, before=0, after=6)
+    sub_p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    sub_run = sub_p.add_run(
+        f"{len(songs)} música{'s' if len(songs) != 1 else ''}  ·  {_date.today().strftime('%d/%m/%Y')}"
+    )
+    sub_run.font.size = Pt(9)
+    sub_run.font.color.rgb = RGBColor(0xcc, 0xc4, 0xee)
+    sub_run.font.name = "Inter"
+
+    # ── Músicas ──────────────────────────────────────────────────────────────
     for i, song in enumerate(songs):
         if i > 0:
             doc.add_page_break()
 
-        # Nome da música
-        doc.add_heading(song.get("name", ""), level=1)
+        # Número + nome da música
+        title_p = doc.add_paragraph()
+        _shade_paragraph(title_p, "ece9f5")
+        _tight(title_p, before=6, after=2)
+        num_run = title_p.add_run(f"{i + 1}.  ")
+        num_run.font.color.rgb = GOLD
+        num_run.font.size = Pt(14)
+        num_run.font.bold = True
+        name_run = title_p.add_run(song.get("name", ""))
+        name_run.font.color.rgb = PURPLE
+        name_run.font.size = Pt(14)
+        name_run.font.bold = True
+        name_run.font.name = "Inter"
+        _bottom_border(title_p, "5b4b8a", 4)
 
-        # Artista / categoria
-        artist = (song.get("artist") or "").strip()
+        # Artista · Categoria
+        artist   = (song.get("artist")   or "").strip()
         category = (song.get("category") or song.get("section") or "").strip()
-        subtitle_parts = [p for p in [artist, category] if p]
-        if subtitle_parts:
-            p = doc.add_paragraph()
-            run = p.add_run(" · ".join(subtitle_parts))
-            run.font.color.rgb = RGBColor(0x88, 0x88, 0x88)
-            run.font.size = Pt(10)
+        meta_parts = [p for p in [artist, category] if p]
+        if meta_parts:
+            mp = doc.add_paragraph()
+            _tight(mp, before=3, after=1)
+            mr = mp.add_run("  " + "  ·  ".join(meta_parts))
+            mr.font.size = Pt(9)
+            mr.font.italic = True
+            mr.font.color.rgb = MUTED
 
         # Tom
         key = (song.get("key") or "").strip()
         if key:
-            p = doc.add_paragraph()
-            run = p.add_run("Tom: " + key)
-            run.font.size = Pt(10)
-            run.font.bold = True
+            kp = doc.add_paragraph()
+            _tight(kp, before=1, after=4)
+            kp.add_run("  Tom: ").font.size = Pt(9)
+            kr = kp.add_run(key)
+            kr.font.size = Pt(10)
+            kr.font.bold = True
+            kr.font.color.rgb = GOLD
 
-        # Cifra em monospace
+        # Cifra linha a linha
         text = (song.get("text") or "").strip()
-        if text:
-            p = doc.add_paragraph()
-            run = p.add_run(text)
+        for line in text.split("\n"):
+            lp = doc.add_paragraph()
+            _tight(lp, before=0, after=0)
+            if not line.strip():
+                _tight(lp, before=0, after=3)
+                continue
+            run = lp.add_run(line)
             run.font.name = "Courier New"
-            run.font.size = Pt(8)
+            if _is_chord_line(line):
+                run.font.size = Pt(8.5)
+                run.font.bold = True
+                run.font.color.rgb = PURPLE
+            else:
+                run.font.size = Pt(8.5)
+                run.font.color.rgb = DARK
 
     buf = io.BytesIO()
     doc.save(buf)
