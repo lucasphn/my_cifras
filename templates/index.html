@@ -4653,7 +4653,11 @@ function saveMyTone(songId) {
   var key = _getCurrentKey();
   if (!key) { showToast("Tom não detectado — cifra sem acordes?"); return; }
   var saveBtn = document.getElementById("btn-save-my-tone");
-  if (saveBtn) saveBtn.disabled = true;
+  var originalText = saveBtn ? saveBtn.textContent : "";
+  if (saveBtn) {
+    saveBtn.disabled = true;
+    saveBtn.innerHTML = '<span class="loading-spinner" style="width:11px;height:11px;border-width:2px;vertical-align:middle;margin-right:4px;"></span>Salvando...';
+  }
   fetch("/api/preferences", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -4674,7 +4678,13 @@ function saveMyTone(songId) {
       showToast("Meu Tom salvo: " + key);
     })
     .catch(function(e) { showToast("Erro ao salvar Meu Tom: " + (e.message || "")); })
-    .finally(function() { if (saveBtn) saveBtn.disabled = false; });
+    .finally(function() {
+      if (saveBtn) {
+        saveBtn.disabled = false;
+        saveBtn.textContent = originalText;
+      }
+      _updateSaveBtn();
+    });
 }
 
 // Toggle: alterna entre Tom Original e Meu Tom
