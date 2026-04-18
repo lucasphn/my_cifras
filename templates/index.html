@@ -3664,12 +3664,29 @@ function confirmDeleteSong(card, song) {
   });
   confirmBtn.addEventListener("click", async function(e) {
     e.stopPropagation();
-    var body = {};
-    if (song.fileId) body.fileId = song.fileId; else body.path = song.path;
-    var r = await fetch("/api/songs/delete", {method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify(body)});
-    var j = await r.json();
-    if (!r.ok) { alert(j.error || "Erro ao excluir"); return; }
-    await reloadLibrary();
+    confirmBtn.disabled = true;
+    cancelBtn.disabled = true;
+    confirmBtn.innerHTML = '<span class="loading-spinner" style="width:11px;height:11px;border-width:2px;vertical-align:middle;margin-right:4px;"></span>Excluindo...';
+    try {
+      var body = {};
+      if (song.fileId) body.fileId = song.fileId; else body.path = song.path;
+      var r = await fetch("/api/songs/delete", {method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify(body)});
+      var j = await r.json();
+      if (!r.ok) { showToast(j.error || "Erro ao excluir"); return; }
+      await reloadLibrary();
+      if (currentCategory && currentCategory.section) {
+        renderSongGrid((library[currentCategory.section]||{})[currentCategory.cat]||[]);
+      } else {
+        renderHomeTable(allSongs);
+        showHomeTable();
+      }
+      showToast("\"" + song.name + "\" excluído.");
+    } catch(e) {
+      showToast("Erro ao excluir: " + e.message);
+      confirmBtn.disabled = false;
+      cancelBtn.disabled = false;
+      confirmBtn.textContent = "Sim, excluir";
+    }
   });
 }
 
