@@ -330,8 +330,7 @@ input { font: inherit; }
   padding: 2px 5px; border-radius: 5px;
   transition: color .15s, background .15s;
 }
-.btn-folder-add:hover { color: var(--primary); background: var(--primary-light); }
-.sidebar-section-title:hover .btn-folder-add { display: flex; }
+.btn-folder-add { display: none !important; }
 
 .btn-cat-menu {
   display: none;
@@ -3381,8 +3380,7 @@ function renderSidebar() {
     var secLabel = cleanLabel(section);
     title.innerHTML =
       '<span class="arrow">&#9660;</span>' +
-      escHtml(secLabel) +
-      '<button class="btn-folder-add" title="Nova categoria">＋</button>';
+      escHtml(secLabel);
     sec.appendChild(title);
 
     var cats = document.createElement("div");
@@ -3457,36 +3455,7 @@ function renderSidebar() {
       cats.appendChild(item);
     });
 
-    // ── Input inline para nova categoria ──
-    var addInput = null;
-    title.querySelector(".btn-folder-add").addEventListener("click", function(e) {
-      e.stopPropagation();
-      if (addInput) return;
-      addInput = document.createElement("div");
-      addInput.className = "sidebar-folder-input";
-      addInput.innerHTML =
-        '<input type="text" placeholder="Nome da categoria" maxlength="60">' +
-        '<button class="btn-fi-ok">OK</button>' +
-        '<button class="btn-fi-cancel">✕</button>';
-      cats.appendChild(addInput);
-      var inp = addInput.querySelector("input");
-      inp.focus();
-
-      function cancel() { if (addInput) { addInput.remove(); addInput = null; } }
-      addInput.querySelector(".btn-fi-cancel").addEventListener("click", cancel);
-      addInput.querySelector(".btn-fi-ok").addEventListener("click", function() {
-        var val = inp.value.trim();
-        if (!val) return;
-        folderCreate(section, val, cancel);
-      });
-      inp.addEventListener("keydown", function(e) {
-        if (e.key === "Enter") { var val = inp.value.trim(); if (val) folderCreate(section, val, cancel); }
-        if (e.key === "Escape") cancel();
-      });
-    });
-
     title.addEventListener("click", function(e) {
-      if (e.target.closest(".btn-folder-add")) return;
       title.classList.toggle("collapsed");
       cats.classList.toggle("collapsed");
     });
