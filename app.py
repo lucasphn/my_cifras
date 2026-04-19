@@ -952,6 +952,15 @@ def privacy():
     return render_template("privacy.html")
 
 
+@app.route("/google<token>.html")
+def google_site_verification(token):
+    """Verificação de propriedade do Google Search Console (HTML file method)."""
+    return Response(
+        f"google-site-verification: google{token}.html",
+        mimetype="text/html"
+    )
+
+
 @app.route("/terms")
 def terms():
     return render_template("terms.html")
