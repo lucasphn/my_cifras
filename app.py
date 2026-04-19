@@ -629,15 +629,13 @@ def invalidate_library_cache():
 # Cache de bundle (conteúdo completo para sync offline)
 # ---------------------------------------------------------------------------
 
-_bundle_cache = {"etag": None, "json_bytes": None, "ts": 0}
+_bundle_cache = {"etag": None, "ts": 0}  # só ETag — não guarda bytes em memória
 _bundle_lock  = threading.Lock()
-BUNDLE_CACHE_TTL = 300  # 5 minutos
 
 def invalidate_bundle_cache():
     with _bundle_lock:
-        _bundle_cache["etag"]       = None
-        _bundle_cache["json_bytes"] = None
-        _bundle_cache["ts"]         = 0
+        _bundle_cache["etag"] = None
+        _bundle_cache["ts"]   = 0
 
 def _compute_bundle_etag(songs):
     parts = sorted(
@@ -1173,19 +1171,6 @@ def api_cifras_bundle():
     if request.headers.get("If-None-Match", "") == etag:
         return Response(status=304)
 
-    # Serve do cache do servidor se ainda válido
-    now = time.monotonic()
-    with _bundle_lock:
-        if (
-            _bundle_cache["etag"] == etag
-            and _bundle_cache["json_bytes"]
-            and (now - _bundle_cache["ts"]) < BUNDLE_CACHE_TTL
-        ):
-            resp = Response(_bundle_cache["json_bytes"], content_type="application/json")
-            resp.headers["ETag"] = etag
-            resp.headers["Cache-Control"] = "no-store"
-            return resp
-
     # Obtém credenciais no contexto Flask antes de spawnar threads
     creds = _get_oauth_creds()
     if creds and creds.expired and creds.refresh_token:
@@ -1222,18 +1207,16 @@ def api_cifras_bundle():
             return fid, None
 
     bundle = {}
-    with concurrent.futures.ThreadPoolExecutor(max_workers=12) as pool:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=4) as pool:
         for fid, data in pool.map(_fetch, songs):
             if data:
                 bundle[fid] = data
 
-    json_bytes = json.dumps({"etag": etag, "songs": bundle}, ensure_ascii=False).encode("utf-8")
-
     with _bundle_lock:
-        _bundle_cache["etag"]       = etag
-        _bundle_cache["json_bytes"] = json_bytes
-        _bundle_cache["ts"]         = time.monotonic()
+        _bundle_cache["etag"] = etag
+        _bundle_cache["ts"]   = time.monotonic()
 
+    json_bytes = json.dumps({"etag": etag, "songs": bundle}, ensure_ascii=False).encode("utf-8")
     resp = Response(json_bytes, content_type="application/json")
     resp.headers["ETag"] = etag
     resp.headers["Cache-Control"] = "no-store"

@@ -22,4 +22,4 @@ ENV OAUTHLIB_RELAX_TOKEN_SCOPE=1
 
 EXPOSE 8000
 
-CMD ["gunicorn", "app:app", "--bind", "0.0.0.0:8000", "--workers", "2", "--timeout", "120"]
+CMD ["gunicorn", "app:app", "--bind", "0.0.0.0:8000", "--workers", "1", "--worker-class", "gthread", "--threads", "4", "--timeout", "180"]
