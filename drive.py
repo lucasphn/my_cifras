@@ -389,8 +389,7 @@ def scan_library(service, root_folder_id):
         for item in list_folder(service, section["id"]):
             if item["mimeType"] == FOLDER_MIME:
                 songs = _collect_songs(service, item["id"], sname, item["name"])
-                if songs:
-                    library[sname][item["name"]] = songs
+                library[sname][item["name"]] = songs  # inclui pastas vazias
             elif _is_supported(item):
                 library[sname].setdefault("_raiz", [])
                 library[sname]["_raiz"].append(
