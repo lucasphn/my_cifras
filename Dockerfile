@@ -1,10 +1,10 @@
 FROM python:3.12-slim
 
-# Dependências do sistema para PyMuPDF e WeasyPrint
+# Dependências do sistema para PyMuPDF e WeasyPrint (Debian Bookworm)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libglib2.0-0 libgl1 \
+    libcairo2 \
     libpango-1.0-0 libpangocairo-1.0-0 libpangoft2-1.0-0 \
-    libcairo2 libgdk-pixbuf2.0-0 libffi8 \
     fontconfig fonts-liberation \
     && rm -rf /var/lib/apt/lists/*
 
