@@ -6268,10 +6268,12 @@ function init() {
           allSongs = _metaStore.enrich(allSongs);
           renderHomeTable(allSongs);
           // Inicia sync offline após enriquecer metadados
-          setTimeout(_bundleSync, 1500);
+          var _syncDelay = localStorage.getItem(_LS_BUNDLE_ETAG) ? 3000 : 8000;
+          setTimeout(_bundleSync, _syncDelay);
         }).catch(function(){
           // Mesmo sem metadados, inicia sync com o que tiver
-          setTimeout(_bundleSync, 1500);
+          var _syncDelay = localStorage.getItem(_LS_BUNDLE_ETAG) ? 3000 : 8000;
+          setTimeout(_bundleSync, _syncDelay);
         });
     })
     .catch(function(err) {

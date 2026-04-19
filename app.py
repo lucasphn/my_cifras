@@ -1222,7 +1222,7 @@ def api_cifras_bundle():
             return fid, None
 
     bundle = {}
-    with concurrent.futures.ThreadPoolExecutor(max_workers=6) as pool:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=12) as pool:
         for fid, data in pool.map(_fetch, songs):
             if data:
                 bundle[fid] = data
@@ -2202,4 +2202,4 @@ if __name__ == "__main__":
     auth = "OAuth ativo" if is_oauth_configured() else "sem autenticação"
     print(f"Modo  : {mode}")
     print(f"Auth  : {auth}")
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    app.run(host="0.0.0.0", port=5000, debug=True, threaded=True)
