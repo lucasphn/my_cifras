@@ -151,7 +151,7 @@ def _strip_frontmatter(text):
 
 def _parse_frontmatter(text):
     """Retorna (body, meta_dict) extraindo YAML frontmatter simples."""
-    meta = {"artist": "", "key": "", "title": "", "tags": []}
+    meta = {"artist": "", "key": "", "title": "", "tags": [], "capo": ""}
     if text.startswith("---"):
         parts = text.split("---", 2)
         if len(parts) >= 3:
@@ -404,7 +404,7 @@ def _song_key(data):
 _prefs_lock = threading.Lock()
 _prefs_cache = {"data": None, "file_id": None}
 
-VALID_SLOTS = {"my_key", "original_key", "alt_key"}
+VALID_SLOTS = {"my_key", "original_key", "alt_key", "my_capo"}
 
 
 def _load_prefs():
@@ -458,12 +458,17 @@ def api_save_preference():
     file_id = data.get("fileId", "").strip()
     slot = data.get("slot", "").strip()
     key = data.get("key", "").strip()
-    if not file_id or slot not in VALID_SLOTS or not key:
-        return jsonify({"error": "fileId, slot e key são obrigatórios"}), 400
+    if not file_id or slot not in VALID_SLOTS:
+        return jsonify({"error": "fileId e slot válido são obrigatórios"}), 400
+    if slot != "my_capo" and not key:
+        return jsonify({"error": "key é obrigatório para este slot"}), 400
     try:
         prefs = dict(_load_prefs())
         song_prefs = dict(prefs.get(file_id, {}))
-        song_prefs[slot] = key
+        if slot == "my_capo" and (not key or key == "0"):
+            song_prefs.pop("my_capo", None)
+        else:
+            song_prefs[slot] = key
         prefs[file_id] = song_prefs
         _save_prefs(prefs)
         return jsonify(song_prefs)
@@ -980,11 +985,18 @@ def api_cifra():
                 text = drive.export_gdoc_as_text(get_service(), file_id)
             else:
                 content_bytes = drive.download_bytes(get_service(), file_id)
-                text = extract_text_from_bytes(content_bytes, _mime_to_ext(mime))
+                ext = _mime_to_ext(mime)
+                text = extract_text_from_bytes(content_bytes, ext)
         except Exception as e:
             if _is_auth_error(e):
                 return _auth_error_response()
             return jsonify({"error": str(e)}), 500
+        # Para arquivos .md do Drive, extrai frontmatter igual aos arquivos locais
+        is_md = mime in ("text/markdown", "text/plain") or (text.startswith("---") and "\n---" in text)
+        if is_md and text.startswith("---"):
+            body, meta = _parse_frontmatter(text)
+            return jsonify({"text": body, "artist": meta.get("artist", ""), "key": meta.get("key", ""),
+                            "title": meta.get("title", ""), "tags": meta.get("tags", []), "capo": meta.get("capo", "")})
         return jsonify({"text": text})
 
     if not path:
@@ -999,7 +1011,7 @@ def api_cifra():
         raw = p.read_text(encoding="utf-8", errors="replace")
         body, meta = _parse_frontmatter(raw)
         return jsonify({"text": body, "artist": meta.get("artist",""), "key": meta.get("key",""),
-                        "title": meta.get("title",""), "tags": meta.get("tags",[])})
+                        "title": meta.get("title",""), "tags": meta.get("tags",[]), "capo": meta.get("capo","")})
     return jsonify({"text": extract_text(path), "artist": "", "key": "", "title": "", "tags": []})
 
 
@@ -1038,16 +1050,16 @@ def api_export():
     def _song_card(idx, s):
         num     = idx + 1
         name    = _esc(s.get("name", ""))
-        artist  = _esc((s.get("artist") or "").strip())
-        category = s.get("category", "")
+        note    = _esc((s.get("note") or "").strip())
         key     = s.get("key", "")
+        capo    = int(s.get("capo") or 0)
         meta_parts = []
-        if artist:
-            meta_parts.append(f'<span class="meta-artist">{artist}</span>')
-        if category:
-            meta_parts.append(f'<span class="badge badge-cat">{_esc(category)}</span>')
+        if note:
+            meta_parts.append(f'<span class="badge badge-note">{note}</span>')
         if key:
-            meta_parts.append(f'<span class="badge badge-key">&#9835; {_esc(key)}</span>')
+            meta_parts.append(f'<span class="badge badge-key">Tom: {_esc(key)}</span>')
+        if capo > 0:
+            meta_parts.append(f'<span class="badge badge-capo">Capotraste na {capo}ª casa</span>')
         meta_row = f'<div class="song-meta">{" ".join(meta_parts)}</div>' if meta_parts else ""
         cifra_html = _render_cifra_html(s.get("text", ""))
         return (
@@ -1092,7 +1104,7 @@ def api_export():
     justify-content: space-between;
     gap: 16px;
   }}
-  .doc-banner .logo svg {{ height: 32px; width: auto; filter: brightness(10); opacity: .9; }}
+  .doc-banner .logo svg {{ height: 56px; width: auto; filter: brightness(10); opacity: .92; }}
   .doc-banner-right {{ text-align: right; }}
   .doc-title {{
     font-size: 1.6em;
@@ -1168,6 +1180,18 @@ def api_export():
     color: #9a7a10;
     border: 1px solid rgba(212,175,55,.3);
     font-weight: 700;
+  }}
+  .badge-capo {{
+    background: #d4af37;
+    color: #fff;
+    border: 1px solid #b8942a;
+    font-weight: 700;
+  }}
+  .badge-note {{
+    background: rgba(91,75,138,.08);
+    color: #5b4b8a;
+    border: 1px solid rgba(91,75,138,.18);
+    font-style: italic;
   }}
 
   /* ── Cifra ── */
@@ -1431,27 +1455,37 @@ def api_export_docx():
         name_run.font.name = "Inter"
         _bottom_border(title_p, "5b4b8a", 4)
 
-        # Artista · Categoria
-        artist   = (song.get("artist")   or "").strip()
-        category = (song.get("category") or song.get("section") or "").strip()
-        meta_parts = [p for p in [artist, category] if p]
-        if meta_parts:
+        # Nota do músico (artista omitido intencionalmente no documento)
+        note = (song.get("note") or "").strip()
+        if note:
             mp = doc.add_paragraph()
             _tight(mp, before=3, after=1)
-            mr = mp.add_run("  " + "  ·  ".join(meta_parts))
+            mr = mp.add_run("  " + note)
             mr.font.size = Pt(9)
             mr.font.italic = True
             mr.font.color.rgb = MUTED
 
-        # Tom
-        key = (song.get("key") or "").strip()
-        if key:
+        # Tom + Capo
+        key  = (song.get("key")  or "").strip()
+        capo = int(song.get("capo") or 0)
+        if key or capo > 0:
             kp = doc.add_paragraph()
             _tight(kp, before=1, after=4)
-            kp.add_run("  Tom: ").font.size = Pt(9)
-            kr = kp.add_run(key)
-            kr.font.size = Pt(10)
-            kr.font.bold = True
+            if key:
+                kp.add_run("  Tom: ").font.size = Pt(9)
+                kr = kp.add_run(key)
+                kr.font.size = Pt(10)
+                kr.font.bold = True
+                kr.font.color.rgb = PURPLE
+            if capo > 0:
+                sep = kp.add_run("     " if key else "  ")
+                sep.font.size = Pt(9)
+                cap_label = kp.add_run("Capotraste na ")
+                cap_label.font.size = Pt(9)
+                cap_r = kp.add_run(f"{capo}ª casa")
+                cap_r.font.size = Pt(10)
+                cap_r.font.bold = True
+                cap_r.font.color.rgb = GOLD
             kr.font.color.rgb = GOLD
 
         # Cifra linha a linha
@@ -1496,6 +1530,7 @@ def api_update_meta():
         "title":  (data.get("title")  or "").strip(),
         "artist": (data.get("artist") or "").strip(),
         "key":    (data.get("key")    or "").strip(),
+        "capo":   str(data.get("capo") or "").strip(),
         "tags":   data.get("tags", []),
     }
 
@@ -1517,11 +1552,13 @@ def api_update_meta():
         tags_list = [t.strip() for t in tags_str.split(",") if t.strip()] if tags_str else []
         tags_yaml = "[" + ", ".join(tags_list) + "]"
 
+        capo_line = f"capo: {new_meta['capo']}\n" if new_meta.get('capo') else ""
         fm = (
             "---\n"
             f"title: {new_meta['title']}\n"
             f"artist: {new_meta['artist']}\n"
             f"key: {new_meta['key']}\n"
+            + capo_line +
             f"section: {existing.get('section','')}\n"
             f"category: {existing.get('category','')}\n"
             f"tags: {tags_yaml}\n"

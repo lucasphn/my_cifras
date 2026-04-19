@@ -1132,6 +1132,14 @@ input { font: inherit; }
 .rep-item .drag-handle { color: #ccc; font-size: 0.85em; cursor: grab; flex-shrink: 0; }
 .rep-item .rep-name { flex: 1; font-size: 0.85em; font-weight: 600; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; color: var(--text); }
 .rep-item .rep-cat { font-size: 0.7em; color: var(--text-muted); }
+.rep-item .rep-note {
+  font-size: 0.7em; color: var(--text-muted);
+  background: transparent; border: none; border-bottom: 1px dashed transparent;
+  padding: 0; width: 100%; outline: none; font-family: inherit;
+  transition: border-color .15s;
+}
+.rep-item .rep-note:focus { border-bottom-color: var(--primary); color: var(--text); }
+.rep-item .rep-note::placeholder { color: var(--text-muted); opacity: .5; }
 .rep-item .btn-remove { color: #ccc; font-size: 0.95em; flex-shrink: 0; padding: 3px 5px; border-radius: 5px; transition: all .15s; }
 .rep-item .btn-remove:hover { color: var(--danger); background: rgba(220,38,38,.1); }
 .rep-tone-badge {
@@ -1300,10 +1308,84 @@ input { font: inherit; }
 #modal-title-wrap { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; overflow: hidden; }
 #modal-title { font-weight: 600; font-size: 1em; white-space: nowrap; text-overflow: ellipsis; overflow: hidden; }
 #modal-artist { font-size: 0.72em; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-#modal-meta { font-size: 0.78em; color: var(--text-muted); white-space: nowrap; }
+#modal-meta { display: none; }
+.capo-badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: .72em; font-weight: 700; letter-spacing: .03em;
+  padding: 3px 10px; border-radius: 20px; white-space: nowrap;
+  background: #d4af37; color: #fff;
+  box-shadow: 0 1px 4px rgba(212,175,55,.35);
+}
 #btn-modal-back-footer { display: none; }
 #modal-close { font-size: 1.2em; color: var(--text-muted); padding: 4px 8px; border-radius: 5px; }
 #modal-close:hover { color: var(--text); background: var(--surface2); }
+
+/* ─── Focus Mode ─────────────────────────────────────────────────────────── */
+#modal.focus-mode #modal-header,
+#modal.focus-mode #transpose-toolbar,
+#modal.focus-mode #my-tones-bar,
+#modal.focus-mode #modal-footer {
+  display: none !important;
+}
+#modal.focus-mode #modal-body {
+  border-radius: var(--radius-lg);
+}
+#focus-exit-btn {
+  display: none;
+  position: fixed;
+  bottom: 24px;
+  right: 20px;
+  z-index: 10000;
+  background: rgba(91,75,138,.92);
+  color: #fff;
+  border: none;
+  border-radius: 50px;
+  padding: 10px 18px;
+  font-size: 0.8em;
+  font-weight: 600;
+  letter-spacing: .03em;
+  box-shadow: 0 4px 20px rgba(91,75,138,.4);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  cursor: pointer;
+  gap: 6px;
+  align-items: center;
+  transition: background .15s, transform .15s;
+}
+#focus-exit-btn:hover { background: var(--primary); transform: scale(1.05); }
+#focus-exit-btn.visible { display: flex; animation: focus-btn-in .25s cubic-bezier(.34,1.3,.64,1); }
+@keyframes focus-btn-in {
+  from { opacity: 0; transform: translateY(16px) scale(.9); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+#btn-modal-fullscreen.focus-active { color: var(--primary); background: var(--primary-light); border-radius: 5px; }
+
+/* Focus title bar (visible only in focus mode) */
+#focus-titlebar {
+  display: none;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 4px 12px;
+  margin-bottom: 4px;
+  border-bottom: 1px solid var(--border);
+}
+#modal.focus-mode #focus-titlebar { display: flex; }
+#focus-titlebar-name {
+  font-size: 0.85em;
+  font-weight: 600;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+#focus-titlebar-close {
+  flex-shrink: 0;
+  font-size: 0.9em;
+  color: var(--text-muted);
+  padding: 2px 7px;
+  border-radius: 5px;
+}
+#focus-titlebar-close:hover { color: var(--text); background: var(--surface2); }
 
 /* Toolbar de transposição */
 #transpose-toolbar {
@@ -1414,6 +1496,19 @@ input { font: inherit; }
   white-space: nowrap;
 }
 .mt-save-btn:hover { background: rgba(91,75,138,.1); }
+.mt-capo-stepper { display: inline-flex; align-items: center; gap: 3px; }
+.mt-capo-stepper button {
+  width: 22px; height: 22px; border-radius: 50%;
+  border: 1px solid var(--border); background: var(--surface);
+  color: var(--text); font-size: .9em; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; flex-shrink: 0; transition: background .12s;
+}
+.mt-capo-stepper button:hover { background: var(--surface2); }
+.mt-capo-num {
+  min-width: 20px; text-align: center;
+  font-size: .82em; font-weight: 700; color: var(--text);
+}
 
 /* ─── Modal: zoom e tela cheia ───────────────────────────────────────────── */
 #modal-view-controls { display: flex; align-items: center; gap: 3px; flex-shrink: 0; }
@@ -1478,19 +1573,43 @@ input { font: inherit; }
 #presenter-body {
   flex: 1; overflow-y: auto; padding: 28px 36px;
   display: flex; flex-direction: column;
+  background: #fff;
 }
 @media (max-width: 1024px) { #presenter-body { padding: 18px 16px; } }
 #presenter-song-name {
-  font-size: 1.4em; font-weight: 800; color: #5b4b8a; margin-bottom: 3px;
+  font-size: 1.4em; font-weight: 800; color: #5b4b8a; margin-bottom: 4px;
 }
 #presenter-song-cat {
-  font-size: 0.82em; color: var(--text-muted); margin-bottom: 18px;
-  padding-bottom: 14px; border-bottom: 1px solid var(--border);
+  font-size: 1em; color: #444; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
 }
+#presenter-song-controls {
+  display: none; align-items: center; gap: 6px; flex-wrap: wrap;
+  margin-bottom: 16px; padding-bottom: 14px; border-bottom: 2px solid #e8e4f3;
+}
+.psc-group {
+  display: inline-flex; align-items: center; gap: 3px;
+  background: #f5f3fc; border: 1px solid #d8d0ef; border-radius: 8px;
+  padding: 3px 6px;
+}
+.psc-label { font-size: .72em; color: #7a6fa8; font-weight: 600; margin-right: 2px; white-space: nowrap; }
+.psc-btn {
+  font-size: .8em; font-weight: 700; width: 24px; height: 24px; border-radius: 5px;
+  border: 1px solid #d0c8ea; background: #fff; color: #5b4b8a; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; transition: background .1s;
+}
+.psc-btn:hover { background: #ede8f8; }
+.psc-val { font-size: .82em; font-weight: 700; color: #5b4b8a; min-width: 28px; text-align: center; }
+.psc-toggle { font-size: .72em; font-weight: 700; padding: 3px 9px; border-radius: 5px;
+  border: 1px solid #d0c8ea; background: #fff; color: #7a6fa8; cursor: pointer; transition: all .1s; }
+.psc-toggle.active { background: #5b4b8a; border-color: #5b4b8a; color: #fff; }
 #presenter-cifra {
   font-family: var(--font-mono); line-height: 1.75;
-  white-space: pre-wrap; word-break: break-word; color: var(--text);
+  white-space: pre-wrap; word-break: break-word; color: #1a1d2e;
 }
+#presenter-cifra.two-col {
+  columns: 2; column-gap: 2.5em;
+}
+#presenter-cifra .chord-line { color: #5b4b8a; font-weight: 700; }
 #presenter-loading {
   display: flex; align-items: center; justify-content: center;
   flex: 1; gap: 10px; color: var(--text-muted); font-size: 0.95em;
@@ -2661,7 +2780,7 @@ input { font: inherit; }
             <rect x="8" y="0" width="6" height="11" rx="1.5"/>
           </svg>
         </button>
-        <button class="modal-vctrl" id="btn-modal-fullscreen" title="Tela cheia (F)">&#11035;</button>
+        <button class="modal-vctrl" id="btn-modal-fullscreen" title="Modo foco (F)">&#11035;</button>
       </div>
       <button id="modal-close" title="Fechar (Esc)">&#10005;</button>
     </div>
@@ -2684,8 +2803,23 @@ input { font: inherit; }
       </label>
       <span class="mt-toggle-text" id="mt-toggle-text">Meu Tom</span>
       <button class="mt-save-btn" id="btn-save-my-tone" style="display:none">&#9733; Salvar como Meu Tom</button>
+      <span style="flex:1"></span>
+      <span id="mt-capo-wrap" style="display:none;align-items:center;gap:5px;">
+        <span class="mt-label">Meu Capo:</span>
+        <div class="mt-capo-stepper">
+          <button type="button" id="mt-capo-dec">&#8722;</button>
+          <span id="mt-capo-num" class="mt-capo-num">0</span>
+          <button type="button" id="mt-capo-inc">+</button>
+        </div>
+      </span>
+      <span id="capo-badge-modal" style="display:none" class="capo-badge">Capotraste na <span id="capo-badge-num"></span>ª casa</span>
     </div>
     <div id="modal-body">
+      <!-- Faixa de título visível apenas no modo foco -->
+      <div id="focus-titlebar">
+        <span id="focus-titlebar-name"></span>
+        <button id="focus-titlebar-close" title="Sair do modo foco (Esc)">&#10005;</button>
+      </div>
       <div id="edit-toolbar">
         <span class="etb-label">Editar:</span>
         <button class="etb-btn" id="etb-select-all" title="Selecionar todo o texto (Ctrl+A)">&#9776; Selecionar tudo</button>
@@ -2710,6 +2844,11 @@ input { font: inherit; }
           <label>Tom</label>
           <input type="text" id="meta-key" placeholder="ex: C, G, Am, F#m...">
           <span class="meta-hint">Tom original da música (pode ser diferente do tom transposto)</span>
+        </div>
+        <div class="meta-field">
+          <label>Capotraste</label>
+          <input type="number" id="meta-capo" placeholder="0" min="0" max="12" style="width:80px">
+          <span class="meta-hint">Casa do capotraste (0 = sem capo)</span>
         </div>
         <div class="meta-field">
           <label>Tags</label>
@@ -2737,8 +2876,6 @@ input { font: inherit; }
   <div id="presenter-topbar">
     <span id="presenter-rep-name"></span>
     <span id="presenter-pos"></span>
-    <button class="pres-ctrl" id="btn-pres-zoom-out" title="Diminuir fonte (-)">A&#8722;</button>
-    <button class="pres-ctrl" id="btn-pres-zoom-in" title="Aumentar fonte (+)">A+</button>
     <button class="pres-ctrl" id="btn-pres-fullscreen" title="Tela cheia (F)">&#11035;</button>
     <button class="pres-ctrl" id="btn-pres-close" title="Fechar (Esc)">&#10005;</button>
   </div>
@@ -2746,6 +2883,32 @@ input { font: inherit; }
     <div id="presenter-loading"><span class="loading-spinner"></span>&nbsp;Carregando cifras...</div>
     <div id="presenter-song-name" style="display:none"></div>
     <div id="presenter-song-cat" style="display:none"></div>
+    <div id="presenter-song-controls" style="display:none">
+      <!-- Tamanho da fonte -->
+      <div class="psc-group">
+        <span class="psc-label">Texto</span>
+        <button class="psc-btn" id="psc-zoom-out">A&#8722;</button>
+        <span class="psc-val" id="psc-zoom-val">100%</span>
+        <button class="psc-btn" id="psc-zoom-in">A+</button>
+      </div>
+      <!-- Transposição -->
+      <div class="psc-group">
+        <span class="psc-label">Tom</span>
+        <button class="psc-btn" id="psc-tp-down">&#9660;</button>
+        <span class="psc-val" id="psc-tp-val">0</span>
+        <button class="psc-btn" id="psc-tp-up">&#9650;</button>
+      </div>
+      <!-- Capo -->
+      <div class="psc-group" id="psc-capo-group">
+        <span class="psc-label">Capotraste</span>
+        <button class="psc-btn" id="psc-capo-dec">&#8722;</button>
+        <span class="psc-val" id="psc-capo-val">0</span>
+        <button class="psc-btn" id="psc-capo-inc">+</button>
+        <span class="psc-label" id="psc-capo-suffix"></span>
+      </div>
+      <!-- Duas colunas -->
+      <button class="psc-toggle" id="psc-twocol">&#9645; 2 colunas</button>
+    </div>
     <pre id="presenter-cifra" style="display:none"></pre>
   </div>
   <div id="presenter-nav">
@@ -2951,6 +3114,12 @@ input { font: inherit; }
   </div>
 </div>
 
+<!-- Focus mode exit button -->
+<button id="focus-exit-btn" title="Sair do modo foco">
+  <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor"><path d="M2 2h4v1.5H3.5V5H2V2zm10 0v3h-1.5V3.5H9V2h3zM2 9h1.5v1.5H5V12H2V9zm9 1.5H9.5V12H12V9h-1.5v1.5z"/></svg>
+  Sair do foco
+</button>
+
 <!-- Toast -->
 <div id="toast"></div>
 
@@ -2976,7 +3145,7 @@ var _metaStore = (function() {
     get: function(id) { return data[id] || null; },
     set: function(id, meta) {
       if (!id) return;
-      data[id] = { artist: meta.artist || "", key: meta.key || "", tags: meta.tags || [] };
+      data[id] = { artist: meta.artist || "", key: meta.key || "", capo: meta.capo || "", tags: meta.tags || [] };
       try { localStorage.setItem(KEY, JSON.stringify(data)); } catch(e) {}
     },
     enrich: function(songs) {
@@ -2986,6 +3155,7 @@ var _metaStore = (function() {
         return Object.assign({}, s, {
           artist: cached.artist || s.artist || "",
           key:    cached.key    || s.key    || "",
+          capo:   cached.capo   || s.capo   || "",
           tags:   cached.tags   || s.tags   || [],
         });
       });
@@ -3149,7 +3319,7 @@ function _makeHomeCard(song, cls) {
       (song.artist ? '<div class="hc-artist">' + escHtml(song.artist) + '</div>' : '') +
       '<div class="home-card-tags">' +
         '<span class="hc-cat">' + escHtml(catLabel) + '</span>' +
-        (song.key ? '<span class="hc-key">' + escHtml(song.key) + '</span>' : '') +
+        (song.key ? '<span class="hc-key">Tom: ' + escHtml(song.key) + '</span>' : '') +
         (views > 0 ? '<span class="hc-views has-views">&#128065; ' + views + '</span>' : '') +
       '</div>' +
     '</div>' +
@@ -3158,12 +3328,17 @@ function _makeHomeCard(song, cls) {
     '</div>' +
     '<div class="song-ops-wrap"><button class="btn-song-ops" title="Opções">⋯</button></div>';
 
-  card.querySelector(".btn-hc-add").addEventListener("click", function(e) {
+  card.querySelector(".btn-hc-add").addEventListener("click", async function(e) {
     e.stopPropagation();
-    toggleRepertorio(song, this);
+    var btn = this;
+    var prevText = btn.textContent;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="loading-spinner" style="width:10px;height:10px;border-width:2px;vertical-align:middle;margin-right:4px;display:inline-block;"></span>Adicionando...';
+    await toggleRepertorio(song, btn);
+    btn.disabled = false;
     var nowIn = repertorio.some(function(r) { return (r.fileId || r.path) === (song.fileId || song.path); });
-    this.classList.toggle("added", nowIn);
-    this.textContent = nowIn ? "✓ Adicionado" : "+ Repertório";
+    btn.classList.toggle("added", nowIn);
+    btn.textContent = nowIn ? "✓ Adicionado" : "+ Repertório";
   });
 
   var opsBtn = card.querySelector(".btn-song-ops");
@@ -3801,9 +3976,8 @@ function openModal(song) {
   exitEditMode();
   document.getElementById("modal-title").textContent = song.name;
   document.getElementById("modal-artist").textContent = song.artist || "";
-  document.getElementById("modal-meta").textContent = song.category
-    ? (song.category === "_raiz" ? song.section : song.category)
-    : "";
+  document.getElementById("modal-meta").innerHTML = "";
+  _updateCapoBadge(song.capo || "");
   document.getElementById("cifra-content").textContent = "";
   document.getElementById("modal-loading").style.display = "inline";
   document.getElementById("modal-overlay").classList.add("open");
@@ -3861,14 +4035,17 @@ function openModal(song) {
           if (data.key    !== undefined) currentModal.key    = data.key;
           if (data.title  !== undefined && data.title) currentModal.name = data.title;
           if (data.tags   !== undefined) currentModal.tags   = data.tags;
+          if (data.capo   !== undefined) currentModal.capo   = data.capo;
           // Se não há tom definido, tenta inferir pelo texto da cifra
           if (!currentModal.key && data.text) {
             var detected = detectBaseNote(data.text);
             if (detected) currentModal.key = detected;
           }
+          // Atualiza capo badge após carregar os dados reais
+          _updateCapoBadge(currentModal.capo || "");
           // Persiste no cache local para reloads futuros
           _metaStore.set(currentModal.fileId || currentModal.path, {
-            artist: currentModal.artist, key: currentModal.key, tags: currentModal.tags
+            artist: currentModal.artist, key: currentModal.key, capo: currentModal.capo, tags: currentModal.tags
           });
         }
         applyTranspose(0);
@@ -3892,12 +4069,14 @@ function closeModal() {
       document.getElementById("btn-two-col").classList.remove("active");
     }
     document.getElementById("modal-overlay").classList.remove("open");
+    if (_focusMode) modalToggleFocusMode(true);
     currentModal = null;
   });
 }
 
 // ─── Modo Edição ─────────────────────────────────────────────────────────────
 function enterEditMode() {
+  if (_focusMode) modalToggleFocusMode(true);
   editMode = true;
   document.getElementById("modal-body").classList.add("edit-mode");
   document.getElementById("cifra-edit").value = rawCifraText;
@@ -4355,6 +4534,7 @@ function openMetaPanel() {
   document.getElementById("meta-title").value  = currentModal.name  || "";
   document.getElementById("meta-artist").value = currentModal.artist || "";
   document.getElementById("meta-key").value    = currentModal.key    || "";
+  document.getElementById("meta-capo").value   = currentModal.capo   || "";
   var tags = currentModal.tags;
   document.getElementById("meta-tags").value   =
     Array.isArray(tags) ? tags.join(", ") : (tags || "");
@@ -4396,6 +4576,7 @@ async function saveMetadata() {
     title:  document.getElementById("meta-title").value.trim(),
     artist: document.getElementById("meta-artist").value.trim(),
     key:    document.getElementById("meta-key").value.trim(),
+    capo:   document.getElementById("meta-capo").value.trim(),
     tags:   tagsList,
   };
   if (currentModal.fileId) payload.fileId = currentModal.fileId;
@@ -4418,16 +4599,15 @@ async function saveMetadata() {
       document.getElementById("modal-artist").textContent = payload.artist || "";
     }
     if (payload.key)    { currentModal.key    = payload.key; updateTransposeUI(); }
+    currentModal.capo = payload.capo;
     currentModal.tags = tagsList;
 
-    // Atualiza badge de metadados no cabeçalho do modal (só tom agora, artista está no subtítulo)
-    var meta = [];
-    if (payload.key) meta.push("Tom: " + payload.key);
-    document.getElementById("modal-meta").textContent = meta.join(" · ");
+    // Atualiza capo badge
+    _updateCapoBadge(payload.capo);
 
     // Persiste no cache local para reloads futuros
     _metaStore.set(currentModal.fileId || currentModal.path, {
-      artist: payload.artist, key: payload.key, tags: tagsList,
+      artist: payload.artist, key: payload.key, capo: payload.capo, tags: tagsList,
     });
     // Atualiza allSongs em memória
     var songKey = currentModal.fileId || currentModal.path || "";
@@ -4452,6 +4632,19 @@ async function saveMetadata() {
   } finally {
     btn.disabled = false;
     btn.textContent = "\uD83D\uDCBE Salvar";
+  }
+}
+
+function _buildMetaBadge(key, capo) { return ""; }
+
+function _updateCapoBadge(capo) {
+  var badge = document.getElementById("capo-badge-modal");
+  var num = parseInt(capo) || 0;
+  if (num > 0) {
+    document.getElementById("capo-badge-num").textContent = num;
+    badge.style.display = "inline-flex";
+  } else {
+    badge.style.display = "none";
   }
 }
 
@@ -4554,8 +4747,9 @@ function updateTransposeUI() {
 
 // ─── Meus Tons ───────────────────────────────────────────────────────────────
 
-var _myTones = {};            // cache: { <fileId>: { my_key } }
+var _myTones = {};            // cache: { <fileId>: { my_key, my_capo } }
 var _mtSavedSemitone = null;  // semitom do my_key salvo para a música atual
+var _mtCapoValue = 0;         // valor atual do stepper de capo pessoal
 var _pendingMyKeyApply = false; // true enquanto prefs carregam antes da cifra
 
 function _getCurrentKey() {
@@ -4590,9 +4784,12 @@ function _updateSaveBtn() {
   if (!currentModal) { saveBtn.style.display = "none"; return; }
   var songId = currentModal.fileId || currentModal.path;
   var prefs = songId ? (_myTones[songId] || {}) : {};
-  var hasMyKey = !!prefs.my_key;
-  var showSave = !!songId && currentSemitone !== 0 && currentSemitone !== _mtSavedSemitone;
-  saveBtn.textContent = hasMyKey ? "\u21bb Atualizar Meu Tom" : "\u2605 Salvar como Meu Tom";
+  var hasPrefs = !!(prefs.my_key || prefs.my_capo);
+  var keyChanged = !!songId && currentSemitone !== 0 && currentSemitone !== _mtSavedSemitone;
+  var savedCapo = parseInt(prefs.my_capo) || 0;
+  var capoChanged = !!songId && _mtCapoValue !== savedCapo;
+  var showSave = keyChanged || capoChanged;
+  saveBtn.textContent = hasPrefs ? "\u21bb Atualizar Meu Tom" : "\u2605 Salvar como Meu Tom";
   saveBtn.style.display = showSave ? "inline-flex" : "none";
 }
 
@@ -4600,6 +4797,13 @@ function _applyMyToneOnOpen(songId) {
   var prefs = _myTones[songId] || {};
   var myKey = prefs.my_key;
   var toggleInput = document.getElementById("mt-toggle-input");
+
+  // Inicializa capo pessoal (preferência salva, ou capo do arquivo, ou 0)
+  var savedCapo = parseInt(prefs.my_capo) || 0;
+  var fileCapo  = parseInt(currentModal && currentModal.capo) || 0;
+  _mtCapoValue = savedCapo > 0 ? savedCapo : fileCapo;
+  _setCapoStepperDisplay(_mtCapoValue);
+
   if (!rawCifraText) {
     _pendingMyKeyApply = !!myKey;
     _updateMyToneUI(songId);
@@ -4618,6 +4822,7 @@ function _applyMyToneOnOpen(songId) {
         _mtSavedSemitone = diff;
         if (toggleInput) toggleInput.checked = true;
         _updateMyToneUI(songId);
+        _updateCapoBadge(_mtCapoValue);
         applyTranspose(diff);
         return;
       }
@@ -4626,14 +4831,25 @@ function _applyMyToneOnOpen(songId) {
   _mtSavedSemitone = null;
   if (toggleInput) toggleInput.checked = false;
   _updateMyToneUI(songId);
+  _updateCapoBadge(fileCapo);
+}
+
+function _setCapoStepperDisplay(val) {
+  var numEl = document.getElementById("mt-capo-num");
+  if (numEl) numEl.textContent = val;
 }
 
 function loadMyTones(songId) {
   _mtSavedSemitone = null;
+  _mtCapoValue = 0;
   _pendingMyKeyApply = false;
   var toggleInput = document.getElementById("mt-toggle-input");
   if (toggleInput) toggleInput.checked = false;
   _updateMyToneUI(null);
+  // Mostra o stepper apenas para músicas editáveis (com fileId ou path)
+  var capoWrap = document.getElementById("mt-capo-wrap");
+  if (capoWrap) capoWrap.style.display = songId ? "inline-flex" : "none";
+  _setCapoStepperDisplay(0);
   if (!songId) return;
   if (_myTones[songId] !== undefined) { _applyMyToneOnOpen(songId); return; }
   fetch("/api/preferences?fileId=" + encodeURIComponent(songId))
@@ -4644,43 +4860,76 @@ function loadMyTones(songId) {
     }).catch(function() { _myTones[songId] = {}; _updateMyToneUI(songId); });
 }
 
-function saveMyTone(songId) {
+async function saveMyTone(songId) {
   var key = _getCurrentKey();
-  if (!key) { showToast("Tom não detectado — cifra sem acordes?"); return; }
   var saveBtn = document.getElementById("btn-save-my-tone");
   var originalText = saveBtn ? saveBtn.textContent : "";
   if (saveBtn) {
     saveBtn.disabled = true;
     saveBtn.innerHTML = '<span class="loading-spinner" style="width:11px;height:11px;border-width:2px;vertical-align:middle;margin-right:4px;"></span>Salvando...';
   }
-  fetch("/api/preferences", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ fileId: songId, slot: "my_key", key: key })
-  }).then(function(r) {
-      if (r.status === 401) { _handleAuthExpired(); return null; }
-      if (!r.ok) return r.json().then(function(e) { throw new Error(e.error || "HTTP " + r.status); });
-      return r.json();
-    })
-    .then(function(data) {
-      if (!data) return;
-      _myTones[songId] = data;
-      _mtSavedSemitone = currentSemitone;
-      var toggleInput = document.getElementById("mt-toggle-input");
-      if (toggleInput) toggleInput.checked = true;
-      _updateMyToneUI(songId);
-      _updateSaveBtn();
-      showToast("Meu Tom salvo: " + key);
-    })
-    .catch(function(e) { showToast("Erro ao salvar Meu Tom: " + (e.message || "")); })
-    .finally(function() {
-      if (saveBtn) {
-        saveBtn.disabled = false;
-        saveBtn.textContent = originalText;
-      }
-      _updateSaveBtn();
+  try {
+    var lastData = null;
+    // Salva tom (se detectado)
+    if (key) {
+      var r1 = await fetch("/api/preferences", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ fileId: songId, slot: "my_key", key: key })
+      });
+      if (r1.status === 401) { _handleAuthExpired(); return; }
+      if (!r1.ok) { var e1 = await r1.json(); throw new Error(e1.error || "HTTP " + r1.status); }
+      lastData = await r1.json();
+    }
+    // Salva capo pessoal (0 = limpar preferência)
+    var capoStr = _mtCapoValue > 0 ? String(_mtCapoValue) : "0";
+    var r2 = await fetch("/api/preferences", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ fileId: songId, slot: "my_capo", key: capoStr })
     });
+    if (r2.status === 401) { _handleAuthExpired(); return; }
+    if (!r2.ok) { var e2 = await r2.json(); throw new Error(e2.error || "HTTP " + r2.status); }
+    lastData = await r2.json();
+
+    _myTones[songId] = lastData;
+    _mtSavedSemitone = currentSemitone;
+    var toggleInput = document.getElementById("mt-toggle-input");
+    if (toggleInput && key) toggleInput.checked = true;
+    _updateMyToneUI(songId);
+    _updateSaveBtn();
+    _updateCapoBadge(_mtCapoValue);
+    var msg = key ? "Meu Tom salvo: " + key : "Preferências salvas";
+    if (_mtCapoValue > 0) msg += " · Capotraste " + _mtCapoValue + "ª";
+    showToast(msg);
+  } catch(e) {
+    showToast("Erro ao salvar: " + (e.message || ""));
+  } finally {
+    if (saveBtn) {
+      saveBtn.disabled = false;
+      saveBtn.textContent = originalText;
+    }
+    _updateSaveBtn();
+  }
 }
+
+// Stepper de capo pessoal
+document.getElementById("mt-capo-dec").addEventListener("click", function() {
+  if (_mtCapoValue > 0) {
+    _mtCapoValue--;
+    _setCapoStepperDisplay(_mtCapoValue);
+    _updateCapoBadge(_mtCapoValue);
+    _updateSaveBtn();
+  }
+});
+document.getElementById("mt-capo-inc").addEventListener("click", function() {
+  if (_mtCapoValue < 12) {
+    _mtCapoValue++;
+    _setCapoStepperDisplay(_mtCapoValue);
+    _updateCapoBadge(_mtCapoValue);
+    _updateSaveBtn();
+  }
+});
 
 // Toggle: alterna entre Tom Original e Meu Tom
 document.getElementById("mt-toggle-input").addEventListener("change", function() {
@@ -4693,8 +4942,11 @@ document.getElementById("mt-toggle-input").addEventListener("change", function()
       showToast("Salve um Meu Tom primeiro.");
       return;
     }
+    _updateCapoBadge(_mtCapoValue);
     applyTranspose(_mtSavedSemitone);
   } else {
+    var fileCapo = parseInt(currentModal && currentModal.capo) || 0;
+    _updateCapoBadge(fileCapo);
     applyTranspose(0);
   }
 });
@@ -4736,7 +4988,7 @@ function updateModalRepBtn() {
 }
 
 // ─── Repertório ─────────────────────────────────────────────────────────────
-function toggleRepertorio(song, btnEl) {
+async function toggleRepertorio(song, btnEl) {
   var idx = repertorio.findIndex(function(r) {
     return r.path === song.path && r.name === song.name;
   });
@@ -4744,14 +4996,61 @@ function toggleRepertorio(song, btnEl) {
     repertorio.splice(idx, 1);
     showToast(song.name + " removido do repertório.");
   } else {
-    // Se a música está aberta no modal com transposição ativa,
-    // guarda o texto já transposto (sem modificar o arquivo original)
     var entry = Object.assign({}, song);
-    if (currentModal && currentModal.name === song.name &&
-        currentSemitone !== 0 && rawCifraText) {
-      entry.text = transposeText(rawCifraText, currentSemitone);
-      entry._transposedKey = currentSemitone > 0 ? "+" + currentSemitone : String(currentSemitone);
+    var songId = song.fileId || song.path;
+    var isModalSong = currentModal && (currentModal.fileId || currentModal.path) === songId;
+
+    if (isModalSong) {
+      // Modal aberto: usa estado atual (transposição + capo pessoal)
+      if (currentSemitone !== 0 && rawCifraText) {
+        entry.text = transposeText(rawCifraText, currentSemitone);
+        entry._transposedKey = currentSemitone > 0 ? "+" + currentSemitone : String(currentSemitone);
+      }
+      if (_mtCapoValue > 0) entry.capo = String(_mtCapoValue);
+      var toggleInput = document.getElementById("mt-toggle-input");
+      if (toggleInput && toggleInput.checked && _myTones[songId] && _myTones[songId].my_key) {
+        entry.key = _myTones[songId].my_key;
+      }
+    } else if (songId) {
+      // Card sem modal: carrega preferências e aplica Meu Tom se existir
+      if (_myTones[songId] === undefined) {
+        try {
+          var r0 = await fetch("/api/preferences?fileId=" + encodeURIComponent(songId));
+          _myTones[songId] = r0.ok ? (await r0.json()) : {};
+        } catch(e) { _myTones[songId] = {}; }
+      }
+      var prefs = _myTones[songId] || {};
+      if (prefs.my_capo && parseInt(prefs.my_capo) > 0) entry.capo = prefs.my_capo;
+      if (prefs.my_key) {
+        entry.key = prefs.my_key;
+        // Busca texto e transpõe
+        try {
+          var url = song.fileId
+            ? "/api/cifra?fileId=" + encodeURIComponent(song.fileId) + "&mimeType=" + encodeURIComponent(song.mimeType || "")
+            : "/api/cifra?path=" + encodeURIComponent(song.path);
+          var rd = await fetch(url);
+          var dd = await rd.json();
+          var srcText = dd.text || "";
+          if (srcText) {
+            var baseNote = detectBaseNote(srcText);
+            if (baseNote) {
+              var baseIdx = NOTES.indexOf(normalizeNote(baseNote));
+              var km = prefs.my_key.match(/^([A-G][b#]?)/);
+              var keyRoot = km ? (normalizeNote(km[1]) || km[1]) : prefs.my_key;
+              var targetIdx = NOTES.indexOf(keyRoot);
+              if (baseIdx !== -1 && targetIdx !== -1) {
+                var diff = ((targetIdx - baseIdx) + 12) % 12;
+                if (diff !== 0) {
+                  entry.text = transposeText(srcText, diff);
+                  entry._transposedKey = diff > 0 ? "+" + diff : String(diff);
+                }
+              }
+            }
+          }
+        } catch(e) { /* usa só o key, sem transpor texto */ }
+      }
     }
+
     repertorio.push(entry);
     var toastMsg = song.name + " adicionado";
     if (entry._transposedKey) toastMsg += " (tom " + entry._transposedKey + ")";
@@ -4760,7 +5059,6 @@ function toggleRepertorio(song, btnEl) {
   renderRepList();
   updateRepBadge();
   updateModalRepBtn();
-  // Atualiza grid
   if (btnEl) {
     var inRep = idx < 0;
     btnEl.textContent = inRep ? "✓ Adicionado" : "+ Repertório";
@@ -4789,10 +5087,16 @@ function renderRepList() {
       '<div style="flex:1;min-width:0">' +
         '<div class="rep-name">' + escHtml(song.name) +
           (song._transposedKey ? ' <span class="rep-tone-badge">' + escHtml(song._transposedKey) + '</span>' : '') +
+          (parseInt(song.capo) > 0 ? ' <span class="capo-badge" style="font-size:.6em;padding:2px 8px">Capotraste ' + parseInt(song.capo) + 'ª</span>' : '') +
         '</div>' +
-        '<div class="rep-cat">' + escHtml(song.category === "_raiz" ? song.section : (song.category || "")) + '</div>' +
+        '<input class="rep-note" placeholder="ex: entrada, mantra, comunhão..." value="' + escHtml(song.note || '') + '">' +
       '</div>' +
       '<button class="btn-remove" title="Remover">&#10005;</button>';
+
+    item.querySelector(".rep-note").addEventListener("click", function(e) { e.stopPropagation(); });
+    item.querySelector(".rep-note").addEventListener("input", function(e) {
+      repertorio[i].note = e.target.value;
+    });
 
     item.querySelector(".btn-remove").addEventListener("click", function() {
       repertorio.splice(i, 1);
@@ -4890,8 +5194,8 @@ async function exportDocx() {
         name: s.name,
         artist: s.artist || "",
         text: text,
-        category: s.category === "_raiz" ? "" : (s.category || ""),
-        section: s.section || "",
+        note: s.note || "",
+        capo: s.capo || "",
         key: s.key || ""
       });
     }
@@ -4952,9 +5256,10 @@ async function exportRepertorio(autoPrint) {
     }
     songs.push({
       name: s.name,
+      artist: s.artist || "",
       text: text,
-      category: s.category === "_raiz" ? "" : (s.category || ""),
-      section: s.section || "",
+      note: s.note || "",
+      capo: s.capo || "",
       key: s.key || ""
     });
   }
@@ -5204,14 +5509,17 @@ async function openPresenter(repId) {
     }
     presenterSongs.push({
       name: s.name,
-      cat: s.category === "_raiz" ? (s.section || "") : (s.category || s.section || ""),
-      text: text
+      note: s.note || "",
+      capo: parseInt(s.capo) || 0,
+      rawText: text,       // texto original sem transposição
+      zoom: 1.0,
+      semitone: 0,
+      twoCol: false
     });
   }
 
   document.getElementById("presenter-loading").style.display = "none";
   presenterIdx = 0;
-  presenterZoom = 1.0;
   _renderPresenterSong();
 }
 
@@ -5219,16 +5527,49 @@ function _renderPresenterSong() {
   var song = presenterSongs[presenterIdx];
   if (!song) return;
 
+  // Título
   document.getElementById("presenter-song-name").textContent = song.name;
   document.getElementById("presenter-song-name").style.display = "block";
-  document.getElementById("presenter-song-cat").textContent = song.cat;
-  document.getElementById("presenter-song-cat").style.display = "block";
 
+  // Nota + capo badge na linha do título
+  var catEl = document.getElementById("presenter-song-cat");
+  catEl.innerHTML = "";
+  if (song.note) {
+    var noteSpan = document.createElement("span");
+    noteSpan.textContent = song.note;
+    noteSpan.style.cssText = "background:rgba(91,75,138,.1);color:#5b4b8a;border:1px solid rgba(91,75,138,.22);border-radius:99px;padding:2px 10px;font-size:.82em;font-weight:600;";
+    catEl.appendChild(noteSpan);
+  }
+  if (song.capo > 0) {
+    var capoBadge = document.createElement("span");
+    capoBadge.className = "capo-badge";
+    capoBadge.style.cssText = "font-size:.7em;padding:2px 10px;";
+    capoBadge.textContent = "Capotraste na " + song.capo + "\xaa casa";
+
+    catEl.appendChild(capoBadge);
+  }
+  catEl.style.display = (song.note || song.capo > 0) ? "flex" : "none";
+
+  // Controles individuais da música
+  var ctrl = document.getElementById("presenter-song-controls");
+  ctrl.style.display = "flex";
+  document.getElementById("psc-zoom-val").textContent = Math.round(song.zoom * 100) + "%";
+  var tpVal = song.semitone;
+  document.getElementById("psc-tp-val").textContent = tpVal === 0 ? "0" : (tpVal > 0 ? "+" + tpVal : String(tpVal));
+  document.getElementById("psc-twocol").classList.toggle("active", song.twoCol);
+  var capoNum = song.capo || 0;
+  document.getElementById("psc-capo-val").textContent = capoNum > 0 ? capoNum : "0";
+  document.getElementById("psc-capo-suffix").textContent = capoNum > 0 ? ("\xaa casa") : "";
+
+  // Cifra com transposição individual
+  var displayText = song.semitone !== 0 ? transposeText(song.rawText, song.semitone) : song.rawText;
   var cifraEl = document.getElementById("presenter-cifra");
-  cifraEl.innerHTML = _cifraHtml(song.text);
-  cifraEl.style.fontSize = (presenterZoom * 0.95) + "em";
+  cifraEl.innerHTML = _cifraHtml(displayText);
+  cifraEl.style.fontSize = (song.zoom * 0.95) + "em";
+  cifraEl.classList.toggle("two-col", song.twoCol);
   cifraEl.style.display = "block";
 
+  // Nav
   document.getElementById("presenter-pos").textContent = (presenterIdx + 1) + " / " + presenterSongs.length;
   document.getElementById("btn-pres-prev").disabled = presenterIdx === 0;
   document.getElementById("btn-pres-next").disabled = presenterIdx === presenterSongs.length - 1;
@@ -5240,9 +5581,7 @@ function _renderPresenterSong() {
       var dot = document.createElement("div");
       dot.className = "pres-dot" + (i === presenterIdx ? " active" : "");
       dot.title = presenterSongs[i].name;
-      (function(idx) {
-        dot.addEventListener("click", function() { presenterIdx = idx; _renderPresenterSong(); });
-      })(i);
+      (function(idx) { dot.addEventListener("click", function() { presenterIdx = idx; _renderPresenterSong(); }); })(i);
       dotsEl.appendChild(dot);
     });
   }
@@ -5254,9 +5593,79 @@ function closePresenter() {
   if (document.fullscreenElement) document.exitFullscreen();
 }
 
+// Controles individuais por música
+document.getElementById("psc-zoom-out").addEventListener("click", function() {
+  var s = presenterSongs[presenterIdx]; if (!s) return;
+  s.zoom = Math.max(0.5, +(s.zoom - 0.1).toFixed(1));
+  document.getElementById("psc-zoom-val").textContent = Math.round(s.zoom * 100) + "%";
+  document.getElementById("presenter-cifra").style.fontSize = (s.zoom * 0.95) + "em";
+});
+document.getElementById("psc-zoom-in").addEventListener("click", function() {
+  var s = presenterSongs[presenterIdx]; if (!s) return;
+  s.zoom = Math.min(2.5, +(s.zoom + 0.1).toFixed(1));
+  document.getElementById("psc-zoom-val").textContent = Math.round(s.zoom * 100) + "%";
+  document.getElementById("presenter-cifra").style.fontSize = (s.zoom * 0.95) + "em";
+});
+document.getElementById("psc-tp-down").addEventListener("click", function() {
+  var s = presenterSongs[presenterIdx]; if (!s) return;
+  s.semitone = ((s.semitone - 1 + 12) % 12);
+  _renderPresenterSong();
+});
+document.getElementById("psc-tp-up").addEventListener("click", function() {
+  var s = presenterSongs[presenterIdx]; if (!s) return;
+  s.semitone = (s.semitone + 1) % 12;
+  _renderPresenterSong();
+});
+document.getElementById("psc-capo-dec").addEventListener("click", function() {
+  var s = presenterSongs[presenterIdx]; if (!s) return;
+  if (s.capo > 0) {
+    s.capo--;
+    _updatePresenterCapoBadge(s);
+  }
+});
+document.getElementById("psc-capo-inc").addEventListener("click", function() {
+  var s = presenterSongs[presenterIdx]; if (!s) return;
+  if (s.capo < 12) {
+    s.capo++;
+    _updatePresenterCapoBadge(s);
+  }
+});
+
+function _updatePresenterCapoBadge(song) {
+  var n = song.capo || 0;
+  document.getElementById("psc-capo-val").textContent = n > 0 ? n : "0";
+  document.getElementById("psc-capo-suffix").textContent = n > 0 ? ("\xaa casa") : "";
+  // Atualiza o badge dourado acima
+  var catEl = document.getElementById("presenter-song-cat");
+  var existing = catEl.querySelector(".capo-badge");
+  if (n > 0) {
+    if (!existing) {
+      existing = document.createElement("span");
+      existing.className = "capo-badge";
+      existing.style.cssText = "font-size:.7em;padding:2px 10px;";
+      catEl.appendChild(existing);
+      catEl.style.display = "flex";
+    }
+    existing.textContent = "Capotraste na " + n + "\xaa casa";
+  } else {
+    if (existing) existing.remove();
+    var note = catEl.querySelector("span:not(.capo-badge)");
+    if (!note) catEl.style.display = "none";
+  }
+}
+
+document.getElementById("psc-twocol").addEventListener("click", function() {
+  var s = presenterSongs[presenterIdx]; if (!s) return;
+  s.twoCol = !s.twoCol;
+  this.classList.toggle("active", s.twoCol);
+  document.getElementById("presenter-cifra").classList.toggle("two-col", s.twoCol);
+});
+
 function presenterZoomChange(delta) {
-  presenterZoom = Math.max(0.5, Math.min(2.5, presenterZoom + delta));
-  document.getElementById("presenter-cifra").style.fontSize = (presenterZoom * 0.95) + "em";
+  var s = presenterSongs[presenterIdx]; if (!s) return;
+  s.zoom = Math.max(0.5, Math.min(2.5, +(s.zoom + delta).toFixed(1)));
+  document.getElementById("psc-zoom-val").textContent = Math.round(s.zoom * 100) + "%";
+  document.getElementById("presenter-cifra").style.fontSize = (s.zoom * 0.95) + "em";
 }
 
 async function presenterToggleFullscreen() {
@@ -5278,17 +5687,48 @@ function modalZoomChange(delta) {
   document.getElementById("cifra-content").style.fontSize = (BASE_CIFRA_FS * modalZoom) + "em";
 }
 
-async function modalToggleFullscreen() {
-  var el = document.getElementById("modal-overlay");
-  var btn = document.getElementById("btn-modal-fullscreen");
-  if (!document.fullscreenElement) {
-    await el.requestFullscreen().catch(function(){});
-    btn.classList.add("active");
+var _focusMode = false;
+function modalToggleFocusMode(forceOff) {
+  var modal = document.getElementById("modal");
+  var btn   = document.getElementById("btn-modal-fullscreen");
+  var exitBtn = document.getElementById("focus-exit-btn");
+  _focusMode = forceOff === true ? false : !_focusMode;
+  if (_focusMode) {
+    // Update compact title bar
+    var titleEl = document.getElementById("focus-titlebar-name");
+    if (titleEl && currentModal) titleEl.textContent = currentModal.name || "";
+    modal.classList.add("focus-mode");
+    btn.classList.add("focus-active");
+    exitBtn.classList.add("visible");
+    _attachFocusSwipe();
   } else {
-    await document.exitFullscreen();
-    btn.classList.remove("active");
+    modal.classList.remove("focus-mode");
+    btn.classList.remove("focus-active");
+    exitBtn.classList.remove("visible");
+    _detachFocusSwipe();
   }
 }
+
+// Swipe-down gesture to exit focus mode
+var _fSwipeStartY = 0;
+function _focusSwipeStart(e) { _fSwipeStartY = (e.touches ? e.touches[0].clientY : e.clientY); }
+function _focusSwipeEnd(e) {
+  var endY = (e.changedTouches ? e.changedTouches[0].clientY : e.clientY);
+  if (endY - _fSwipeStartY > 70) modalToggleFocusMode(true);
+}
+function _attachFocusSwipe() {
+  var body = document.getElementById("modal-body");
+  body.addEventListener("touchstart", _focusSwipeStart, { passive: true });
+  body.addEventListener("touchend", _focusSwipeEnd, { passive: true });
+}
+function _detachFocusSwipe() {
+  var body = document.getElementById("modal-body");
+  body.removeEventListener("touchstart", _focusSwipeStart);
+  body.removeEventListener("touchend", _focusSwipeEnd);
+}
+
+// Keep legacy name for fullscreenchange cleanup compatibility
+function modalToggleFullscreen() { modalToggleFocusMode(); }
 
 // ─── Busca ──────────────────────────────────────────────────────────────────
 var searchMode = "name"; // "name" | "content"
@@ -5461,7 +5901,7 @@ async function saveTone() {
       if (newKey) {
         currentModal.key = newKey;
         _metaStore.set(currentModal.fileId || currentModal.path, {
-          artist: currentModal.artist || "", key: newKey, tags: currentModal.tags || []
+          artist: currentModal.artist || "", key: newKey, capo: currentModal.capo || "", tags: currentModal.tags || []
         });
         // Persiste o novo tom no frontmatter do arquivo .md automaticamente
         if (currentModal.fileId || currentModal.path) {
@@ -5641,8 +6081,9 @@ function init() {
       return;
     }
     if (e.key === "Escape") {
-      // Se está editando e Escape foi pressionado fora do textarea, cancela edição com confirmação
-      if (editMode && document.activeElement !== document.getElementById("cifra-edit")) {
+      if (_focusMode) {
+        modalToggleFocusMode(true);
+      } else if (editMode && document.activeElement !== document.getElementById("cifra-edit")) {
         _confirmLeaveEdit(function() { exitEditMode(); });
       } else if (!editMode) {
         closeModal();
@@ -5654,7 +6095,7 @@ function init() {
       if (tag !== "INPUT" && tag !== "TEXTAREA") {
         if (e.key === "+" || e.key === "=") { modalZoomChange(0.15); e.preventDefault(); }
         else if (e.key === "-") { modalZoomChange(-0.15); e.preventDefault(); }
-        else if (e.key === "f" || e.key === "F") { modalToggleFullscreen(); e.preventDefault(); }
+        else if (e.key === "f" || e.key === "F") { modalToggleFocusMode(); e.preventDefault(); }
       }
     }
   });
@@ -5692,9 +6133,10 @@ function init() {
   // Botão repertório no modal
   document.getElementById("btn-modal-add").addEventListener("click", function() {
     if (!currentModal) return;
-    toggleRepertorio(currentModal, null);
-    updateModalRepBtn();
-    refreshGridBtns();
+    toggleRepertorio(currentModal, null).then(function() {
+      updateModalRepBtn();
+      refreshGridBtns();
+    });
   });
 
   // Botão Home (legado — a função está no sidebar-home-item)
@@ -5732,20 +6174,19 @@ function init() {
     if (presenterIdx < presenterSongs.length - 1) { presenterIdx++; _renderPresenterSong(); }
   });
   document.getElementById("btn-pres-close").addEventListener("click", closePresenter);
-  document.getElementById("btn-pres-zoom-out").addEventListener("click", function() { presenterZoomChange(-0.15); });
-  document.getElementById("btn-pres-zoom-in").addEventListener("click", function() { presenterZoomChange(0.15); });
   document.getElementById("btn-pres-fullscreen").addEventListener("click", presenterToggleFullscreen);
   document.addEventListener("fullscreenchange", function() {
     if (!document.fullscreenElement) {
       document.getElementById("btn-pres-fullscreen").classList.remove("active");
-      document.getElementById("btn-modal-fullscreen").classList.remove("active");
     }
   });
 
-  // Modal zoom e tela cheia
+  // Modal zoom e modo foco
   document.getElementById("btn-modal-zoom-out").addEventListener("click", function() { modalZoomChange(-0.15); });
   document.getElementById("btn-modal-zoom-in").addEventListener("click", function() { modalZoomChange(0.15); });
-  document.getElementById("btn-modal-fullscreen").addEventListener("click", modalToggleFullscreen);
+  document.getElementById("btn-modal-fullscreen").addEventListener("click", function() { modalToggleFocusMode(); });
+  document.getElementById("focus-exit-btn").addEventListener("click", function() { modalToggleFocusMode(true); });
+  document.getElementById("focus-titlebar-close").addEventListener("click", function() { modalToggleFocusMode(true); });
 
   document.getElementById("btn-rep-new").addEventListener("click", newRep);
   document.getElementById("btn-rep-save").addEventListener("click", saveCurrentRep);
