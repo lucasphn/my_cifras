@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Política de Privacidade — My Cifras</title>
+  <link rel="icon" type="image/svg+xml" href="/static/brand/favicon.svg">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root { --primary: #5b4b8a; --bg: #f7f6fb; --text: #1f2937; --muted: #6b7280; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+      background: var(--bg); color: var(--text); line-height: 1.7; }
+    nav { background: var(--primary); padding: 0 24px; height: 54px; display: flex;
+      align-items: center; gap: 12px; }
+    nav img { height: 28px; }
+    nav a { color: #fff; font-size: .9em; opacity: .85; }
+    nav a:hover { opacity: 1; }
+    .container { max-width: 720px; margin: 0 auto; padding: 48px 24px 80px; }
+    h1 { font-size: 1.7em; font-weight: 700; color: var(--primary); margin-bottom: 8px; }
+    .updated { font-size: .85em; color: var(--muted); margin-bottom: 36px; }
+    h2 { font-size: 1.1em; font-weight: 600; margin: 28px 0 8px; color: var(--primary); }
+    p { margin-bottom: 12px; }
+    ul { padding-left: 20px; margin-bottom: 12px; }
+    li { margin-bottom: 6px; }
+    footer { text-align: center; padding: 24px; font-size: .8em; color: var(--muted); }
+  </style>
+</head>
+<body>
+<nav>
+  <img src="/static/brand/logo-light.svg" alt="My Cifras">
+  <a href="/" style="margin-left:auto">← Voltar ao app</a>
+</nav>
+
+<div class="container">
+  <h1>Política de Privacidade</h1>
+  <p class="updated">Última atualização: junho de 2025</p>
+
+  <p>O <strong>My Cifras</strong> é um aplicativo pessoal de gerenciamento de cifras musicais. Esta política descreve como coletamos e utilizamos suas informações.</p>
+
+  <h2>1. Informações coletadas</h2>
+  <p>Ao fazer login com o Google, coletamos apenas:</p>
+  <ul>
+    <li>Nome e endereço de e-mail da conta Google</li>
+    <li>Foto de perfil (apenas para exibição na interface)</li>
+  </ul>
+  <p>Não coletamos senhas, dados de pagamento ou qualquer outra informação pessoal.</p>
+
+  <h2>2. Uso do Google Drive</h2>
+  <p>O aplicativo acessa o Google Drive com as seguintes finalidades:</p>
+  <ul>
+    <li>Ler arquivos de cifras da pasta compartilhada da biblioteca</li>
+    <li>Armazenar suas preferências pessoais (tom preferido por música) na pasta <code>_mycifras_data</code> do seu próprio Drive</li>
+    <li>Salvar seus repertórios e histórico de visualizações</li>
+  </ul>
+  <p>O aplicativo <strong>não</strong> lê, modifica ou acessa nenhum outro arquivo do seu Google Drive além dos mencionados acima.</p>
+
+  <h2>3. Armazenamento local</h2>
+  <p>Para melhorar a experiência offline, o aplicativo armazena temporariamente o conteúdo das cifras no <em>IndexedDB</em> do seu navegador. Esses dados ficam apenas no seu dispositivo e podem ser apagados a qualquer momento limpando os dados do site no navegador.</p>
+
+  <h2>4. Compartilhamento de dados</h2>
+  <p>Não compartilhamos suas informações com terceiros. Os dados são utilizados exclusivamente para o funcionamento do aplicativo.</p>
+
+  <h2>5. Segurança</h2>
+  <p>O acesso ao aplicativo é protegido por autenticação OAuth 2.0 do Google. Não armazenamos tokens de acesso de forma permanente além da sessão ativa.</p>
+
+  <h2>6. Seus direitos</h2>
+  <p>Você pode encerrar o acesso do aplicativo ao seu Google Drive a qualquer momento em <a href="https://myaccount.google.com/permissions" target="_blank" rel="noopener" style="color:var(--primary)">Permissões de aplicativos do Google</a>.</p>
+
+  <h2>7. Contato</h2>
+  <p>Dúvidas sobre esta política? Entre em contato pelo e-mail disponível no perfil do aplicativo.</p>
+</div>
+
+<footer>My Cifras &mdash; Política de Privacidade</footer>
+</body>
+</html>

@@ -947,6 +947,16 @@ _start_keep_alive()
 # Rotas principais
 # ---------------------------------------------------------------------------
 
+@app.route("/privacy")
+def privacy():
+    return render_template("privacy.html")
+
+
+@app.route("/terms")
+def terms():
+    return render_template("terms.html")
+
+
 @app.route("/")
 def index():
     # Modo local (sem OAuth): vai direto para o app
