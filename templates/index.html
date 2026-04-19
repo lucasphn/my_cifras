@@ -3291,17 +3291,29 @@ function _showOfflineBanner() {
 }
 
 // ─── Bundle sync (offline cache via ETag) ────────────────────────────────────
-var _LS_BUNDLE_ETAG = 'mycifras_bundle_etag';
-var _bundleSyncing  = false;
+var _LS_BUNDLE_ETAG    = 'mycifras_bundle_etag';
+var _LS_BUNDLE_SYNC_TS = 'mycifras_bundle_sync_ts';
+var _BUNDLE_SYNC_TTL   = 30 * 60 * 1000; // 30 minutos
+var _bundleSyncing     = false;
+
+function _shouldRunBundleSync() {
+  if (!localStorage.getItem(_LS_BUNDLE_ETAG)) return true; // nunca sincronizou
+  var lastSync = parseInt(localStorage.getItem(_LS_BUNDLE_SYNC_TS) || '0', 10);
+  return (Date.now() - lastSync) > _BUNDLE_SYNC_TTL;
+}
 
 async function _bundleSync() {
   if (_bundleSyncing || !navigator.onLine) return;
+  if (!_shouldRunBundleSync()) return;
   _bundleSyncing = true;
   try {
     var storedEtag = localStorage.getItem(_LS_BUNDLE_ETAG) || '';
     var headers    = storedEtag ? { 'If-None-Match': storedEtag } : {};
     var resp = await fetch('/api/cifras/bundle', { headers: headers });
-    if (resp.status === 304) return;
+    if (resp.status === 304) {
+      localStorage.setItem(_LS_BUNDLE_SYNC_TS, String(Date.now()));
+      return;
+    }
     if (!resp.ok) return;
     var data = await resp.json();
     if (!data || !data.songs) return;
@@ -3311,6 +3323,7 @@ async function _bundleSync() {
     });
     if (entries.length) await _idbBulkPut(entries);
     if (data.etag) localStorage.setItem(_LS_BUNDLE_ETAG, data.etag);
+    localStorage.setItem(_LS_BUNDLE_SYNC_TS, String(Date.now()));
   } catch (e) {
     // silent
   } finally {
@@ -6268,12 +6281,10 @@ function init() {
           allSongs = _metaStore.enrich(allSongs);
           renderHomeTable(allSongs);
           // Inicia sync offline após enriquecer metadados
-          var _syncDelay = localStorage.getItem(_LS_BUNDLE_ETAG) ? 3000 : 8000;
-          setTimeout(_bundleSync, _syncDelay);
+          setTimeout(_bundleSync, 4000);
         }).catch(function(){
           // Mesmo sem metadados, inicia sync com o que tiver
-          var _syncDelay = localStorage.getItem(_LS_BUNDLE_ETAG) ? 3000 : 8000;
-          setTimeout(_bundleSync, _syncDelay);
+          setTimeout(_bundleSync, 4000);
         });
     })
     .catch(function(err) {
