@@ -3266,23 +3266,8 @@ function _idbCount() {
 
 // ─── Sync pill ───────────────────────────────────────────────────────────────
 var _syncPillTimer = null;
-function _showSyncPill(done, total) {
-  var pill = document.getElementById('sync-pill');
-  if (!pill) return;
-  if (total === 0) return;
-  clearTimeout(_syncPillTimer);
-  if (done < total) {
-    pill.textContent = '\u21BB Sincronizando offline… (' + done + '/' + total + ')';
-  } else {
-    pill.textContent = '\u2714 ' + total + ' cifras disponíveis offline';
-  }
-  pill.classList.add('visible');
-}
-function _hideSyncPill() {
-  var pill = document.getElementById('sync-pill');
-  if (!pill) return;
-  _syncPillTimer = setTimeout(function() { pill.classList.remove('visible'); }, 3500);
-}
+function _showSyncPill(done, total) {}
+function _hideSyncPill() {}
 function _hideOfflineBanner() {
   var el = document.getElementById('offline-banner');
   if (el) el.classList.remove('visible');
