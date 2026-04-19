@@ -365,6 +365,8 @@ def api_reps_create():
     rep = {"id": rep_id, "name": name, "songs": songs, "created_at": now, "updated_at": now}
     with _rep_lock:
         reps = _load_reps()
+        if len(reps) >= 5:
+            return jsonify({"error": "Limite de 5 repertórios atingido"}), 400
         reps[rep_id] = rep
         _save_reps(reps)
     return jsonify(rep), 201

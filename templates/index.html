@@ -5566,11 +5566,20 @@ async function loadSavedReps() {
   }
 }
 
+var _REP_LIMIT = 5;
+
 function renderSavedReps() {
   var list = document.getElementById("saved-reps-list");
   var empty = document.getElementById("saved-reps-empty");
   list.innerHTML = "";
   var keys = Object.keys(savedReps);
+  // Atualiza estado do botão "+ Novo" conforme limite
+  var newBtn = document.getElementById("btn-rep-new");
+  if (newBtn) {
+    var atLimit = keys.length >= _REP_LIMIT;
+    newBtn.disabled = atLimit;
+    newBtn.title = atLimit ? "Limite de " + _REP_LIMIT + " repertórios atingido" : "";
+  }
   if (!keys.length) {
     empty.style.display = "block";
     return;
@@ -5681,7 +5690,7 @@ async function saveCurrentRep() {
         body: JSON.stringify(payload)
       });
     }
-    if (!r.ok) { showToast("Erro ao salvar."); return; }
+    if (!r.ok) { var errJ = await r.json().catch(function(){return{};}); showToast(errJ.error || "Erro ao salvar."); return; }
     var saved = await r.json();
     // Atualiza cache local imediatamente (sem depender do servidor para UI)
     savedReps[saved.id] = saved;
