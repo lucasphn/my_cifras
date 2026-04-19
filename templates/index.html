@@ -3480,7 +3480,7 @@ function _makeHomeCard(song, cls) {
       (song.artist ? '<div class="hc-artist">' + escHtml(song.artist) + '</div>' : '') +
       '<div class="home-card-tags">' +
         '<span class="hc-cat">' + escHtml(catLabel) + '</span>' +
-        (song.key ? '<span class="hc-key">Tom: ' + escHtml(song.key) + '</span>' : '') +
+        (function(){ var _dk = (song.fileId && _myTones[song.fileId] && _myTones[song.fileId].my_key) || song.key || ""; return _dk ? '<span class="hc-key">Tom: ' + escHtml(_dk) + '</span>' : ''; })() +
         (views > 0 ? '<span class="hc-views has-views">&#128065; ' + views + '</span>' : '') +
       '</div>' +
     '</div>' +
@@ -5465,8 +5465,11 @@ async function _loadSongsForExport() {
         text = "[Erro ao carregar]";
       }
     }
+    var _prefs = (s.fileId && _myTones[s.fileId]) || {};
+    var _key  = _prefs.my_key  || s.key  || "";
+    var _capo = _prefs.my_capo != null ? _prefs.my_capo : (s.capo || "");
     songs.push({ name: s.name, artist: s.artist || "", text: text,
-                 note: s.note || "", capo: s.capo || "", key: s.key || "" });
+                 note: s.note || "", capo: _capo, key: _key });
   }
   return songs;
 }
