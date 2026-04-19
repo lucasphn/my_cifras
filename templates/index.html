@@ -5266,12 +5266,23 @@ async function exportRepertorio() {
     });
     if (!resp.ok) throw new Error("Erro ao gerar PDF (status " + resp.status + ")");
     setExportProgress(98, "Baixando...");
+    var isFallback = resp.headers.get("X-Export-Fallback") === "1";
     var blob = await resp.blob();
     var url = URL.createObjectURL(blob);
-    var a = document.createElement("a");
-    a.href = url; a.download = title + ".pdf";
-    document.body.appendChild(a); a.click();
-    setTimeout(function() { URL.revokeObjectURL(url); a.remove(); }, 1000);
+    if (isFallback) {
+      // WeasyPrint indisponível — abre HTML em nova aba para imprimir
+      var a = document.createElement("a");
+      a.href = url; a.target = "_blank"; a.rel = "noopener";
+      document.body.appendChild(a); a.click();
+      document.body.removeChild(a);
+      setTimeout(function() { URL.revokeObjectURL(url); }, 15000);
+      showToast("PDF gerado como HTML — use Ctrl+P para salvar.");
+    } else {
+      var a = document.createElement("a");
+      a.href = url; a.download = title + ".pdf";
+      document.body.appendChild(a); a.click();
+      setTimeout(function() { URL.revokeObjectURL(url); a.remove(); }, 1000);
+    }
     setExportProgress(100, "Pronto!");
     _hideExportOverlay(1200);
   } catch(e) {

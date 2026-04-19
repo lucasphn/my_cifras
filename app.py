@@ -1297,8 +1297,13 @@ def api_export_pdf():
             base_url=request.url_root,
         ).write_pdf()
     except Exception as e:
-        app.logger.error("WeasyPrint error: %s", e)
-        return Response(html, mimetype="text/html; charset=utf-8", status=500)
+        app.logger.error("WeasyPrint indisponível (%s) — retornando HTML como fallback", e)
+        # Fallback: devolve HTML para o cliente abrir em nova aba
+        return Response(
+            html,
+            mimetype="text/html; charset=utf-8",
+            headers={"X-Export-Fallback": "1"},
+        )
     buf = io.BytesIO(pdf_bytes)
     buf.seek(0)
     safe_name = _re.sub(r'[<>:"/\\|?*]', "_", title).strip() or "repertorio"
