@@ -1,4 +1,6 @@
+import concurrent.futures
 import functools
+import hashlib
 import json
 import os
 import re
@@ -620,6 +622,29 @@ def _get_library():
 def invalidate_library_cache():
     with _cache_lock:
         _library_cache["data"] = None
+    invalidate_bundle_cache()
+
+
+# ---------------------------------------------------------------------------
+# Cache de bundle (conteúdo completo para sync offline)
+# ---------------------------------------------------------------------------
+
+_bundle_cache = {"etag": None, "json_bytes": None, "ts": 0}
+_bundle_lock  = threading.Lock()
+BUNDLE_CACHE_TTL = 300  # 5 minutos
+
+def invalidate_bundle_cache():
+    with _bundle_lock:
+        _bundle_cache["etag"]       = None
+        _bundle_cache["json_bytes"] = None
+        _bundle_cache["ts"]         = 0
+
+def _compute_bundle_etag(songs):
+    parts = sorted(
+        f"{s['fileId']}:{s.get('modifiedTime', '')}"
+        for s in songs if s.get("fileId")
+    )
+    return hashlib.sha256("\n".join(parts).encode()).hexdigest()[:16]
 
 
 # ---------------------------------------------------------------------------
@@ -1057,6 +1082,7 @@ def api_save_content():
             drive.update_md_content(svc, file_id, frontmatter + new_body)
         except Exception as e:
             return jsonify({"error": str(e)}), 500
+        invalidate_bundle_cache()
         return jsonify({"ok": True})
 
     if path:
@@ -1076,6 +1102,7 @@ def api_save_content():
         else:
             frontmatter = ""
         abs_path.write_text(frontmatter + new_body, encoding="utf-8")
+        invalidate_bundle_cache()
         return jsonify({"ok": True})
 
     return jsonify({"error": "Informe fileId ou path"}), 400
@@ -1123,6 +1150,94 @@ def api_cifra():
         return jsonify({"text": body, "artist": meta.get("artist",""), "key": meta.get("key",""),
                         "title": meta.get("title",""), "tags": meta.get("tags",[]), "capo": meta.get("capo","")})
     return jsonify({"text": extract_text(path), "artist": "", "key": "", "title": "", "tags": []})
+
+
+@app.route("/api/cifras/bundle")
+@login_required
+def api_cifras_bundle():
+    """Retorna todas as cifras em um único JSON para sync offline.
+    Suporta If-None-Match / ETag para retornar 304 quando não houve alterações.
+    """
+    if not _use_drive():
+        return jsonify({"error": "Drive não configurado"}), 404
+
+    import drive as drv
+    from googleapiclient.discovery import build as _gdrive_build
+    from auth import get_credentials as _get_oauth_creds
+    from google.auth.transport.requests import Request as _GRequest
+
+    songs = [s for s in flatten_songs(_get_library()) if s.get("fileId")]
+    etag  = _compute_bundle_etag(songs)
+
+    # 304 se cliente já tem esta versão
+    if request.headers.get("If-None-Match", "") == etag:
+        return Response(status=304)
+
+    # Serve do cache do servidor se ainda válido
+    now = time.monotonic()
+    with _bundle_lock:
+        if (
+            _bundle_cache["etag"] == etag
+            and _bundle_cache["json_bytes"]
+            and (now - _bundle_cache["ts"]) < BUNDLE_CACHE_TTL
+        ):
+            resp = Response(_bundle_cache["json_bytes"], content_type="application/json")
+            resp.headers["ETag"] = etag
+            resp.headers["Cache-Control"] = "no-store"
+            return resp
+
+    # Obtém credenciais no contexto Flask antes de spawnar threads
+    creds = _get_oauth_creds()
+    if creds and creds.expired and creds.refresh_token:
+        creds.refresh(_GRequest())
+
+    def _fetch(song):
+        local_svc = _gdrive_build("drive", "v3", credentials=creds, cache_discovery=False)
+        fid  = song["fileId"]
+        mime = song.get("mimeType", "")
+        try:
+            if mime == drv.GDOCS_MIME:
+                text = drv.export_gdoc_as_text(local_svc, fid)
+                body, meta = text, {}
+            else:
+                raw_bytes = drv.download_bytes(local_svc, fid)
+                ext = _mime_to_ext(mime)
+                if ext in (".md", ".txt"):
+                    raw = raw_bytes.decode("utf-8", errors="replace")
+                    if raw.startswith("---") and "\n---" in raw:
+                        body, meta = _parse_frontmatter(raw)
+                    else:
+                        body, meta = raw, {}
+                else:
+                    body = extract_text_from_bytes(raw_bytes, ext)
+                    meta = {}
+            return fid, {
+                "text":   body,
+                "name":   song["name"],
+                "artist": meta.get("artist", ""),
+                "key":    meta.get("key", ""),
+                "capo":   meta.get("capo", ""),
+            }
+        except Exception:
+            return fid, None
+
+    bundle = {}
+    with concurrent.futures.ThreadPoolExecutor(max_workers=6) as pool:
+        for fid, data in pool.map(_fetch, songs):
+            if data:
+                bundle[fid] = data
+
+    json_bytes = json.dumps({"etag": etag, "songs": bundle}, ensure_ascii=False).encode("utf-8")
+
+    with _bundle_lock:
+        _bundle_cache["etag"]       = etag
+        _bundle_cache["json_bytes"] = json_bytes
+        _bundle_cache["ts"]         = time.monotonic()
+
+    resp = Response(json_bytes, content_type="application/json")
+    resp.headers["ETag"] = etag
+    resp.headers["Cache-Control"] = "no-store"
+    return resp
 
 
 @app.route("/api/upload", methods=["POST"])
@@ -1485,6 +1600,7 @@ def api_import_save():
         svc = get_service()
         folder_id = drive.resolve_folder(svc, section, category or "_raiz", CIFRAS_FOLDER_ID)
         file_id = drive.upload_md(svc, title, content, folder_id)
+        invalidate_library_cache()
         return jsonify({"ok": True, "fileId": file_id})
     else:
         safe_name = re.sub(r'[<>:"/\\|?*]', "_", title).strip()
@@ -1492,6 +1608,7 @@ def api_import_save():
         dest_dir.mkdir(parents=True, exist_ok=True)
         dest_file = dest_dir / (safe_name + ".md")
         dest_file.write_text(content, encoding="utf-8")
+        invalidate_library_cache()
         return jsonify({"ok": True, "path": str(dest_file)})
 
 

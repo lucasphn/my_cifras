@@ -37,7 +37,7 @@ def list_folder(service, folder_id):
             service.files()
             .list(
                 q=f"'{folder_id}' in parents and trashed=false",
-                fields="nextPageToken, files(id, name, mimeType)",
+                fields="nextPageToken, files(id, name, mimeType, modifiedTime)",
                 pageToken=page_token,
                 orderBy="name",
             )
@@ -392,6 +392,7 @@ def _collect_songs(service, folder_id, section, category):
             "name": Path(f["name"]).stem,
             "fileId": f["id"],
             "mimeType": f["mimeType"],
+            "modifiedTime": f.get("modifiedTime", ""),
             "section": section,
             "category": category,
         }
@@ -419,6 +420,7 @@ def scan_library(service, root_folder_id):
                         "name": Path(item["name"]).stem,
                         "fileId": item["id"],
                         "mimeType": item["mimeType"],
+                        "modifiedTime": item.get("modifiedTime", ""),
                         "section": sname,
                         "category": "_raiz",
                     }

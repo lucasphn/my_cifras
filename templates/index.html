@@ -3264,6 +3264,18 @@ function _idbCount() {
   });
 }
 
+function _idbBulkPut(entries) {
+  return _idbOpen().then(function(db) {
+    return new Promise(function(resolve, reject) {
+      var tx    = db.transaction(_IDB_STORE, 'readwrite');
+      var store = tx.objectStore(_IDB_STORE);
+      entries.forEach(function(e) { store.put(e); });
+      tx.oncomplete = resolve;
+      tx.onerror    = function() { reject(tx.error); };
+    });
+  });
+}
+
 // ─── Sync pill ───────────────────────────────────────────────────────────────
 var _syncPillTimer = null;
 function _showSyncPill(done, total) {}
@@ -3277,51 +3289,32 @@ function _showOfflineBanner() {
   if (el) el.classList.add('visible');
 }
 
-// ─── Background sync ─────────────────────────────────────────────────────────
-var _bgSyncing = false;
+// ─── Bundle sync (offline cache via ETag) ────────────────────────────────────
+var _LS_BUNDLE_ETAG = 'mycifras_bundle_etag';
+var _bundleSyncing  = false;
 
-async function _bgSync() {
-  if (_bgSyncing) return;
-  if (!allSongs || allSongs.length === 0) return;
-
-  var songs = allSongs.filter(function(s) { return !!s.fileId; });
-  if (songs.length === 0) return;
-
-  _bgSyncing = true;
-  var synced = 0;
-  var total  = songs.length;
-  _showSyncPill(0, total);
-
-  for (var i = 0; i < songs.length; i++) {
-    if (!navigator.onLine) break;
-    var song = songs[i];
-    try {
-      var cached = await _idbGet(song.fileId);
-      if (cached && cached.text) {
-        synced++;
-        _showSyncPill(synced, total);
-        continue;
-      }
-      var url  = '/api/cifra?fileId=' + encodeURIComponent(song.fileId)
-               + '&mimeType=' + encodeURIComponent(song.mimeType || '');
-      var resp = await fetch(url);
-      if (resp.ok) {
-        var data = await resp.json();
-        if (data && data.text) {
-          await _idbPut(song.fileId, { text: data.text, name: song.name, ts: Date.now() });
-        }
-      }
-      synced++;
-      _showSyncPill(synced, total);
-      await new Promise(function(r) { setTimeout(r, 250); });
-    } catch (e) {
-      synced++;
-    }
+async function _bundleSync() {
+  if (_bundleSyncing || !navigator.onLine) return;
+  _bundleSyncing = true;
+  try {
+    var storedEtag = localStorage.getItem(_LS_BUNDLE_ETAG) || '';
+    var headers    = storedEtag ? { 'If-None-Match': storedEtag } : {};
+    var resp = await fetch('/api/cifras/bundle', { headers: headers });
+    if (resp.status === 304) return;
+    if (!resp.ok) return;
+    var data = await resp.json();
+    if (!data || !data.songs) return;
+    var ts      = Date.now();
+    var entries = Object.keys(data.songs).map(function(fid) {
+      return Object.assign({ fileId: fid, ts: ts }, data.songs[fid]);
+    });
+    if (entries.length) await _idbBulkPut(entries);
+    if (data.etag) localStorage.setItem(_LS_BUNDLE_ETAG, data.etag);
+  } catch (e) {
+    // silent
+  } finally {
+    _bundleSyncing = false;
   }
-
-  _bgSyncing = false;
-  _showSyncPill(synced, total);
-  _hideSyncPill();
 }
 
 // ─── Estado global ──────────────────────────────────────────────────────────
@@ -6274,10 +6267,10 @@ function init() {
           allSongs = _metaStore.enrich(allSongs);
           renderHomeTable(allSongs);
           // Inicia sync offline após enriquecer metadados
-          setTimeout(_bgSync, 1500);
+          setTimeout(_bundleSync, 1500);
         }).catch(function(){
           // Mesmo sem metadados, inicia sync com o que tiver
-          setTimeout(_bgSync, 1500);
+          setTimeout(_bundleSync, 1500);
         });
     })
     .catch(function(err) {
@@ -6289,7 +6282,7 @@ function init() {
     });
 
   // Reagir a mudanças de conectividade
-  window.addEventListener('online',  function() { _hideOfflineBanner(); _bgSync(); });
+  window.addEventListener('online',  function() { _hideOfflineBanner(); _bundleSync(); });
   window.addEventListener('offline', function() { _showOfflineBanner(); });
   if (!navigator.onLine) _showOfflineBanner();
 
