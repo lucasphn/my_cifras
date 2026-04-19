@@ -1386,23 +1386,17 @@ def api_import_save():
 @app.route("/api/export/docx", methods=["POST"])
 @login_required
 def api_export_docx():
-    """Gera um arquivo .docx estilizado com as cifras do repertório."""
+    """Gera .docx minimalista — fácil de editar no Word."""
     import io
     import re as _re
-    from datetime import date as _date
     from docx import Document
     from docx.shared import Pt, RGBColor, Inches
-    from docx.enum.text import WD_ALIGN_PARAGRAPH
     from docx.oxml.ns import qn
     from docx.oxml import OxmlElement
     from flask import send_file
 
-    # ── Paleta ──────────────────────────────────────────────────────────────
     PURPLE = RGBColor(0x5b, 0x4b, 0x8a)
-    GOLD   = RGBColor(0xd4, 0xaf, 0x37)
     DARK   = RGBColor(0x1a, 0x1d, 0x2e)
-    MUTED  = RGBColor(0x88, 0x88, 0x99)
-    WHITE  = RGBColor(0xff, 0xff, 0xff)
 
     _CHORD_TOKEN = _re.compile(
         r'^[A-G][b#]?(?:m|maj|min|dim|aug|sus|add|[0-9]|/[A-G][b#]?)*$'
@@ -1416,71 +1410,7 @@ def api_export_docx():
         p.paragraph_format.space_after  = Pt(after)
         return p
 
-    def _shade_para(p, hex_fill):
-        pPr = p._p.get_or_add_pPr()
-        shd = OxmlElement("w:shd")
-        shd.set(qn("w:val"), "clear"); shd.set(qn("w:color"), "auto")
-        shd.set(qn("w:fill"), hex_fill)
-        pPr.append(shd)
-
-    def _shade_run(run, hex_fill):
-        """Aplica fundo colorido a um run (simula badge)."""
-        rPr = run._r.get_or_add_rPr()
-        shd = OxmlElement("w:shd")
-        shd.set(qn("w:val"), "clear"); shd.set(qn("w:color"), "auto")
-        shd.set(qn("w:fill"), hex_fill)
-        rPr.append(shd)
-
-    def _shade_cell(cell, hex_fill):
-        tcPr = cell._tc.get_or_add_tcPr()
-        shd = OxmlElement("w:shd")
-        shd.set(qn("w:val"), "clear"); shd.set(qn("w:color"), "auto")
-        shd.set(qn("w:fill"), hex_fill)
-        tcPr.append(shd)
-
-    def _no_cell_border(cell):
-        tcPr = cell._tc.get_or_add_tcPr()
-        tcBorders = OxmlElement("w:tcBorders")
-        for side in ["top", "left", "bottom", "right", "insideH", "insideV"]:
-            el = OxmlElement(f"w:{side}")
-            el.set(qn("w:val"), "none"); el.set(qn("w:sz"), "0")
-            el.set(qn("w:space"), "0"); el.set(qn("w:color"), "auto")
-            tcBorders.append(el)
-        tcPr.append(tcBorders)
-
-    def _set_table_borders(table, outer_color=None):
-        tblPr = table._tbl.tblPr
-        for existing in tblPr.findall(qn("w:tblBorders")):
-            tblPr.remove(existing)
-        tblBorders = OxmlElement("w:tblBorders")
-        for side in ["top", "left", "bottom", "right", "insideH", "insideV"]:
-            el = OxmlElement(f"w:{side}")
-            if outer_color and side in ["top", "left", "bottom", "right"]:
-                el.set(qn("w:val"), "single"); el.set(qn("w:sz"), "6")
-                el.set(qn("w:space"), "0"); el.set(qn("w:color"), outer_color)
-            else:
-                el.set(qn("w:val"), "none"); el.set(qn("w:sz"), "0")
-                el.set(qn("w:space"), "0"); el.set(qn("w:color"), "auto")
-            tblBorders.append(el)
-        tblPr.append(tblBorders)
-
-    def _set_table_width(table, twips):
-        tblPr = table._tbl.tblPr
-        for existing in tblPr.findall(qn("w:tblW")):
-            tblPr.remove(existing)
-        tblW = OxmlElement("w:tblW")
-        tblW.set(qn("w:w"), str(twips)); tblW.set(qn("w:type"), "dxa")
-        tblPr.append(tblW)
-
-    def _set_col_width(cell, twips):
-        tcPr = cell._tc.get_or_add_tcPr()
-        for existing in tcPr.findall(qn("w:tcW")):
-            tcPr.remove(existing)
-        tcW = OxmlElement("w:tcW")
-        tcW.set(qn("w:w"), str(twips)); tcW.set(qn("w:type"), "dxa")
-        tcPr.append(tcW)
-
-    def _bottom_border_para(p, color="5b4b8a", sz=4):
+    def _bottom_rule(p, color="c8c0e0", sz=4):
         pPr = p._p.get_or_add_pPr()
         pBdr = OxmlElement("w:pBdr")
         bt = OxmlElement("w:bottom")
@@ -1488,165 +1418,65 @@ def api_export_docx():
         bt.set(qn("w:space"), "1"); bt.set(qn("w:color"), color)
         pBdr.append(bt); pPr.append(pBdr)
 
-    def _badge_run(p, text, bg_hex, fg=WHITE, size=8.5, bold=True):
-        """Adiciona um run com fundo colorido (badge)."""
-        r = p.add_run(text)
-        r.font.size = Pt(size); r.font.bold = bold
-        r.font.color.rgb = fg; r.font.name = "Inter"
-        _shade_run(r, bg_hex)
-        return r
-
-    # ── Parse ────────────────────────────────────────────────────────────────
     data  = request.get_json(force=True)
     songs = data.get("songs", [])
     title = data.get("title", "Repertório")
 
     doc = Document()
-    # Margem mais estreita para aproveitar o espaço como o PDF
-    PAGE_W_TWIPS = int(8.5 * 1440)   # A4 landscape equiv.; usamos Letter
     for sec in doc.sections:
-        sec.top_margin    = Inches(0.7)
-        sec.bottom_margin = Inches(0.75)
-        sec.left_margin   = Inches(0.85)
-        sec.right_margin  = Inches(0.85)
-    TEXT_W = int((8.5 - 0.85 - 0.85) * 1440)   # twips disponíveis
+        sec.top_margin    = Inches(1.0)
+        sec.bottom_margin = Inches(1.0)
+        sec.left_margin   = Inches(1.2)
+        sec.right_margin  = Inches(1.2)
 
-    # ── CABEÇALHO: tabela 2 colunas (logo | título) ─────────────────────────
-    hdr = doc.add_table(rows=1, cols=2)
-    hdr.allow_autofit = False
-    _set_table_width(hdr, TEXT_W)
-    _set_table_borders(hdr)   # sem bordas
-
-    logo_cell  = hdr.rows[0].cells[0]
-    title_cell = hdr.rows[0].cells[1]
-    LOGO_W = int(1.3 * 1440)
-    _set_col_width(logo_cell,  LOGO_W)
-    _set_col_width(title_cell, TEXT_W - LOGO_W)
-    _shade_cell(logo_cell,  "5b4b8a")
-    _shade_cell(title_cell, "5b4b8a")
-    _no_cell_border(logo_cell)
-    _no_cell_border(title_cell)
-
-    # Célula logo: "my / Cifras."
-    lp = logo_cell.paragraphs[0]
-    _tight(lp, before=10, after=0)
-    lp.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    lr = lp.add_run("my")
-    lr.font.size = Pt(7.5); lr.font.color.rgb = WHITE; lr.font.name = "Inter"
-
-    lp2 = logo_cell.add_paragraph()
-    _tight(lp2, before=0, after=10)
-    lp2.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    lr2 = lp2.add_run("Cifras.")
-    lr2.font.size = Pt(13); lr2.font.bold = True
-    lr2.font.color.rgb = WHITE; lr2.font.name = "Inter"
-
-    # Célula título
-    tp = title_cell.paragraphs[0]
-    _tight(tp, before=10, after=2)
-    tp.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+    # ── Título do documento ──────────────────────────────────────────────────
+    tp = doc.add_paragraph()
+    _tight(tp, before=0, after=6)
     tr = tp.add_run(title)
-    tr.font.size = Pt(20); tr.font.bold = True
-    tr.font.color.rgb = WHITE; tr.font.name = "Inter"
+    tr.font.bold = True; tr.font.size = Pt(18); tr.font.color.rgb = PURPLE
+    _bottom_rule(tp)
 
-    tp2 = title_cell.add_paragraph()
-    _tight(tp2, before=0, after=10)
-    tp2.alignment = WD_ALIGN_PARAGRAPH.RIGHT
-    tr2 = tp2.add_run(
-        f"{len(songs)} música{'s' if len(songs) != 1 else ''}  ·  {_date.today().strftime('%d/%m/%Y')}"
-    )
-    tr2.font.size = Pt(9); tr2.font.color.rgb = RGBColor(0xcc, 0xc4, 0xee)
-    tr2.font.name = "Inter"
-
-    # ── MÚSICAS ──────────────────────────────────────────────────────────────
+    # ── Músicas (página por música) ──────────────────────────────────────────
     for i, song in enumerate(songs):
-        # Espaçador entre cards
-        sp = doc.add_paragraph()
-        _tight(sp, before=0, after=0)
-        sp.paragraph_format.line_spacing = Pt(8)
+        if i > 0:
+            doc.add_page_break()
 
-        # Card: tabela 1×1 com borda externa
-        card = doc.add_table(rows=1, cols=1)
-        card.allow_autofit = False
-        _set_table_width(card, TEXT_W)
-        _set_table_borders(card, outer_color="e6e1f0")
-        cell = card.rows[0].cells[0]
-        _set_col_width(cell, TEXT_W)
-        _no_cell_border(cell)
+        # Nome da música
+        np_ = doc.add_paragraph()
+        _tight(np_, before=0, after=4)
+        nr = np_.add_run(f"{i + 1}.  {song.get('name', '')}")
+        nr.font.bold = True; nr.font.size = Pt(13); nr.font.color.rgb = PURPLE
+        _bottom_rule(np_)
 
-        # ── Título ──
-        tp = cell.paragraphs[0]
-        _tight(tp, before=8, after=6)
-        _shade_para(tp, "ece9f5")
-        _bottom_border_para(tp, "5b4b8a", 4)
-        tp.paragraph_format.left_indent = Pt(6)
-
-        nr = tp.add_run(f"{i + 1}.  ")
-        nr.font.bold = True; nr.font.size = Pt(13)
-        nr.font.color.rgb = GOLD; nr.font.name = "Inter"
-
-        name_r = tp.add_run(song.get("name", ""))
-        name_r.font.bold = True; name_r.font.size = Pt(13)
-        name_r.font.color.rgb = PURPLE; name_r.font.name = "Inter"
-
-        # ── Badges: nota, tom, capo ──
+        # Metadados numa linha só (nota | Tom: X | Capotraste na Xª)
         note = (song.get("note") or "").strip()
         key  = (song.get("key")  or "").strip()
         capo = int(song.get("capo") or 0)
+        meta_parts = []
+        if note: meta_parts.append(note)
+        if key:  meta_parts.append(f"Tom: {key}")
+        if capo > 0: meta_parts.append(f"Capotraste na {capo}ª casa")
+        if meta_parts:
+            mp = doc.add_paragraph()
+            _tight(mp, before=2, after=6)
+            mr = mp.add_run("  " + "  ·  ".join(meta_parts))
+            mr.font.size = Pt(9); mr.font.italic = True
+            mr.font.color.rgb = RGBColor(0x7a, 0x6f, 0xa8)
 
-        if note or key or capo > 0:
-            mp = cell.add_paragraph()
-            _tight(mp, before=5, after=5)
-            mp.paragraph_format.left_indent = Pt(6)
-
-            if note:
-                _badge_run(mp, f"  {note}  ", "5b4b8a")
-                mp.add_run("  ")
-
-            if key:
-                _badge_run(mp, " ♫ ", "5b4b8a", size=8)
-                _badge_run(mp, f" {key} ", "5b4b8a")
-                mp.add_run("  ")
-
-            if capo > 0:
-                _badge_run(mp, f"  Capotraste na {capo}ª casa  ", "d4af37")
-
-        # ── Tom: X (linha monospace abaixo dos badges) ──
-        if key:
-            kp = cell.add_paragraph()
-            _tight(kp, before=2, after=4)
-            kp.paragraph_format.left_indent = Pt(6)
-            kr = kp.add_run(f"Tom: {key}")
-            kr.font.name = "Courier New"; kr.font.size = Pt(9)
-            kr.font.bold = True; kr.font.color.rgb = PURPLE
-
-        # ── Cifra ──
+        # Cifra
         text = (song.get("text") or "").strip()
         for line in text.split("\n"):
-            lp = cell.add_paragraph()
+            lp = doc.add_paragraph()
             _tight(lp, before=0, after=0)
             if not line.strip():
                 _tight(lp, before=0, after=3)
                 continue
             run = lp.add_run(line)
-            run.font.name = "Courier New"
-            run.font.size = Pt(8.5)
+            run.font.name = "Courier New"; run.font.size = Pt(9)
             if _is_chord_line(line):
-                run.font.bold = True
-                run.font.color.rgb = PURPLE
+                run.font.bold = True; run.font.color.rgb = PURPLE
             else:
                 run.font.color.rgb = DARK
-
-        # Padding inferior
-        pad = cell.add_paragraph()
-        _tight(pad, before=4, after=4)
-
-    # ── Rodapé ───────────────────────────────────────────────────────────────
-    fp = doc.add_paragraph()
-    _tight(fp, before=14, after=0)
-    fp.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    fr = fp.add_run(f"My Cifras  ·  gerado em {_date.today().strftime('%d/%m/%Y')}")
-    fr.font.size = Pt(8); fr.font.color.rgb = MUTED; fr.font.name = "Inter"
 
     buf = io.BytesIO()
     doc.save(buf)

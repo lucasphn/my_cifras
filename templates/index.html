@@ -1440,6 +1440,7 @@ input { font: inherit; }
   white-space: pre-wrap;
   word-break: break-word;
   color: var(--text);
+  font-weight: 500;
 }
 .chord-line { color: var(--chord-color); font-weight: 700; }
 
@@ -1605,6 +1606,7 @@ input { font: inherit; }
 #presenter-cifra {
   font-family: var(--font-mono); line-height: 1.75;
   white-space: pre-wrap; word-break: break-word; color: #1a1d2e;
+  font-weight: 500;
 }
 #presenter-cifra.two-col {
   columns: 2; column-gap: 2.5em;
@@ -4761,6 +4763,15 @@ function updateTransposeUI() {
 // ─── Meus Tons ───────────────────────────────────────────────────────────────
 
 var _myTones = {};            // cache: { <fileId>: { my_key, my_capo } }
+
+// ── localStorage helpers para prefs (evita delay do Drive) ─────────────────
+var _LS_PREFS_PREFIX = "mycifras_prefs_";
+function _lsGetPrefs(songId) {
+  try { var v = localStorage.getItem(_LS_PREFS_PREFIX + songId); return v ? JSON.parse(v) : null; } catch(e) { return null; }
+}
+function _lsSetPrefs(songId, data) {
+  try { localStorage.setItem(_LS_PREFS_PREFIX + songId, JSON.stringify(data)); } catch(e) {}
+}
 var _mtSavedSemitone = null;  // semitom do my_key salvo para a música atual
 var _mtCapoValue = 0;         // valor atual do stepper de capo pessoal
 var _pendingMyKeyApply = false; // true enquanto prefs carregam antes da cifra
@@ -4865,10 +4876,23 @@ function loadMyTones(songId) {
   _setCapoStepperDisplay(0);
   if (!songId) return;
   if (_myTones[songId] !== undefined) { _applyMyToneOnOpen(songId); return; }
+  // Aplica do localStorage imediatamente (sem delay do Drive)
+  var cached = _lsGetPrefs(songId);
+  if (cached) {
+    _myTones[songId] = cached;
+    _applyMyToneOnOpen(songId);
+    // Sincroniza com Drive em background para manter consistência
+    fetch("/api/preferences?fileId=" + encodeURIComponent(songId))
+      .then(function(r) { return r.ok ? r.json() : null; })
+      .then(function(data) { if (data) { _myTones[songId] = data; _lsSetPrefs(songId, data); } })
+      .catch(function() {});
+    return;
+  }
   fetch("/api/preferences?fileId=" + encodeURIComponent(songId))
     .then(function(r) { return r.ok ? r.json() : {}; })
     .then(function(data) {
       _myTones[songId] = data || {};
+      _lsSetPrefs(songId, _myTones[songId]);
       _applyMyToneOnOpen(songId);
     }).catch(function() { _myTones[songId] = {}; _updateMyToneUI(songId); });
 }
@@ -4906,6 +4930,7 @@ async function saveMyTone(songId) {
     lastData = await r2.json();
 
     _myTones[songId] = lastData;
+    _lsSetPrefs(songId, lastData);   // persiste local imediatamente
     _mtSavedSemitone = currentSemitone;
     var toggleInput = document.getElementById("mt-toggle-input");
     if (toggleInput && key) toggleInput.checked = true;
@@ -5027,10 +5052,15 @@ async function toggleRepertorio(song, btnEl) {
     } else if (songId) {
       // Card sem modal: carrega preferências e aplica Meu Tom se existir
       if (_myTones[songId] === undefined) {
-        try {
-          var r0 = await fetch("/api/preferences?fileId=" + encodeURIComponent(songId));
-          _myTones[songId] = r0.ok ? (await r0.json()) : {};
-        } catch(e) { _myTones[songId] = {}; }
+        var _lsc2 = _lsGetPrefs(songId);
+        if (_lsc2) { _myTones[songId] = _lsc2; }
+        else {
+          try {
+            var r0 = await fetch("/api/preferences?fileId=" + encodeURIComponent(songId));
+            _myTones[songId] = r0.ok ? (await r0.json()) : {};
+            _lsSetPrefs(songId, _myTones[songId]);
+          } catch(e) { _myTones[songId] = {}; }
+        }
       }
       var prefs = _myTones[songId] || {};
       if (prefs.my_capo && parseInt(prefs.my_capo) > 0) entry.capo = prefs.my_capo;
