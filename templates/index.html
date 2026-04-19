@@ -1928,6 +1928,18 @@ input { font: inherit; }
 #export-prog-label {
   font-size: 0.82em; font-weight: 600; color: var(--text-muted);
 }
+#btn-export-cancel {
+  margin-top: 4px;
+  padding: 7px 22px;
+  font-size: 0.82em; font-weight: 600;
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  cursor: pointer;
+  transition: border-color .15s, color .15s;
+}
+#btn-export-cancel:hover { border-color: var(--danger); color: var(--danger); }
 /* SVG violonista */
 #guitarist-wrap { position: relative; width: 90px; height: 90px; }
 #guitarist-wrap svg { width: 90px; height: 90px; }
@@ -3055,6 +3067,7 @@ input { font: inherit; }
     <h3 id="export-card-title">Gerando repertório...</h3>
     <div id="export-prog-wrap"><div id="export-prog-bar"></div></div>
     <div id="export-prog-label">0%</div>
+    <button id="btn-export-cancel" type="button">Cancelar</button>
   </div>
 </div>
 
@@ -5160,48 +5173,66 @@ function refreshGridBtns() {
 }
 
 // ─── Exportação ─────────────────────────────────────────────────────────────
+var _exportAborted = false;
+var _exportAbortCtrl = null;
+
 function setExportProgress(pct, label) {
   document.getElementById("export-prog-bar").style.width = pct + "%";
   document.getElementById("export-prog-label").textContent = label || (Math.round(pct) + "%");
 }
 
+function _showExportOverlay(title) {
+  _exportAborted = false;
+  _exportAbortCtrl = new AbortController();
+  document.getElementById("export-card-title").textContent = "Gerando " + title + "...";
+  setExportProgress(0, "0%");
+  document.getElementById("export-overlay").classList.add("show");
+}
+
+function _hideExportOverlay(delay) {
+  setTimeout(function() {
+    document.getElementById("export-overlay").classList.remove("show");
+  }, delay || 0);
+}
+
+async function _loadSongsForExport() {
+  var songs = [];
+  var total = repertorio.length;
+  for (var i = 0; i < total; i++) {
+    if (_exportAborted) throw new DOMException("Cancelado", "AbortError");
+    var s = repertorio[i];
+    setExportProgress(Math.round((i / total) * 80), "Carregando " + (i + 1) + " de " + total + "...");
+    var text = s.text || "";
+    if (!text) {
+      try {
+        var r = await fetch(
+          s.fileId
+            ? "/api/cifra?fileId=" + encodeURIComponent(s.fileId) + "&mimeType=" + encodeURIComponent(s.mimeType || "")
+            : "/api/cifra?path=" + encodeURIComponent(s.path),
+          { signal: _exportAbortCtrl.signal }
+        );
+        var d = await r.json();
+        text = d.text || "";
+      } catch(e) {
+        if (e.name === "AbortError") throw e;
+        text = "[Erro ao carregar]";
+      }
+    }
+    songs.push({ name: s.name, artist: s.artist || "", text: text,
+                 note: s.note || "", capo: s.capo || "", key: s.key || "" });
+  }
+  return songs;
+}
+
 async function exportDocx() {
   if (!repertorio.length) { showToast("O repertório está vazio."); return; }
   var title = document.getElementById("rep-title-input").value.trim() || "Repertório";
-  var overlay = document.getElementById("export-overlay");
-  document.getElementById("export-card-title").textContent = "Gerando " + title + "...";
-  setExportProgress(0, "0%");
-  overlay.classList.add("show");
+  _showExportOverlay(title);
   try {
-    var songs = [];
-    var total = repertorio.length;
-    for (var i = 0; i < total; i++) {
-      var s = repertorio[i];
-      setExportProgress(Math.round((i / total) * 80), "Carregando " + (i + 1) + " de " + total + "...");
-      var text = "";
-      if (s.text) {
-        text = s.text;
-      } else {
-        try {
-          var r = await fetch(s.fileId
-            ? "/api/cifra?fileId=" + encodeURIComponent(s.fileId) + "&mimeType=" + encodeURIComponent(s.mimeType || "")
-            : "/api/cifra?path=" + encodeURIComponent(s.path));
-          var d = await r.json();
-          text = d.text || "";
-        } catch(e) { text = "[Erro ao carregar]"; }
-      }
-      songs.push({
-        name: s.name,
-        artist: s.artist || "",
-        text: text,
-        note: s.note || "",
-        capo: s.capo || "",
-        key: s.key || ""
-      });
-    }
+    var songs = await _loadSongsForExport();
     setExportProgress(88, "Gerando documento...");
     var resp = await fetch("/api/export/docx", {
-      method: "POST",
+      method: "POST", signal: _exportAbortCtrl.signal,
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ songs: songs, title: title })
     });
@@ -5214,79 +5245,39 @@ async function exportDocx() {
     document.body.appendChild(a); a.click();
     setTimeout(function() { URL.revokeObjectURL(url); a.remove(); }, 1000);
     setExportProgress(100, "Pronto!");
+    _hideExportOverlay(1200);
   } catch(e) {
-    showToast("Erro: " + e.message);
-  } finally {
-    setTimeout(function() { overlay.classList.remove("show"); }, 1200);
+    _hideExportOverlay(0);
+    if (e.name !== "AbortError") showToast("Erro: " + e.message);
   }
 }
 
-async function exportRepertorio(autoPrint) {
+async function exportRepertorio() {
   if (!repertorio.length) { showToast("O repertório está vazio."); return; }
-
   var title = document.getElementById("rep-title-input").value.trim() || "Repertório";
-
-  // Mostra overlay de progresso
-  var overlay = document.getElementById("export-overlay");
-  document.getElementById("export-card-title").textContent = "Gerando " + title + "...";
-  setExportProgress(0, "0%");
-  overlay.classList.add("show");
-
-  var songs = [];
-  var total = repertorio.length;
-  for (var i = 0; i < total; i++) {
-    var s = repertorio[i];
-    var pct = Math.round((i / total) * 85);
-    setExportProgress(pct, "Carregando " + (i + 1) + " de " + total + "...");
-
-    var text = "";
-    if (s.text) {
-      // Já tem texto em memória (upload avulso ou tom transposto)
-      text = s.text;
-    } else {
-      try {
-        var r = await fetch(s.fileId
-          ? "/api/cifra?fileId=" + encodeURIComponent(s.fileId) + "&mimeType=" + encodeURIComponent(s.mimeType || "")
-          : "/api/cifra?path=" + encodeURIComponent(s.path));
-        var data = await r.json();
-        text = data.text || "";
-      } catch(e) {
-        text = "[Erro ao carregar]";
-      }
-    }
-    songs.push({
-      name: s.name,
-      artist: s.artist || "",
-      text: text,
-      note: s.note || "",
-      capo: s.capo || "",
-      key: s.key || ""
+  _showExportOverlay(title);
+  try {
+    var songs = await _loadSongsForExport();
+    setExportProgress(88, "Gerando PDF...");
+    var resp = await fetch("/api/export/pdf", {
+      method: "POST", signal: _exportAbortCtrl.signal,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ songs: songs, title: title })
     });
+    if (!resp.ok) throw new Error("Erro ao gerar PDF (status " + resp.status + ")");
+    setExportProgress(98, "Baixando...");
+    var blob = await resp.blob();
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    a.href = url; a.download = title + ".pdf";
+    document.body.appendChild(a); a.click();
+    setTimeout(function() { URL.revokeObjectURL(url); a.remove(); }, 1000);
+    setExportProgress(100, "Pronto!");
+    _hideExportOverlay(1200);
+  } catch(e) {
+    _hideExportOverlay(0);
+    if (e.name !== "AbortError") showToast("Erro: " + e.message);
   }
-
-  setExportProgress(90, "Montando HTML...");
-  var resp = await fetch("/api/export", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ songs: songs, title: title, print: !!autoPrint })
-  });
-  var html = await resp.text();
-  setExportProgress(100, "Pronto!");
-
-  // Pequena pausa para o usuário ver 100%
-  await new Promise(function(res) { setTimeout(res, 600); });
-  overlay.classList.remove("show");
-
-  var blob = new Blob([html], { type: "text/html" });
-  var url = URL.createObjectURL(blob);
-  var a = document.createElement("a");
-  a.href = url; a.target = "_blank"; a.rel = "noopener";
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  setTimeout(function() { URL.revokeObjectURL(url); }, 10000);
-  document.getElementById("rep-title-input").value = "";
-  showToast("Repertório " + title + " gerado!");
 }
 
 // ─── Repertórios persistidos ─────────────────────────────────────────────────
@@ -6203,7 +6194,12 @@ function init() {
     });
   });
   document.getElementById("btn-rep-docx").addEventListener("click", exportDocx);
-  document.getElementById("btn-rep-pdf").addEventListener("click", function() { exportRepertorio(true); });
+  document.getElementById("btn-rep-pdf").addEventListener("click", exportRepertorio);
+  document.getElementById("btn-export-cancel").addEventListener("click", function() {
+    _exportAborted = true;
+    if (_exportAbortCtrl) _exportAbortCtrl.abort();
+    showToast("Exportação cancelada.");
+  });
   loadSavedReps();
 
   // ─── Liturgia do Dia ─────────────────────────────────────────────────────

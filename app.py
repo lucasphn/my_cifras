@@ -1028,13 +1028,8 @@ def api_upload():
     return jsonify({"text": text, "name": Path(file.filename).stem})
 
 
-@app.route("/api/export", methods=["POST"])
-@login_required
-def api_export():
-    data = request.get_json(force=True)
-    songs = data.get("songs", [])
-    title = data.get("title", "Repertório")
-    auto_print = data.get("print", False)
+def _build_export_html(songs, title, auto_print=False):
+    """Gera o HTML estilizado do repertório (usado pelo endpoint HTML e PDF)."""
     today = date.today().strftime("%d/%m/%Y")
 
     # Inline logo SVG
@@ -1270,7 +1265,49 @@ def api_export():
 </body>
 </html>"""
 
+    return html
+
+
+@app.route("/api/export", methods=["POST"])
+@login_required
+def api_export():
+    data = request.get_json(force=True)
+    songs = data.get("songs", [])
+    title = data.get("title", "Repertório")
+    auto_print = data.get("print", False)
+    html = _build_export_html(songs, title, auto_print)
     return Response(html, mimetype="text/html; charset=utf-8")
+
+
+@app.route("/api/export/pdf", methods=["POST"])
+@login_required
+def api_export_pdf():
+    """Gera PDF diretamente via WeasyPrint — sem precisar abrir o browser."""
+    import io
+    import re as _re
+    from flask import send_file
+    data  = request.get_json(force=True)
+    songs = data.get("songs", [])
+    title = data.get("title", "Repertório")
+    html  = _build_export_html(songs, title, auto_print=False)
+    try:
+        from weasyprint import HTML as WP_HTML
+        pdf_bytes = WP_HTML(
+            string=html,
+            base_url=request.url_root,
+        ).write_pdf()
+    except Exception as e:
+        app.logger.error("WeasyPrint error: %s", e)
+        return Response(html, mimetype="text/html; charset=utf-8", status=500)
+    buf = io.BytesIO(pdf_bytes)
+    buf.seek(0)
+    safe_name = _re.sub(r'[<>:"/\\|?*]', "_", title).strip() or "repertorio"
+    return send_file(
+        buf,
+        as_attachment=True,
+        download_name=safe_name + ".pdf",
+        mimetype="application/pdf",
+    )
 
 
 # ---------------------------------------------------------------------------

@@ -16,3 +16,6 @@ beautifulsoup4==4.14.3
 
 # Frontmatter .md
 python-frontmatter==1.1.0
+
+# Geração de PDF server-side
+weasyprint==63.1
