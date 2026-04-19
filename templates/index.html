@@ -2542,6 +2542,27 @@ input { font: inherit; }
   -webkit-tap-highlight-color: transparent;
 }
 .mbn-btn:active { background: var(--primary-light); color: var(--primary); transform: scale(.94); }
+
+/* ── Sync pill (offline background sync indicator) ──────────────────────── */
+#sync-pill {
+  position: fixed; bottom: 72px; left: 50%; transform: translateX(-50%);
+  background: rgba(31,24,50,.88); color: #fff;
+  padding: 6px 18px; border-radius: 50px; font-size: 0.73em; font-weight: 500;
+  white-space: nowrap; pointer-events: none;
+  opacity: 0; transition: opacity .3s ease;
+  z-index: 8000;
+}
+#sync-pill.visible { opacity: 1; }
+@media (min-width: 640px) { #sync-pill { bottom: 20px; } }
+
+/* ── Offline banner ──────────────────────────────────────────────────────── */
+#offline-banner {
+  position: fixed; top: var(--header-h); left: 0; right: 0;
+  background: #374151; color: #f9fafb;
+  text-align: center; padding: 5px 12px; font-size: 0.78em; font-weight: 500;
+  z-index: 8001; display: none;
+}
+#offline-banner.visible { display: block; }
 </style>
 </head>
 <body>
@@ -3138,6 +3159,10 @@ input { font: inherit; }
 <!-- Toast -->
 <div id="toast"></div>
 
+<!-- Offline sync indicator -->
+<div id="sync-pill"></div>
+<div id="offline-banner">&#9888; Sem conexão — exibindo cifras salvas offline</div>
+
 <!-- Diálogo de confirmação customizado -->
 <div id="confirm-overlay">
   <div id="confirm-dialog">
@@ -3177,6 +3202,135 @@ var _metaStore = (function() {
     },
   };
 })();
+
+// ─── IndexedDB — cache offline de cifras ────────────────────────────────────
+var _IDB_NAME    = 'mycifras-offline';
+var _IDB_STORE   = 'cifras';
+var _IDB_VERSION = 1;
+var _idbDb       = null;
+
+function _idbOpen() {
+  return new Promise(function(resolve, reject) {
+    if (_idbDb) { resolve(_idbDb); return; }
+    var req = indexedDB.open(_IDB_NAME, _IDB_VERSION);
+    req.onupgradeneeded = function(e) {
+      var db = e.target.result;
+      if (!db.objectStoreNames.contains(_IDB_STORE)) {
+        db.createObjectStore(_IDB_STORE, { keyPath: 'fileId' });
+      }
+    };
+    req.onsuccess  = function(e) { _idbDb = e.target.result; resolve(_idbDb); };
+    req.onerror    = function()  { reject(req.error); };
+  });
+}
+
+function _idbGet(fileId) {
+  return _idbOpen().then(function(db) {
+    return new Promise(function(resolve, reject) {
+      var tx  = db.transaction(_IDB_STORE, 'readonly');
+      var req = tx.objectStore(_IDB_STORE).get(fileId);
+      req.onsuccess = function() { resolve(req.result || null); };
+      req.onerror   = function() { reject(req.error); };
+    });
+  });
+}
+
+function _idbPut(fileId, data) {
+  return _idbOpen().then(function(db) {
+    return new Promise(function(resolve, reject) {
+      var tx  = db.transaction(_IDB_STORE, 'readwrite');
+      var req = tx.objectStore(_IDB_STORE).put(Object.assign({ fileId: fileId }, data));
+      req.onsuccess = function() { resolve(); };
+      req.onerror   = function() { reject(req.error); };
+    });
+  });
+}
+
+function _idbCount() {
+  return _idbOpen().then(function(db) {
+    return new Promise(function(resolve) {
+      var tx  = db.transaction(_IDB_STORE, 'readonly');
+      var req = tx.objectStore(_IDB_STORE).count();
+      req.onsuccess = function() { resolve(req.result); };
+      req.onerror   = function() { resolve(0); };
+    });
+  });
+}
+
+// ─── Sync pill ───────────────────────────────────────────────────────────────
+var _syncPillTimer = null;
+function _showSyncPill(done, total) {
+  var pill = document.getElementById('sync-pill');
+  if (!pill) return;
+  if (total === 0) return;
+  clearTimeout(_syncPillTimer);
+  if (done < total) {
+    pill.textContent = '\u21BB Sincronizando offline… (' + done + '/' + total + ')';
+  } else {
+    pill.textContent = '\u2714 ' + total + ' cifras disponíveis offline';
+  }
+  pill.classList.add('visible');
+}
+function _hideSyncPill() {
+  var pill = document.getElementById('sync-pill');
+  if (!pill) return;
+  _syncPillTimer = setTimeout(function() { pill.classList.remove('visible'); }, 3500);
+}
+function _hideOfflineBanner() {
+  var el = document.getElementById('offline-banner');
+  if (el) el.classList.remove('visible');
+}
+function _showOfflineBanner() {
+  var el = document.getElementById('offline-banner');
+  if (el) el.classList.add('visible');
+}
+
+// ─── Background sync ─────────────────────────────────────────────────────────
+var _bgSyncing = false;
+
+async function _bgSync() {
+  if (_bgSyncing) return;
+  if (!allSongs || allSongs.length === 0) return;
+
+  var songs = allSongs.filter(function(s) { return !!s.fileId; });
+  if (songs.length === 0) return;
+
+  _bgSyncing = true;
+  var synced = 0;
+  var total  = songs.length;
+  _showSyncPill(0, total);
+
+  for (var i = 0; i < songs.length; i++) {
+    if (!navigator.onLine) break;
+    var song = songs[i];
+    try {
+      var cached = await _idbGet(song.fileId);
+      if (cached && cached.text) {
+        synced++;
+        _showSyncPill(synced, total);
+        continue;
+      }
+      var url  = '/api/cifra?fileId=' + encodeURIComponent(song.fileId)
+               + '&mimeType=' + encodeURIComponent(song.mimeType || '');
+      var resp = await fetch(url);
+      if (resp.ok) {
+        var data = await resp.json();
+        if (data && data.text) {
+          await _idbPut(song.fileId, { text: data.text, name: song.name, ts: Date.now() });
+        }
+      }
+      synced++;
+      _showSyncPill(synced, total);
+      await new Promise(function(r) { setTimeout(r, 250); });
+    } catch (e) {
+      synced++;
+    }
+  }
+
+  _bgSyncing = false;
+  _showSyncPill(synced, total);
+  _hideSyncPill();
+}
 
 // ─── Estado global ──────────────────────────────────────────────────────────
 var library = {};
@@ -4062,13 +4216,35 @@ function openModal(song) {
           _metaStore.set(currentModal.fileId || currentModal.path, {
             artist: currentModal.artist, key: currentModal.key, capo: currentModal.capo, tags: currentModal.tags
           });
+          // Salva no cache offline (IndexedDB)
+          if (song.fileId && data.text) {
+            _idbPut(song.fileId, { text: data.text, name: song.name, ts: Date.now() }).catch(function(){});
+          }
         }
         applyTranspose(0);
       })
       .catch(function() {
-        document.getElementById("modal-loading").style.display = "none";
-        rawCifraText = "[Falha ao carregar cifra]";
-        applyTranspose(0);
+        // Tenta IDB quando offline
+        if (song.fileId) {
+          _idbGet(song.fileId).then(function(cached) {
+            document.getElementById("modal-loading").style.display = "none";
+            if (cached && cached.text) {
+              rawCifraText = cached.text;
+              showToast("Offline — exibindo versão salva.");
+            } else {
+              rawCifraText = "[Sem conexão e cifra não disponível offline]";
+            }
+            applyTranspose(0);
+          }).catch(function() {
+            document.getElementById("modal-loading").style.display = "none";
+            rawCifraText = "[Falha ao carregar cifra]";
+            applyTranspose(0);
+          });
+        } else {
+          document.getElementById("modal-loading").style.display = "none";
+          rawCifraText = "[Falha ao carregar cifra]";
+          applyTranspose(0);
+        }
       });
   }
 }
@@ -6044,7 +6220,12 @@ function init() {
           });
           allSongs = _metaStore.enrich(allSongs);
           renderHomeTable(allSongs);
-        }).catch(function(){});
+          // Inicia sync offline após enriquecer metadados
+          setTimeout(_bgSync, 1500);
+        }).catch(function(){
+          // Mesmo sem metadados, inicia sync com o que tiver
+          setTimeout(_bgSync, 1500);
+        });
     })
     .catch(function(err) {
       clearInterval(fakeTimer);
@@ -6053,6 +6234,18 @@ function init() {
       document.getElementById("empty-msg").textContent = "Nao foi possivel carregar a biblioteca.";
       document.getElementById("empty-state").style.display = "flex";
     });
+
+  // Reagir a mudanças de conectividade
+  window.addEventListener('online',  function() { _hideOfflineBanner(); _bgSync(); });
+  window.addEventListener('offline', function() { _showOfflineBanner(); });
+  if (!navigator.onLine) _showOfflineBanner();
+
+  // Registra Service Worker
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/sw.js').catch(function(e) {
+      console.warn('SW registro falhou:', e);
+    });
+  }
 
   // Busca
   var searchBox = document.getElementById("search-box");

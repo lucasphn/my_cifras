@@ -29,6 +29,19 @@ app.register_blueprint(auth_bp)
 
 
 # ---------------------------------------------------------------------------
+# Service Worker
+# ---------------------------------------------------------------------------
+
+@app.route("/sw.js")
+def service_worker():
+    from flask import send_from_directory
+    resp = send_from_directory("static", "sw.js")
+    resp.headers["Service-Worker-Allowed"] = "/"
+    resp.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    return resp
+
+
+# ---------------------------------------------------------------------------
 # Modo de operação
 # ---------------------------------------------------------------------------
 
