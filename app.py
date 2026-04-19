@@ -1,3 +1,4 @@
+import functools
 import json
 import os
 import re
@@ -23,9 +24,45 @@ CIFRAS_ROOT = os.environ.get("CIFRAS_ROOT", str(Path.home() / "OneDrive" / "Cifr
 CIFRAS_FOLDER_ID = os.environ.get("CIFRAS_FOLDER_ID", "")
 SUPPORTED_EXTENSIONS = {".docx", ".doc", ".pdf", ".txt", ".md"}
 
+# E-mails com acesso de owner (separados por vírgula)
+_OWNER_EMAILS = {
+    e.strip().lower()
+    for e in os.environ.get("OWNER_EMAIL", "").split(",")
+    if e.strip()
+}
+
 # Registra blueprint de autenticação
 from auth import bp as auth_bp, login_required, get_service, current_user, is_oauth_configured
 app.register_blueprint(auth_bp)
+
+
+# ---------------------------------------------------------------------------
+# Controle de acesso por role
+# ---------------------------------------------------------------------------
+
+def is_owner() -> bool:
+    """True se o usuário logado é owner (ou se OWNER_EMAIL não está definido)."""
+    if not _OWNER_EMAILS:
+        return True
+    return current_user().get("email", "").lower().strip() in _OWNER_EMAILS
+
+
+def owner_required(f):
+    """Decorator: bloqueia a rota para não-owners com 403."""
+    @functools.wraps(f)
+    def decorated(*args, **kwargs):
+        if not is_owner():
+            return jsonify({"error": "Permissão negada"}), 403
+        return f(*args, **kwargs)
+    return decorated
+
+
+def _get_user_data_folder_id(svc):
+    """Owner usa CIFRAS_FOLDER_ID (compatibilidade). Outros: pasta própria no Drive."""
+    if is_owner() or not _use_drive():
+        return CIFRAS_FOLDER_ID
+    import drive as drv
+    return drv.get_user_data_folder(svc)
 
 
 # ---------------------------------------------------------------------------
@@ -261,6 +298,7 @@ def flatten_songs(library):
 
 REPERTORIOS_LOCAL = Path(__file__).parent / "_repertorios.json"
 _rep_lock = threading.Lock()
+_reps_cache: dict = {}   # { email: {"data": ..., "file_id": ...} }
 
 def _load_reps_local():
     try:
@@ -274,7 +312,14 @@ def _save_reps_local(data):
 def _load_reps():
     if _use_drive():
         import drive as drv
-        data, _ = drv.load_repertorios(get_service(), CIFRAS_FOLDER_ID)
+        svc = get_service()
+        folder_id = _get_user_data_folder_id(svc)
+        email = current_user().get("email", "_local")
+        cached = _reps_cache.get(email)
+        if cached and cached.get("data") is not None:
+            return cached["data"]
+        data, file_id = drv.load_repertorios(svc, folder_id)
+        _reps_cache[email] = {"data": data, "file_id": file_id}
         return data
     return _load_reps_local()
 
@@ -282,8 +327,15 @@ def _save_reps(data):
     if _use_drive():
         import drive as drv
         svc = get_service()
-        _, file_id = drv.load_repertorios(svc, CIFRAS_FOLDER_ID)
+        folder_id = _get_user_data_folder_id(svc)
+        email = current_user().get("email", "_local")
+        cached = _reps_cache.get(email)
+        if cached and cached.get("file_id"):
+            file_id = cached["file_id"]
+        else:
+            _, file_id = drv.load_repertorios(svc, folder_id)
         drv.save_repertorios(svc, file_id, data)
+        _reps_cache[email] = {"data": data, "file_id": file_id}
     else:
         _save_reps_local(data)
 
@@ -352,23 +404,25 @@ def api_reps_delete(rep_id):
 # Views tracking (persistido em views.json com lock para concorrência)
 # ---------------------------------------------------------------------------
 
-_views_lock = threading.Lock()   # protege contra escrita simultânea
-_views_cache = {"data": None, "file_id": None}  # cache em memória para evitar leitura a cada request
+_views_lock = threading.Lock()
+_views_cache: dict = {}   # { email: {"data": ..., "file_id": ...} }
 
 def _load_views():
-    """Carrega views do Drive (com cache em memória). Thread-safe para leitura."""
-    if _views_cache["data"] is not None:
-        return _views_cache["data"]
+    """Carrega views do Drive para o usuário atual (com cache em memória)."""
+    email = current_user().get("email", "_local")
+    cached = _views_cache.get(email)
+    if cached and cached.get("data") is not None:
+        return cached["data"]
     if _use_drive():
         try:
             import drive as _drive
-            data, file_id = _drive.load_views(get_service(), CIFRAS_FOLDER_ID)
-            _views_cache["data"] = data
-            _views_cache["file_id"] = file_id
+            svc = get_service()
+            folder_id = _get_user_data_folder_id(svc)
+            data, file_id = _drive.load_views(svc, folder_id)
+            _views_cache[email] = {"data": data, "file_id": file_id}
             return data
         except Exception:
             return {}
-    # fallback local (modo dev sem Drive)
     try:
         p = Path(__file__).parent / "views.json"
         return json.loads(p.read_text(encoding="utf-8"))
@@ -376,27 +430,27 @@ def _load_views():
         return {}
 
 def _increment_view(key: str) -> int:
-    """Incrementa o contador de uma música e persiste no Drive. Retorna o novo valor."""
+    """Incrementa o contador de uma música para o usuário atual e persiste."""
+    email = current_user().get("email", "_local")
     with _views_lock:
         if _use_drive():
             try:
                 import drive as _drive
                 svc = get_service()
-                # Garante que temos o file_id
-                if _views_cache["file_id"] is None:
-                    data, file_id = _drive.load_views(svc, CIFRAS_FOLDER_ID)
-                    _views_cache["data"] = data
-                    _views_cache["file_id"] = file_id
-                views = _views_cache["data"] if _views_cache["data"] is not None else {}
+                folder_id = _get_user_data_folder_id(svc)
+                cached = _views_cache.get(email)
+                if not cached or cached.get("file_id") is None:
+                    data, file_id = _drive.load_views(svc, folder_id)
+                    _views_cache[email] = {"data": data, "file_id": file_id}
+                views = _views_cache[email]["data"] or {}
                 views[key] = views.get(key, 0) + 1
-                _views_cache["data"] = views
-                _drive.save_views(svc, _views_cache["file_id"], views)
+                _views_cache[email]["data"] = views
+                _drive.save_views(svc, _views_cache[email]["file_id"], views)
                 return views[key]
             except Exception as e:
                 app.logger.error("Erro ao salvar view no Drive: %s", e)
                 return 0
         else:
-            # fallback local
             p = Path(__file__).parent / "views.json"
             try:
                 views = json.loads(p.read_text(encoding="utf-8"))
@@ -415,20 +469,24 @@ def _song_key(data):
 # ---------------------------------------------------------------------------
 
 _prefs_lock = threading.Lock()
-_prefs_cache = {"data": None, "file_id": None}
+_prefs_cache: dict = {}   # { email: {"data": ..., "file_id": ...} }
 
 VALID_SLOTS = {"my_key", "original_key", "alt_key", "my_capo"}
 
 
 def _load_prefs():
-    if _prefs_cache["data"] is not None:
-        return _prefs_cache["data"]
+    email = current_user().get("email", "_local")
+    cached = _prefs_cache.get(email)
+    if cached and cached.get("data") is not None:
+        return cached["data"]
     if _use_drive():
         try:
             import drive as _drive
-            data, file_id = _drive.load_preferences(get_service(), CIFRAS_FOLDER_ID)
-            _prefs_cache["data"] = data
-            _prefs_cache["file_id"] = file_id
+            svc = get_service()
+            folder_id = _get_user_data_folder_id(svc)
+            data, file_id = _drive.load_preferences(svc, folder_id)
+            with _prefs_lock:
+                _prefs_cache[email] = {"data": data, "file_id": file_id}
             return data
         except Exception:
             pass
@@ -437,14 +495,21 @@ def _load_prefs():
 
 def _save_prefs(data):
     import drive as _drive
+    email = current_user().get("email", "_local")
     with _prefs_lock:
         if _use_drive():
             svc = get_service()
-            if _prefs_cache["file_id"] is None:
-                _, file_id = _drive.load_preferences(svc, CIFRAS_FOLDER_ID)
-                _prefs_cache["file_id"] = file_id
-            _drive.save_preferences(svc, _prefs_cache["file_id"], data)
-        _prefs_cache["data"] = data
+            cached = _prefs_cache.get(email)
+            if not cached or cached.get("file_id") is None:
+                folder_id = _get_user_data_folder_id(svc)
+                _, file_id = _drive.load_preferences(svc, folder_id)
+                if email not in _prefs_cache:
+                    _prefs_cache[email] = {}
+                _prefs_cache[email]["file_id"] = file_id
+            _drive.save_preferences(svc, _prefs_cache[email]["file_id"], data)
+        if email not in _prefs_cache:
+            _prefs_cache[email] = {}
+        _prefs_cache[email]["data"] = data
 
 
 @app.route("/api/preferences")
@@ -561,6 +626,7 @@ def invalidate_library_cache():
 
 @app.route("/api/folders", methods=["POST"])
 @login_required
+@owner_required
 def api_folder_create():
     """Cria nova categoria dentro de uma seção."""
     data = request.get_json(force=True)
@@ -592,6 +658,7 @@ def api_folder_create():
 
 @app.route("/api/folders/<path:section>/<path:category>", methods=["PUT"])
 @login_required
+@owner_required
 def api_folder_rename(section, category):
     """Renomeia uma categoria."""
     data = request.get_json(force=True)
@@ -626,6 +693,7 @@ def api_folder_rename(section, category):
 
 @app.route("/api/folders/<path:section>/<path:category>", methods=["DELETE"])
 @login_required
+@owner_required
 def api_folder_delete(section, category):
     """Exclui uma categoria — apenas se estiver vazia."""
     if _use_drive():
@@ -658,6 +726,7 @@ def api_folder_delete(section, category):
 
 @app.route("/api/songs/delete", methods=["POST"])
 @login_required
+@owner_required
 def api_song_delete():
     data = request.get_json(force=True)
     file_id = (data.get("fileId") or "").strip()
@@ -680,6 +749,7 @@ def api_song_delete():
 
 @app.route("/api/songs/rename", methods=["POST"])
 @login_required
+@owner_required
 def api_song_rename():
     data = request.get_json(force=True)
     file_id = (data.get("fileId") or "").strip()
@@ -711,6 +781,7 @@ def api_song_rename():
 
 @app.route("/api/songs/copy", methods=["POST"])
 @login_required
+@owner_required
 def api_song_copy():
     import shutil
     data = request.get_json(force=True)
@@ -747,6 +818,7 @@ def api_song_copy():
 
 @app.route("/api/songs/move", methods=["POST"])
 @login_required
+@owner_required
 def api_song_move():
     import shutil
     data = request.get_json(force=True)
@@ -877,11 +949,11 @@ _start_keep_alive()
 def index():
     # Modo local (sem OAuth): vai direto para o app
     if not is_oauth_configured():
-        return render_template("index.html", user={})
+        return render_template("index.html", user={}, is_owner=True)
     # OAuth configurado: se autenticado vai para o app, senão mostra landing
     if session.get("token"):
         user = current_user()
-        return render_template("index.html", user=user)
+        return render_template("index.html", user=user, is_owner=is_owner())
     return render_template("landing.html")
 
 
@@ -934,6 +1006,7 @@ def api_track_view():
 
 @app.route("/api/save_content", methods=["POST"])
 @login_required
+@owner_required
 def api_save_content():
     """Salva o conteúdo editado (com ou sem transposição), preservando frontmatter."""
     data = request.get_json(force=True)
@@ -1030,6 +1103,7 @@ def api_cifra():
 
 @app.route("/api/upload", methods=["POST"])
 @login_required
+@owner_required
 def api_upload():
     if "file" not in request.files:
         return jsonify({"error": "Nenhum arquivo enviado"}), 400
@@ -1354,6 +1428,7 @@ def api_import_preview():
 
 @app.route("/api/import/save", methods=["POST"])
 @login_required
+@owner_required
 def api_import_save():
     data = request.get_json(force=True)
     title = data.get("title", "").strip()
@@ -1506,6 +1581,7 @@ def api_export_docx():
 
 @app.route("/api/songs/update_meta", methods=["POST"])
 @login_required
+@owner_required
 def api_update_meta():
     """Atualiza apenas o frontmatter YAML de um arquivo .md."""
     data = request.get_json(force=True)
@@ -1592,6 +1668,7 @@ def api_update_meta():
 
 @app.route("/api/save_tone", methods=["POST"])
 @login_required
+@owner_required
 def api_save_tone():
     data = request.get_json(force=True)
     new_text = data.get("text", "").strip()

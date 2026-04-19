@@ -2565,7 +2565,7 @@ input { font: inherit; }
 #offline-banner.visible { display: block; }
 </style>
 </head>
-<body>
+<body data-owner="{% if is_owner %}1{% else %}0{% endif %}" data-user-email="{{ user.email if user else '' }}">
 
 <!-- Splash screen -->
 <div id="splash">
@@ -2675,8 +2675,10 @@ input { font: inherit; }
         <button id="btn-search-content" title="Buscar na letra">Letra</button>
       </div>
       <div id="search-content-spinner"></div>
+      {% if is_owner %}
       <button class="btn" id="btn-import" title="Importar cifra">&#43; Importar</button>
       <input type="file" id="file-input" accept=".docx,.doc,.pdf,.txt" style="display:none">
+      {% endif %}
       {% if user %}
       <div id="user-badge">
         {% if user.picture %}
@@ -2896,11 +2898,13 @@ input { font: inherit; }
       <button class="btn" id="btn-modal-back-footer" title="Voltar">&#8592; Voltar</button>
       <button class="btn btn-accent" id="btn-modal-add">+ Repertório</button>
       <span style="flex:1"></span>
+      {% if is_owner %}
       <button class="btn" id="btn-meta-toggle" title="Editar metadados">&#9432; Metadados</button>
       <button class="btn" id="btn-save-meta" title="Salvar metadados">&#128190; Salvar</button>
       <button class="btn" id="btn-edit-toggle" title="Editar cifra">&#9998; Editar</button>
       <button class="btn" id="btn-save-edit" title="Salvar edição">&#128190; Salvar</button>
       <button class="btn" id="btn-save-tone" style="display:none" title="Salvar cifra com o tom atual">&#9835; Salvar Tom</button>
+      {% endif %}
       <span id="modal-loading" style="display:none"><span class="loading-spinner"></span></span>
     </div>
   </div>
@@ -3176,6 +3180,9 @@ input { font: inherit; }
 </div>
 
 <script>
+// ─── Role do usuário (injetado pelo servidor) ────────────────────────────────
+var _isOwner = document.body.getAttribute('data-owner') === '1';
+
 // ─── Cache local de metadados (persiste entre reloads) ──────────────────────
 var _metaStore = (function() {
   var KEY = "_mc2";
@@ -3495,7 +3502,7 @@ function _makeHomeCard(song, cls) {
     '<div class="home-card-actions">' +
       '<button class="btn-hc-add' + (inRep ? ' added' : '') + '">' + (inRep ? '✓ Adicionado' : '+ Repertório') + '</button>' +
     '</div>' +
-    '<div class="song-ops-wrap"><button class="btn-song-ops" title="Opções">⋯</button></div>';
+    (_isOwner ? '<div class="song-ops-wrap"><button class="btn-song-ops" title="Opções">⋯</button></div>' : '');
 
   card.querySelector(".btn-hc-add").addEventListener("click", async function(e) {
     e.stopPropagation();
@@ -3511,7 +3518,7 @@ function _makeHomeCard(song, cls) {
   });
 
   var opsBtn = card.querySelector(".btn-song-ops");
-  opsBtn.addEventListener("click", function(e) {
+  if (opsBtn) opsBtn.addEventListener("click", function(e) {
     e.stopPropagation();
     if (_openSongMenu && _openSongMenu._owner === opsBtn) { closeOpenSongMenu(); return; }
     closeOpenSongMenu();
@@ -3754,7 +3761,7 @@ function renderSidebar() {
         iconHtml +
         '<span>' + escHtml(displayName) + '</span>' +
         '<span class="count">' + categories[cat].length + '</span>' +
-        '<div class="cat-menu-wrap"><button class="btn-cat-menu" title="Opções">⋯</button></div>';
+        (_isOwner ? '<div class="cat-menu-wrap"><button class="btn-cat-menu" title="Opções">⋯</button></div>' : '');
       item.dataset.section = section;
       item.dataset.cat = cat;
 
@@ -3765,6 +3772,7 @@ function renderSidebar() {
       });
 
       var menuBtn = item.querySelector(".btn-cat-menu");
+      if (!menuBtn) { cats.appendChild(item); return; }
       menuBtn.addEventListener("click", function(e) {
         e.stopPropagation();
         // toggle: se o menu já está aberto neste botão, fecha e sai
@@ -4151,15 +4159,18 @@ function openModal(song) {
   document.getElementById("modal-loading").style.display = "inline";
   document.getElementById("modal-overlay").classList.add("open");
 
-  // Mostra botão editar/metadados apenas para arquivos com path ou fileId
+  // Mostra botão editar/metadados apenas para arquivos com path ou fileId (e se owner)
   var canEdit = !!(song.path || song.fileId);
   var isMd = canEdit && (
     (song.path && song.path.toLowerCase().endsWith(".md")) ||
     (song.fileId && (!song.mimeType || song.mimeType === "text/markdown" || song.mimeType === "text/plain"))
   );
-  document.getElementById("btn-edit-toggle").style.display = canEdit ? "inline-block" : "none";
-  document.getElementById("btn-meta-toggle").style.display = isMd ? "inline-block" : "none";
-  document.getElementById("btn-save-meta").style.display = "none";
+  var _btnEdit = document.getElementById("btn-edit-toggle");
+  var _btnMeta = document.getElementById("btn-meta-toggle");
+  var _btnSaveMeta = document.getElementById("btn-save-meta");
+  if (_btnEdit) _btnEdit.style.display = canEdit ? "inline-block" : "none";
+  if (_btnMeta) _btnMeta.style.display = isMd ? "inline-block" : "none";
+  if (_btnSaveMeta) _btnSaveMeta.style.display = "none";
   if (metaMode) closeMetaPanel();
 
   updateTransposeUI();
@@ -4182,70 +4193,113 @@ function openModal(song) {
     document.getElementById("modal-loading").style.display = "none";
     applyTranspose(0);
   } else {
-    fetch(song.fileId
+    var _cifraUrl = song.fileId
       ? "/api/cifra?fileId=" + encodeURIComponent(song.fileId) + "&mimeType=" + encodeURIComponent(song.mimeType || "")
-      : "/api/cifra?path=" + encodeURIComponent(song.path))
-      .then(function(r) {
-        if (r.status === 401) { _handleAuthExpired(); return null; }
-        return r.json();
-      })
-      .then(function(data) {
-        if (!data) return;
-        document.getElementById("modal-loading").style.display = "none";
-        if (data.error) {
-          rawCifraText = "[Erro: " + data.error + "]";
-        } else {
-          rawCifraText = data.text;
-          // Atualiza artist/key/tags no objeto se veio do servidor
-          if (data.artist !== undefined) {
-            currentModal.artist = data.artist;
-            document.getElementById("modal-artist").textContent = data.artist || "";
-          }
-          if (data.key    !== undefined) currentModal.key    = data.key;
-          if (data.title  !== undefined && data.title) currentModal.name = data.title;
-          if (data.tags   !== undefined) currentModal.tags   = data.tags;
-          if (data.capo   !== undefined) currentModal.capo   = data.capo;
-          // Se não há tom definido, tenta inferir pelo texto da cifra
-          if (!currentModal.key && data.text) {
-            var detected = detectBaseNote(data.text);
-            if (detected) currentModal.key = detected;
-          }
-          // Atualiza capo badge após carregar os dados reais
-          _updateCapoBadge(currentModal.capo || "");
-          // Persiste no cache local para reloads futuros
-          _metaStore.set(currentModal.fileId || currentModal.path, {
-            artist: currentModal.artist, key: currentModal.key, capo: currentModal.capo, tags: currentModal.tags
-          });
-          // Salva no cache offline (IndexedDB)
-          if (song.fileId && data.text) {
-            _idbPut(song.fileId, { text: data.text, name: song.name, ts: Date.now() }).catch(function(){});
-          }
+      : "/api/cifra?path=" + encodeURIComponent(song.path);
+
+    // Aplica metadados de uma resposta de cifra ao modal atual
+    function _applyCifraData(data, targetModal) {
+      if (!data || data.error || !targetModal) return;
+      if (data.artist !== undefined) {
+        targetModal.artist = data.artist;
+        document.getElementById("modal-artist").textContent = data.artist || "";
+      }
+      if (data.key   !== undefined) targetModal.key   = data.key;
+      if (data.title !== undefined && data.title) targetModal.name = data.title;
+      if (data.tags  !== undefined) targetModal.tags  = data.tags;
+      if (data.capo  !== undefined) targetModal.capo  = data.capo;
+      if (!targetModal.key && data.text) {
+        var detected = detectBaseNote(data.text);
+        if (detected) targetModal.key = detected;
+      }
+      _updateCapoBadge(targetModal.capo || "");
+      _metaStore.set(targetModal.fileId || targetModal.path, {
+        artist: targetModal.artist, key: targetModal.key, capo: targetModal.capo, tags: targetModal.tags
+      });
+      if (song.fileId && data.text) {
+        _idbPut(song.fileId, { text: data.text, name: song.name, ts: Date.now() }).catch(function(){});
+      }
+    }
+
+    // Cache-first: serve imediatamente do IDB, busca rede em paralelo
+    if (song.fileId) {
+      _idbGet(song.fileId).then(function(cached) {
+        var hasCached = cached && cached.text;
+        var _openedSong = currentModal;
+
+        if (hasCached) {
+          // Exibe imediatamente do cache
+          document.getElementById("modal-loading").style.display = "none";
+          rawCifraText = cached.text;
+          applyTranspose(0);
         }
-        applyTranspose(0);
-      })
-      .catch(function() {
-        // Tenta IDB quando offline
-        if (song.fileId) {
-          _idbGet(song.fileId).then(function(cached) {
+
+        // Busca da rede (atualiza se o conteúdo mudou ou se não havia cache)
+        fetch(_cifraUrl)
+          .then(function(r) {
+            if (r.status === 401) { _handleAuthExpired(); return null; }
+            return r.json();
+          })
+          .then(function(data) {
+            if (!data) return;
+            // Só atualiza se o modal ainda está aberto para a mesma música
+            if (currentModal !== _openedSong) return;
             document.getElementById("modal-loading").style.display = "none";
-            if (cached && cached.text) {
-              rawCifraText = cached.text;
-              showToast("Offline — exibindo versão salva.");
-            } else {
-              rawCifraText = "[Sem conexão e cifra não disponível offline]";
+            if (data.error) {
+              if (!hasCached) { rawCifraText = "[Erro: " + data.error + "]"; applyTranspose(0); }
+              return;
             }
+            _applyCifraData(data, currentModal);
+            var networkText = data.text;
+            if (!hasCached || networkText !== rawCifraText) {
+              rawCifraText = networkText;
+              applyTranspose(currentSemitone);
+            }
+          })
+          .catch(function() {
+            if (!hasCached && currentModal === _openedSong) {
+              document.getElementById("modal-loading").style.display = "none";
+              rawCifraText = "[Sem conexão e cifra não disponível offline]";
+              applyTranspose(0);
+            }
+          });
+      }).catch(function() {
+        // IDB falhou — vai direto para a rede
+        fetch(_cifraUrl)
+          .then(function(r) { if (r.status === 401) { _handleAuthExpired(); return null; } return r.json(); })
+          .then(function(data) {
+            if (!data) return;
+            document.getElementById("modal-loading").style.display = "none";
+            if (data.error) { rawCifraText = "[Erro: " + data.error + "]"; }
+            else { _applyCifraData(data, currentModal); rawCifraText = data.text; }
             applyTranspose(0);
-          }).catch(function() {
+          })
+          .catch(function() {
             document.getElementById("modal-loading").style.display = "none";
             rawCifraText = "[Falha ao carregar cifra]";
             applyTranspose(0);
           });
-        } else {
+      });
+    } else {
+      // Path-based (modo local) — rede direta, sem IDB
+      fetch(_cifraUrl)
+        .then(function(r) {
+          if (r.status === 401) { _handleAuthExpired(); return null; }
+          return r.json();
+        })
+        .then(function(data) {
+          if (!data) return;
+          document.getElementById("modal-loading").style.display = "none";
+          if (data.error) { rawCifraText = "[Erro: " + data.error + "]"; }
+          else { rawCifraText = data.text; }
+          applyTranspose(0);
+        })
+        .catch(function() {
           document.getElementById("modal-loading").style.display = "none";
           rawCifraText = "[Falha ao carregar cifra]";
           applyTranspose(0);
-        }
-      });
+        });
+    }
   }
 }
 
@@ -4941,7 +4995,9 @@ function updateTransposeUI() {
 var _myTones = {};            // cache: { <fileId>: { my_key, my_capo } }
 
 // ── localStorage helpers para prefs (evita delay do Drive) ─────────────────
-var _LS_PREFS_PREFIX = "mycifras_prefs_";
+// Prefixo inclui email sanitizado para isolar dados entre usuários no mesmo browser
+var _userEmail = document.body.getAttribute('data-user-email') || 'local';
+var _LS_PREFS_PREFIX = "mycifras_prefs_" + _userEmail.replace(/[^a-zA-Z0-9]/g, '_') + "_";
 function _lsGetPrefs(songId) {
   try { var v = localStorage.getItem(_LS_PREFS_PREFIX + songId); return v ? JSON.parse(v) : null; } catch(e) { return null; }
 }

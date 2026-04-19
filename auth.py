@@ -205,4 +205,13 @@ def logout():
 @bp.route("/api/me")
 @login_required
 def api_me():
-    return jsonify(current_user())
+    import os
+    owner_emails = {
+        e.strip().lower()
+        for e in os.environ.get("OWNER_EMAIL", "").split(",")
+        if e.strip()
+    }
+    user = dict(current_user())
+    email = user.get("email", "").lower().strip()
+    user["is_owner"] = not owner_emails or email in owner_emails
+    return jsonify(user)

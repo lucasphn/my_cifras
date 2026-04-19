@@ -13,6 +13,7 @@ import os
 from pathlib import Path
 
 FOLDER_MIME = "application/vnd.google-apps.folder"
+_USERDATA_FOLDER = "_mycifras_data"
 GDOCS_MIME = "application/vnd.google-apps.document"
 
 SUPPORTED_MIMES = {
@@ -275,6 +276,27 @@ def is_folder_empty(service, folder_id):
 def delete_folder(service, folder_id):
     """Move pasta para a lixeira do Drive."""
     service.files().update(fileId=folder_id, body={"trashed": True}).execute()
+
+
+def get_user_data_folder(service):
+    """Retorna/cria pasta _mycifras_data na raiz do Drive do usuário logado."""
+    resp = (
+        service.files()
+        .list(
+            q=(
+                f"name='{_USERDATA_FOLDER}' and 'root' in parents "
+                f"and mimeType='{FOLDER_MIME}' and trashed=false"
+            ),
+            fields="files(id)",
+        )
+        .execute()
+    )
+    files = resp.get("files", [])
+    if files:
+        return files[0]["id"]
+    metadata = {"name": _USERDATA_FOLDER, "mimeType": FOLDER_MIME, "parents": ["root"]}
+    f = service.files().create(body=metadata, fields="id").execute()
+    return f.get("id")
 
 
 def get_or_create_folder(service, name, parent_id):
