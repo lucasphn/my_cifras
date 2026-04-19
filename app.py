@@ -975,7 +975,10 @@ def index():
     if session.get("token"):
         user = current_user()
         return render_template("index.html", user=user, is_owner=is_owner())
-    return render_template("landing.html")
+    return render_template(
+        "landing.html",
+        google_verification=os.environ.get("GOOGLE_SITE_VERIFICATION", "")
+    )
 
 
 @app.route("/api/library")

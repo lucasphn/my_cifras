@@ -7,6 +7,9 @@
   <link rel="icon" type="image/svg+xml" href="/static/brand/favicon.svg">
   <link rel="manifest" href="/static/manifest.json">
   <meta name="theme-color" content="#5b4b8a">
+  {% if google_verification %}
+  <meta name="google-site-verification" content="{{ google_verification }}">
+  {% endif %}
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
