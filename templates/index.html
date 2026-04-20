@@ -5412,18 +5412,15 @@ function updateRepBadge() {
 }
 
 function refreshGridBtns() {
-  // Atualiza todos os botões de "adicionar" no grid
-  document.querySelectorAll(".song-card").forEach(function(card) {
-    // Reidentifica pela posição — mais simples re-renderizar
+  var repSet = new Set(repertorio.map(function(r) { return r.fileId || r.path || ""; }).filter(Boolean));
+  document.querySelectorAll(".home-card").forEach(function(card) {
+    var key = card.dataset.songFileId || card.dataset.songPath || "";
+    var btn = card.querySelector(".btn-hc-add");
+    if (!btn) return;
+    var inRep = key && repSet.has(key);
+    btn.className = "btn-hc-add" + (inRep ? " added" : "");
+    btn.textContent = inRep ? "\u2713 Adicionado" : "+ Repert\u00f3rio";
   });
-  // Re-renderiza a view atual
-  if (searchActive) {
-    var q = document.getElementById("search-box").value.trim();
-    doSearch(q);
-  } else if (currentCategory) {
-    var songs = (library[currentCategory.section] || {})[currentCategory.cat] || [];
-    renderSongGrid(songs);
-  }
 }
 
 // ─── Exportação ─────────────────────────────────────────────────────────────
@@ -5638,6 +5635,12 @@ function renderSavedReps() {
   });
 }
 
+function _markActiveSavedRep() {
+  document.querySelectorAll(".saved-rep-item[data-id]").forEach(function(item) {
+    item.classList.toggle("active", item.dataset.id === currentRepId);
+  });
+}
+
 function openSavedRep(id) {
   var rep = savedReps[id];
   if (!rep) return;
@@ -5647,7 +5650,7 @@ function openSavedRep(id) {
   renderRepList();
   updateRepBadge();
   refreshGridBtns();
-  renderSavedReps();
+  _markActiveSavedRep();
   showToast(rep.name + " aberto.");
 }
 
