@@ -2582,6 +2582,41 @@ body.android #presenter-cifra .chord-line {
   z-index: 8001; display: none;
 }
 #offline-banner.visible { display: block; }
+
+/* ─── Tablet: botões de controle do modal maiores ────────────────────────── */
+@media (min-width: 600px) and (max-width: 1024px) {
+  /* Alvos de toque maiores para A-, A+, 2 colunas e modo foco */
+  .modal-vctrl {
+    font-size: 1em;
+    font-weight: 700;
+    padding: 10px 16px;
+    border-radius: 10px;
+    min-width: 44px;
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  #modal-view-controls {
+    gap: 6px;
+  }
+  /* Botão fechar (X) também maior */
+  #modal-close {
+    font-size: 1.4em;
+    padding: 8px 12px;
+    border-radius: 10px;
+    min-width: 44px;
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  /* SVG do botão 2 colunas: levemente maior */
+  #btn-two-col svg {
+    width: 18px;
+    height: 14px;
+  }
+}
 </style>
 </head>
 <body data-owner="{% if is_owner %}1{% else %}0{% endif %}" data-user-email="{{ user.email if user else '' }}">
