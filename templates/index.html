@@ -1452,6 +1452,19 @@ button, a, .song-card, .home-card, .home-top-card, .sidebar-cat,
   font-weight: 600;
 }
 .chord-line { color: var(--chord-color); font-weight: 800; }
+.section-marker {
+  display: inline-block;
+  background: var(--primary);
+  color: #fff;
+  border-radius: 5px;
+  padding: 1px 10px;
+  font-size: 0.78em;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin: 2px 0;
+  font-family: inherit;
+}
 
 /* Android: texto escuro e pesado para legibilidade no modo claro forçado pelo browser */
 body.android #cifra-content {
@@ -3485,7 +3498,18 @@ var modalZoom = 1.0;
 // ─── Notas / Transposição ───────────────────────────────────────────────────
 var NOTES = ["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"];
 var ENHARMONIC = {Db:"C#",Eb:"D#",Gb:"F#",Ab:"G#",Bb:"A#"};
-var CHORD_RE = /^[A-G][b#]?(m|maj|min|dim|aug|sus|add|[0-9]|\/[A-G][b#]?)*$/;
+
+// Suporta notação brasileira: F7M, F7+, Cm7-, Bdim, Baug, sus2/4, add9, etc.
+var CHORD_RE = /^[A-G][b#]?(m|M|maj|min|dim|aug|sus|add|\d|[+\-]|°|ø|\/[A-G][b#]?)*$/;
+
+// Marcadores de seção (linha inteira = label estrutural)
+var SECTION_RE = /^\s*[\[(]?\s*(refrão|refrao|coro|verso|ponte|pré.refrão|pre.refrao|bridge|chorus|verse|intro\b|introd|interlúdio|final|tag|solo|instrumental|1ª\s*vez|2ª\s*vez)\s*[\])]?\s*:?\s*$/i;
+
+// Linhas de introdução — ignorar na detecção de tonalidade
+var INTRO_LINE_RE = /\b(intro|introdução|introd|int\.)\b/i;
+
+// Escala maior: intervalos em semitons (T T s T T T s)
+var MAJOR_SCALE_INTERVALS = [0, 2, 4, 5, 7, 9, 11];
 
 function normalizeNote(n) { return ENHARMONIC[n] || n; }
 
@@ -3497,17 +3521,14 @@ function transposeNote(note, semitones) {
 }
 
 function transposeChord(chord, semitones) {
-  // chord: e.g. "Am7", "G/B", "C#m"
-  return chord.replace(/[A-G][b#]?/g, function(m, offset, str) {
-    // only transpose the root and bass note
-    return transposeNote(m, semitones);
-  });
+  return chord.replace(/[A-G][b#]?/g, function(m) { return transposeNote(m, semitones); });
 }
 
 function isChordLine(line) {
+  if (SECTION_RE.test(line)) return false; // marcador de seção não é linha de acordes
   var words = line.trim().split(/\s+/).filter(Boolean);
   if (!words.length) return false;
-  var matches = words.filter(w => CHORD_RE.test(w.replace(/[()[\]]/g, "")));
+  var matches = words.filter(function(w) { return CHORD_RE.test(w.replace(/[()[\]]/g, "")); });
   return matches.length / words.length >= 0.5;
 }
 
@@ -3515,7 +3536,7 @@ function transposeText(text, semitones) {
   if (semitones === 0) return text;
   return text.split("\n").map(function(line) {
     if (isChordLine(line)) {
-      return line.replace(/[A-G][b#]?(?:m|maj|min|dim|aug|sus|add|[0-9]|\/[A-G][b#]?)*(?=[^a-z]|$)/g, function(chord) {
+      return line.replace(/[A-G][b#]?(?:[mMmaj|min|dim|aug|sus|add|\d|[+\-]°ø]|\/[A-G][b#]?)*(?=[^a-z]|$)/g, function(chord) {
         return transposeChord(chord, semitones);
       });
     }
@@ -3523,15 +3544,30 @@ function transposeText(text, semitones) {
   }).join("\n");
 }
 
+// Detecção de tonalidade por análise harmônica: escolhe a escala maior
+// que melhor abrange todos os acordes da música (ignora linhas de intro).
 function detectBaseNote(text) {
-  var lines = text.split("\n");
-  for (var i = 0; i < lines.length; i++) {
-    if (isChordLine(lines[i])) {
-      var m = lines[i].match(/[A-G][b#]?/);
-      if (m) return normalizeNote(m[0]);
+  var roots = [];
+  text.split("\n").forEach(function(line) {
+    if (INTRO_LINE_RE.test(line)) return;
+    if (isChordLine(line)) {
+      var ms = line.match(/[A-G][b#]?/g);
+      if (ms) ms.forEach(function(n) { roots.push(normalizeNote(n)); });
     }
-  }
-  return null;
+  });
+  if (!roots.length) return null;
+
+  var bestKey = null, bestScore = -1;
+  NOTES.forEach(function(root) {
+    var ri = NOTES.indexOf(root);
+    var scale = MAJOR_SCALE_INTERVALS.map(function(i) { return NOTES[(ri + i) % 12]; });
+    var score = roots.filter(function(r) { return scale.indexOf(r) >= 0; }).length;
+    // Tiebreak: preferir chave onde o primeiro acorde é o I ou V grau
+    if (score > bestScore || (score === bestScore && bestKey !== null)) {
+      bestScore = score; bestKey = root;
+    }
+  });
+  return bestKey;
 }
 
 // ─── Utilitários ───────────────────────────────────────────────────────────
@@ -5093,8 +5129,11 @@ function applyTranspose(semitones) {
   currentSemitone = semitones;
   var text = transposeText(rawCifraText, semitones);
 
-  // Renderiza com destaque em linhas de acordes
+  // Renderiza com destaque em linhas de acordes e marcadores de seção
   var html = text.split("\n").map(function(line) {
+    if (SECTION_RE.test(line.trim())) {
+      return '<span class="section-marker">' + escHtml(line.trim()) + '</span>';
+    }
     if (isChordLine(line)) {
       return '<span class="chord-line">' + escHtml(line) + '</span>';
     }
@@ -5897,6 +5936,7 @@ async function doDeleteSavedRep(id, name) {
 // ─── Modo Apresentação ───────────────────────────────────────────────────────
 function _cifraHtml(text) {
   return text.split("\n").map(function(line) {
+    if (SECTION_RE.test(line.trim())) return '<span class="section-marker">' + escHtml(line.trim()) + '</span>';
     if (isChordLine(line)) return '<span class="chord-line">' + escHtml(line) + '</span>';
     return escHtml(line);
   }).join("\n");

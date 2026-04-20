@@ -2186,25 +2186,45 @@ def api_calendar_delete(event_id):
 
 _NOTES_PY       = ["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"]
 _ENHARMONIC_PY  = {"Db":"C#","Eb":"D#","Gb":"F#","Ab":"G#","Bb":"A#"}
-_CHORD_RE_PY    = re.compile(r'^[A-G][b#]?(m|maj|min|dim|aug|sus|add|[0-9]|/[A-G][b#]?)*$')
+# Suporta notação brasileira: F7M, F7+, Cm7-, dim, aug, sus, etc.
+_CHORD_RE_PY    = re.compile(r'^[A-G][b#]?(m|M|maj|min|dim|aug|sus|add|\d|[+\-°ø]|/[A-G][b#]?)*$')
+_INTRO_LINE_PY  = re.compile(r'\b(intro|introdução|introd|int\.)\b', re.IGNORECASE)
+_SECTION_RE_PY  = re.compile(
+    r'^\s*[\[(]?\s*(refrão|refrao|coro|verso|ponte|bridge|chorus|verse|intro\b|introd|final|solo|instrumental)\s*[\])]?\s*:?\s*$',
+    re.IGNORECASE
+)
+_MAJOR_INTERVALS_PY = [0, 2, 4, 5, 7, 9, 11]
 
 def _normalize_note_py(n):
     return _ENHARMONIC_PY.get(n, n)
 
 def _is_chord_line_py(line):
+    if _SECTION_RE_PY.match(line.strip()):
+        return False
     words = [w.strip("()[]") for w in line.strip().split() if w.strip("()[]")]
     if not words:
         return False
     hits = sum(1 for w in words if _CHORD_RE_PY.match(w))
-    return hits / len(words) >= 0.6
+    return hits / len(words) >= 0.5
 
 def _detect_key_py(text):
+    """Detecta tonalidade por análise harmônica: escolhe escala maior com melhor fit."""
+    roots = []
     for line in text.splitlines():
+        if _INTRO_LINE_PY.search(line):
+            continue
         if _is_chord_line_py(line):
-            m = re.search(r'[A-G][b#]?', line)
-            if m:
-                return _normalize_note_py(m.group())
-    return None
+            for m in re.finditer(r'[A-G][b#]?', line):
+                roots.append(_normalize_note_py(m.group()))
+    if not roots:
+        return None
+    best_key, best_score = None, -1
+    for i, root in enumerate(_NOTES_PY):
+        scale = {_NOTES_PY[(i + iv) % 12] for iv in _MAJOR_INTERVALS_PY}
+        score = sum(1 for r in roots if r in scale)
+        if score > best_score:
+            best_score, best_key = score, root
+    return best_key
 
 def _parse_md(content):
     """Retorna (frontmatter_dict, body). Frontmatter simples key: value."""
