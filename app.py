@@ -2181,6 +2181,120 @@ def api_calendar_delete(event_id):
 
 
 # ---------------------------------------------------------------------------
+# Batch fix: detecta e escreve campo "key" nos .md sem tonalidade
+# ---------------------------------------------------------------------------
+
+_NOTES_PY       = ["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"]
+_ENHARMONIC_PY  = {"Db":"C#","Eb":"D#","Gb":"F#","Ab":"G#","Bb":"A#"}
+_CHORD_RE_PY    = re.compile(r'^[A-G][b#]?(m|maj|min|dim|aug|sus|add|[0-9]|/[A-G][b#]?)*$')
+
+def _normalize_note_py(n):
+    return _ENHARMONIC_PY.get(n, n)
+
+def _is_chord_line_py(line):
+    words = [w.strip("()[]") for w in line.strip().split() if w.strip("()[]")]
+    if not words:
+        return False
+    hits = sum(1 for w in words if _CHORD_RE_PY.match(w))
+    return hits / len(words) >= 0.6
+
+def _detect_key_py(text):
+    for line in text.splitlines():
+        if _is_chord_line_py(line):
+            m = re.search(r'[A-G][b#]?', line)
+            if m:
+                return _normalize_note_py(m.group())
+    return None
+
+def _parse_md(content):
+    """Retorna (frontmatter_dict, body). Frontmatter simples key: value."""
+    if not content.startswith("---"):
+        return {}, content
+    parts = content.split("---", 2)
+    if len(parts) < 3:
+        return {}, content
+    fm = {}
+    for line in parts[1].splitlines():
+        if ":" in line:
+            k, _, v = line.partition(":")
+            fm[k.strip()] = v.strip().strip("\"'")
+    body = parts[2].lstrip("\n")
+    return fm, body
+
+def _build_md(fm, body):
+    """Reconstrói o .md com frontmatter atualizado."""
+    lines = ["---"]
+    for k, v in fm.items():
+        val = str(v) if v is not None else ""
+        lines.append(f"{k}: {val}")
+    lines.append("---")
+    lines.append("")
+    return "\n".join(lines) + body
+
+
+@app.route("/api/admin/fix-keys", methods=["POST"])
+@login_required
+@owner_required
+def api_fix_keys():
+    """Percorre todos os .md do acervo e escreve o campo key nos que não têm."""
+    from auth import get_service
+    from drive import scan_library, download_bytes, update_md_content
+
+    svc = get_service()
+    try:
+        lib = scan_library(svc, CIFRAS_FOLDER_ID)
+    except Exception as e:
+        return jsonify({"error": f"Erro ao escanear biblioteca: {e}"}), 500
+
+    fixed = []
+    skipped = []
+    errors = []
+
+    for section, cats in lib.items():
+        for cat, songs in cats.items():
+            for song in songs:
+                name = song.get("name", "")
+                file_id = song.get("id")
+                mime = song.get("mimeType", "")
+
+                # Processa apenas .md
+                if not (name.lower().endswith(".md") or mime == "text/markdown"):
+                    skipped.append(name)
+                    continue
+
+                try:
+                    raw = download_bytes(svc, file_id)
+                    content = raw.decode("utf-8", errors="replace")
+                    fm, body = _parse_md(content)
+
+                    # Já tem key preenchida → pula
+                    if fm.get("key", "").strip():
+                        skipped.append(name)
+                        continue
+
+                    detected = _detect_key_py(body or content)
+                    if not detected:
+                        skipped.append(name)
+                        continue
+
+                    fm["key"] = detected
+                    new_content = _build_md(fm, body)
+                    update_md_content(svc, file_id, new_content)
+                    fixed.append({"name": name, "key": detected})
+
+                except Exception as e:
+                    errors.append({"name": name, "error": str(e)})
+
+    invalidate_library_cache()
+    return jsonify({
+        "fixed":   len(fixed),
+        "skipped": len(skipped),
+        "errors":  len(errors),
+        "details": fixed,
+    })
+
+
+# ---------------------------------------------------------------------------
 # Entry point
 # ---------------------------------------------------------------------------
 

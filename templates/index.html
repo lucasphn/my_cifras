@@ -2132,6 +2132,25 @@ body.android #presenter-cifra .chord-line {
   color: var(--text-muted);
   font-style: italic;
 }
+
+/* ─── Batch fix de tonalidades ───────────────────────────────────────────── */
+.fix-keys-card {
+  display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;
+  background: var(--surface); border: 1.5px solid var(--border);
+  border-radius: var(--radius); padding: .85rem 1.1rem;
+  margin-bottom: .5rem;
+}
+.fix-keys-info { display: flex; align-items: center; gap: .6rem; flex-wrap: wrap; flex: 1; font-size: .85rem; }
+.fix-keys-badge {
+  background: var(--primary); color: #fff; border-radius: 99px;
+  padding: 1px 9px; font-size: .75rem; font-weight: 700;
+}
+.fix-keys-desc { color: var(--text-muted); }
+.fix-keys-result {
+  font-size: .82rem; padding: .6rem 1rem;
+  border-radius: var(--radius); background: var(--surface2);
+  border: 1px solid var(--border); color: var(--text);
+}
 .cal-list {
   display: flex; flex-direction: column; gap: 6px;
 }
@@ -2824,6 +2843,21 @@ body.android #presenter-cifra .chord-line {
           </div>
           <div id="home-top-grid"></div>
         </div>
+
+        {% if is_owner %}
+        <!-- Batch fix: detectar e preencher tonalidades -->
+        <div id="fix-keys-wrap" style="margin-bottom:1.5rem;display:none">
+          <div class="fix-keys-card">
+            <div class="fix-keys-info">
+              <strong>🎵 Tonalidades não detectadas</strong>
+              <span id="fix-keys-count" class="fix-keys-badge"></span>
+              <span class="fix-keys-desc">Arquivos .md sem o campo "tom" no frontmatter.</span>
+            </div>
+            <button class="btn btn-accent" id="btn-fix-keys">Corrigir automaticamente</button>
+          </div>
+          <div id="fix-keys-result" style="display:none" class="fix-keys-result"></div>
+        </div>
+        {% endif %}
 
         <!-- Widget Google Calendar (lista compacta) -->
         <div id="calendar-widget" style="display:none">
@@ -3992,6 +4026,7 @@ async function reloadLibrary() {
       Object.values(cats).forEach(function(songs) { allSongs = allSongs.concat(songs); });
     });
     renderSidebar();
+    _checkFixKeys(allSongs);
     // Re-renderiza categoria atual se ainda existir
     if (currentCategory) {
       var songs = (library[currentCategory.section] || {})[currentCategory.cat];
@@ -6971,6 +7006,56 @@ function initImportModal() {
 if (/android/i.test(navigator.userAgent)) {
   document.body.classList.add("android");
 }
+
+// ─── Batch fix de tonalidades (owner only) ───────────────────────────────────
+function _checkFixKeys(songs) {
+  if (!_isOwner) return;
+  var missing = (songs || allSongs).filter(function(s) {
+    return (s.name || "").toLowerCase().endsWith(".md") && !s.key;
+  });
+  var wrap = document.getElementById("fix-keys-wrap");
+  if (!wrap) return;
+  if (!missing.length) { wrap.style.display = "none"; return; }
+  document.getElementById("fix-keys-count").textContent = missing.length;
+  wrap.style.display = "block";
+}
+
+document.addEventListener("DOMContentLoaded", function() {
+  var btn = document.getElementById("btn-fix-keys");
+  if (!btn) return;
+  btn.addEventListener("click", async function() {
+    btn.disabled = true;
+    btn.textContent = "Corrigindo...";
+    var result = document.getElementById("fix-keys-result");
+    result.style.display = "none";
+    try {
+      var resp = await fetch("/api/admin/fix-keys", { method: "POST" });
+      var data = await resp.json();
+      if (data.error) {
+        result.textContent = "Erro: " + data.error;
+      } else {
+        result.innerHTML =
+          "\u2705 <strong>" + data.fixed + " arquivo(s) corrigido(s)</strong>" +
+          (data.errors ? " \u00b7 \u26a0\ufe0f " + data.errors + " erro(s)" : "") +
+          (data.fixed > 0
+            ? "<br><small>" + data.details.map(function(d){ return escHtml(d.name) + " \u2192 " + d.key; }).join(", ") + "</small>"
+            : "<br><small>Nenhum arquivo precisava de correção.</small>");
+        if (data.fixed > 0) {
+          await reloadLibrary();
+          _checkFixKeys(allSongs);
+        } else {
+          document.getElementById("fix-keys-wrap").style.display = "none";
+        }
+      }
+      result.style.display = "block";
+    } catch(e) {
+      result.textContent = "Falha na requisição.";
+      result.style.display = "block";
+    }
+    btn.disabled = false;
+    btn.textContent = "Corrigir automaticamente";
+  });
+});
 
 document.addEventListener("DOMContentLoaded", init);
 </script>
