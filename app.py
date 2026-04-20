@@ -2166,6 +2166,8 @@ def api_calendar_update(event_id):
 @app.route("/api/calendar/events/<event_id>", methods=["DELETE"])
 @login_required
 def api_calendar_delete(event_id):
+    if not event_id or event_id == "null":
+        return jsonify({"error": "ID de evento inválido"}), 400
     from auth import get_calendar_service
     try:
         svc = get_calendar_service()

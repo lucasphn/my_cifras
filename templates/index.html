@@ -1445,6 +1445,23 @@ input { font: inherit; }
 }
 .chord-line { color: var(--chord-color); font-weight: 800; }
 
+/* Android: letras mais pesadas e nítidas */
+body.android #cifra-content {
+  font-weight: 700;
+  color: #f0eeff;
+  text-rendering: optimizeLegibility;
+}
+body.android #cifra-content .chord-line {
+  font-weight: 900;
+}
+body.android #presenter-cifra {
+  font-weight: 700;
+  text-rendering: optimizeLegibility;
+}
+body.android #presenter-cifra .chord-line {
+  font-weight: 900;
+}
+
 #modal-footer {
   padding: 10px 18px;
   border-top: 1px solid var(--border);
@@ -1673,7 +1690,7 @@ input { font: inherit; }
 #confirm-overlay {
   display: none;
   position: fixed; inset: 0;
-  z-index: 2000;
+  z-index: 4000;
   background: rgba(0,0,0,.55);
   backdrop-filter: blur(4px);
   align-items: center;
@@ -4613,10 +4630,11 @@ async function saveEvent() {
 }
 
 async function deleteEvent() {
-  if (!_evModalEventId) return;
+  if (!_evModalEventId || _evModalEventId === "null") return;
+  var eventId = _evModalEventId;
   _confirmDialog("Excluir este evento?", "Excluir", async function() {
     try {
-      var resp = await fetch("/api/calendar/events/" + _evModalEventId, { method: "DELETE" });
+      var resp = await fetch("/api/calendar/events/" + eventId, { method: "DELETE" });
       var data = await resp.json();
       if (data.error) { showToast("Erro: " + data.error); }
       else {
@@ -6808,6 +6826,7 @@ function setImportLoading(on) {
 }
 
 function initImportModal() {
+  if (!document.getElementById("btn-import")) return;
   document.getElementById("btn-import").addEventListener("click", openImportModal);
   document.getElementById("import-close").addEventListener("click", closeImportModal);
   document.getElementById("import-overlay").addEventListener("click", function(e) {
@@ -6832,6 +6851,10 @@ function initImportModal() {
   document.getElementById("btn-import-preview-text").addEventListener("click", previewImportText);
   document.getElementById("btn-import-save").addEventListener("click", saveImport);
   document.getElementById("import-section").addEventListener("change", onImportSectionChange);
+}
+
+if (/android/i.test(navigator.userAgent)) {
+  document.body.classList.add("android");
 }
 
 document.addEventListener("DOMContentLoaded", init);
