@@ -3569,30 +3569,29 @@ function transposeText(text, semitones) {
   }).join("\n");
 }
 
-// Detecção de tonalidade por análise harmônica: escolhe a escala maior
-// que melhor abrange todos os acordes da música (ignora linhas de intro).
+// Detecção de tonalidade: primeiro acorde após linhas de intro.
+// Se o acorde for menor, retorna a relativa maior (+3 semitons).
 function detectBaseNote(text) {
-  var roots = [];
-  text.split("\n").forEach(function(line) {
-    if (INTRO_LINE_RE.test(line)) return;
-    if (isChordLine(line)) {
-      var ms = line.match(/[A-G][b#]?/g);
-      if (ms) ms.forEach(function(n) { roots.push(normalizeNote(n)); });
+  var lines = text.split("\n");
+  for (var i = 0; i < lines.length; i++) {
+    var line = lines[i];
+    if (INTRO_LINE_RE.test(line)) continue;
+    if (!isChordLine(line)) continue;
+    var words = line.trim().split(/\s+/);
+    for (var j = 0; j < words.length; j++) {
+      var w = words[j].replace(/[()[\]]/g, "");
+      if (!CHORD_RE.test(w)) continue;
+      var rootM = w.match(/^[A-G][b#]{0,2}/);
+      if (!rootM) continue;
+      var root = normalizeNote(rootM[0]);
+      if (NOTES.indexOf(root) < 0) continue;
+      var suffix = w.slice(rootM[0].length);
+      var isMinor = /^m(?!aj)/.test(suffix) || /^min/.test(suffix);
+      if (isMinor) return NOTES[(NOTES.indexOf(root) + 3) % 12];
+      return root;
     }
-  });
-  if (!roots.length) return null;
-
-  var bestKey = null, bestScore = -1;
-  NOTES.forEach(function(root) {
-    var ri = NOTES.indexOf(root);
-    var scale = MAJOR_SCALE_INTERVALS.map(function(i) { return NOTES[(ri + i) % 12]; });
-    var score = roots.filter(function(r) { return scale.indexOf(r) >= 0; }).length;
-    // Tiebreak: preferir chave onde o primeiro acorde é o I ou V grau
-    if (score > bestScore || (score === bestScore && bestKey !== null)) {
-      bestScore = score; bestKey = root;
-    }
-  });
-  return bestKey;
+  }
+  return null;
 }
 
 // ─── Utilitários ───────────────────────────────────────────────────────────
@@ -5191,8 +5190,10 @@ function updateTransposeUI() {
   var display = document.getElementById("tp-display");
   display.textContent = currentSemitone >= 0 ? "+" + currentSemitone : String(currentSemitone);
 
-  // Usa o tom do metadado quando disponível; detectBaseNote apenas como fallback
-  var baseNote = (currentModal && currentModal.key) || (rawCifraText ? detectBaseNote(rawCifraText) : null);
+  // Extrai só a raiz do tom (ex: "Am"→"A", "G#m"→"G#") e normaliza
+  var _keyRaw = (currentModal && currentModal.key) || "";
+  var _keyRoot = _keyRaw.match(/^([A-G][b#]?)/);
+  var baseNote = (_keyRoot ? normalizeNote(_keyRoot[1]) : null) || (rawCifraText ? detectBaseNote(rawCifraText) : null);
   var currentNote = baseNote ? transposeNote(baseNote, currentSemitone) : null;
 
   document.querySelectorAll("#tp-note-buttons button").forEach(function(btn) {
