@@ -2118,6 +2118,12 @@ body.android #presenter-cifra .chord-line {
 }
 .cal-empty-cta strong { color: var(--primary); }
 .cal-empty-icon { font-size: 1.5rem; flex-shrink: 0; }
+.cal-empty-hint {
+  margin-top: .35rem;
+  font-size: .75rem;
+  color: var(--text-muted);
+  font-style: italic;
+}
 .cal-list {
   display: flex; flex-direction: column; gap: 6px;
 }
@@ -2821,7 +2827,13 @@ body.android #presenter-cifra .chord-line {
           <div id="cal-empty-state" style="display:none">
             <button class="cal-empty-cta" id="btn-cal-empty">
               <span class="cal-empty-icon">📅</span>
-              <span>Nenhum ensaio ou compromisso agendado.<br><strong>Clique para adicionar um evento.</strong></span>
+              <div>
+                <div>Nenhum ensaio ou compromisso agendado.</div>
+                <strong>Clique para adicionar um evento.</strong>
+                {% if cal_keywords %}
+                <div class="cal-empty-hint">Eventos aparecem aqui se o título contiver: <em>{{ cal_keywords }}</em></div>
+                {% endif %}
+              </div>
             </button>
           </div>
         </div>

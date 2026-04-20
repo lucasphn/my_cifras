@@ -991,13 +991,15 @@ def terms():
 
 @app.route("/")
 def index():
+    cal_kw_raw = os.environ.get("CALENDAR_KEYWORDS", "").strip()
+    cal_keywords = cal_kw_raw if cal_kw_raw else ""
     # Modo local (sem OAuth): vai direto para o app
     if not is_oauth_configured():
-        return render_template("index.html", user={}, is_owner=True)
+        return render_template("index.html", user={}, is_owner=True, cal_keywords=cal_keywords)
     # OAuth configurado: se autenticado vai para o app, senão mostra landing
     if session.get("token"):
         user = current_user()
-        return render_template("index.html", user=user, is_owner=is_owner())
+        return render_template("index.html", user=user, is_owner=is_owner(), cal_keywords=cal_keywords)
     return render_template(
         "landing.html",
         google_verification=os.environ.get("GOOGLE_SITE_VERIFICATION", "")
