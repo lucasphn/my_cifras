@@ -1,3 +1,5 @@
+
+
 # Prompt Inicial — Cifras App
 
 > Use este prompt para iniciar uma nova conversa e retomar o desenvolvimento.

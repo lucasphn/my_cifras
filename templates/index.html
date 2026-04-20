@@ -1454,8 +1454,6 @@ button, a, .song-card, .home-card, .home-top-card, .sidebar-cat,
 .chord-line { color: var(--chord-color); font-weight: 800; }
 .section-marker {
   display: inline-block;
-  background: var(--primary);
-  color: #fff;
   border-radius: 5px;
   padding: 1px 10px;
   font-size: 0.78em;
@@ -1464,6 +1462,24 @@ button, a, .song-card, .home-card, .home-top-card, .sidebar-cat,
   letter-spacing: 0.06em;
   margin: 2px 0;
   font-family: inherit;
+}
+/* Refrão / Coro — roxo escuro sólido */
+.section-marker.sm-chorus {
+  background: var(--primary);
+  color: #ede8ff;
+  border: 1px solid rgba(91,75,138,.7);
+}
+/* Pré-Refrão — roxo médio com texto branco */
+.section-marker.sm-prechorus {
+  background: #8b7bca;
+  color: #fff;
+  border: 1px solid rgba(91,75,138,.5);
+}
+/* Verso / Parte / Estrofe / Interlúdio / Ponte / etc. — creme claro com texto escuro */
+.section-marker.sm-part {
+  background: #fef3c7;
+  color: #5c3d00;
+  border: 1px solid rgba(212,175,55,.55);
 }
 
 /* Android: texto escuro e pesado para legibilidade no modo claro forçado pelo browser */
@@ -3503,7 +3519,9 @@ var ENHARMONIC = {Db:"C#",Eb:"D#",Gb:"F#",Ab:"G#",Bb:"A#"};
 var CHORD_RE = /^[A-G][b#]?(m|M|maj|min|dim|aug|sus|add|\d|[+\-]|°|ø|\/[A-G][b#]?)*$/;
 
 // Marcadores de seção (linha inteira = label estrutural)
-var SECTION_RE = /^\s*[\[(]?\s*(refrão|refrao|coro|verso|ponte|pré.refrão|pre.refrao|bridge|chorus|verse|intro\b|introd|interlúdio|final|tag|solo|instrumental|1ª\s*vez|2ª\s*vez)\s*[\])]?\s*:?\s*$/i;
+var SECTION_CHORUS_RE = /^\s*[\[(]?\s*(refrão|refrao|coro|chorus)\s*[\])]?\s*:?\s*$/i;
+var SECTION_PRECHORUS_RE = /^\s*[\[(]?\s*(pré.refrão|pre.refrao|pré.chorus|pre.chorus)\s*[\])]?\s*:?\s*$/i;
+var SECTION_RE = /^\s*[\[(]?\s*(refrão|refrao|coro|verso|ponte|pré.refrão|pre.refrao|bridge|chorus|verse|intro\b|introd|interlúdio|interlude|final|tag|solo|instrumental|[1-9][ªa°]?\s*(parte|estrofe|estr[oó]fe|vez))\s*[\])]?\s*:?\s*$/i;
 
 // Linhas de introdução — ignorar na detecção de tonalidade
 var INTRO_LINE_RE = /\b(intro|introdução|introd|int\.)\b/i;
@@ -5132,7 +5150,8 @@ function applyTranspose(semitones) {
   // Renderiza com destaque em linhas de acordes e marcadores de seção
   var html = text.split("\n").map(function(line) {
     if (SECTION_RE.test(line.trim())) {
-      return '<span class="section-marker">' + escHtml(line.trim()) + '</span>';
+      var _smCls = SECTION_CHORUS_RE.test(line.trim()) ? 'section-marker sm-chorus' : SECTION_PRECHORUS_RE.test(line.trim()) ? 'section-marker sm-prechorus' : 'section-marker sm-part';
+      return '<span class="' + _smCls + '">' + escHtml(line.trim()) + '</span>';
     }
     if (isChordLine(line)) {
       return '<span class="chord-line">' + escHtml(line) + '</span>';
@@ -5153,8 +5172,9 @@ function applyTranspose(semitones) {
     }
   }
 
-  // Mostra botão "Salvar Tom" apenas quando há transposição e a música tem path/fileId
-  var canSave = currentModal && (currentModal.path || currentModal.fileId) && semitones !== 0;
+  // Mostra botão "Salvar Tom" quando há transposição tonal ou capo diferente do original
+  var _fileCapo2 = parseInt((currentModal && currentModal.capo) || 0);
+  var canSave = currentModal && (currentModal.path || currentModal.fileId) && (semitones !== 0 || _mtCapoValue !== _fileCapo2);
   var _elSaveTone2 = document.getElementById("btn-save-tone");
   if (_elSaveTone2) _elSaveTone2.style.display = canSave ? "inline-block" : "none";
   _updateSaveBtn();
@@ -5164,8 +5184,8 @@ function updateTransposeUI() {
   var display = document.getElementById("tp-display");
   display.textContent = currentSemitone >= 0 ? "+" + currentSemitone : String(currentSemitone);
 
-  // Detecta nota base do texto original e calcula nota atual
-  var baseNote = rawCifraText ? detectBaseNote(rawCifraText) : null;
+  // Usa o tom do metadado quando disponível; detectBaseNote apenas como fallback
+  var baseNote = (currentModal && currentModal.key) || (rawCifraText ? detectBaseNote(rawCifraText) : null);
   var currentNote = baseNote ? transposeNote(baseNote, currentSemitone) : null;
 
   document.querySelectorAll("#tp-note-buttons button").forEach(function(btn) {
@@ -5367,12 +5387,20 @@ async function saveMyTone(songId) {
 }
 
 // Stepper de capo pessoal
+function _updateSaveToneBtn() {
+  var _elST = document.getElementById("btn-save-tone");
+  if (!_elST) return;
+  var _fcp = parseInt((currentModal && currentModal.capo) || 0);
+  var _show = currentModal && (currentModal.path || currentModal.fileId) && (_mtCapoValue !== _fcp || currentSemitone !== 0);
+  _elST.style.display = _show ? "inline-block" : "none";
+}
 document.getElementById("mt-capo-dec").addEventListener("click", function() {
   if (_mtCapoValue > 0) {
     _mtCapoValue--;
     _setCapoStepperDisplay(_mtCapoValue);
     _updateCapoBadge(_mtCapoValue);
     _updateSaveBtn();
+    _updateSaveToneBtn();
   }
 });
 document.getElementById("mt-capo-inc").addEventListener("click", function() {
@@ -5381,6 +5409,7 @@ document.getElementById("mt-capo-inc").addEventListener("click", function() {
     _setCapoStepperDisplay(_mtCapoValue);
     _updateCapoBadge(_mtCapoValue);
     _updateSaveBtn();
+    _updateSaveToneBtn();
   }
 });
 
@@ -5936,7 +5965,7 @@ async function doDeleteSavedRep(id, name) {
 // ─── Modo Apresentação ───────────────────────────────────────────────────────
 function _cifraHtml(text) {
   return text.split("\n").map(function(line) {
-    if (SECTION_RE.test(line.trim())) return '<span class="section-marker">' + escHtml(line.trim()) + '</span>';
+    if (SECTION_RE.test(line.trim())) { var _psmCls = SECTION_CHORUS_RE.test(line.trim()) ? 'section-marker sm-chorus' : SECTION_PRECHORUS_RE.test(line.trim()) ? 'section-marker sm-prechorus' : 'section-marker sm-part'; return '<span class="' + _psmCls + '">' + escHtml(line.trim()) + '</span>'; }
     if (isChordLine(line)) return '<span class="chord-line">' + escHtml(line) + '</span>';
     return escHtml(line);
   }).join("\n");
@@ -6335,59 +6364,61 @@ function handleFileUpload(file) {
 
 // ─── Salvar Tom ─────────────────────────────────────────────────────────────
 async function saveTone() {
-  if (!currentModal || currentSemitone === 0) return;
+  var _fileCap = parseInt((currentModal && currentModal.capo) || 0);
+  var _capoChg = _mtCapoValue !== _fileCap;
+  if (!currentModal || (currentSemitone === 0 && !_capoChg)) return;
   var btn = document.getElementById("btn-save-tone");
   if (!btn) return;
   btn.disabled = true;
   btn.textContent = "Salvando...";
 
-  var transposedText = transposeText(rawCifraText, currentSemitone);
-  var body = { text: transposedText };
-  if (currentModal.fileId) {
-    body.fileId = currentModal.fileId;
-    body.mimeType = currentModal.mimeType || "";
-  } else {
-    body.path = currentModal.path;
-  }
-
   try {
-    var resp = await fetch("/api/save_tone", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body)
-    });
-    var data = await resp.json();
-    if (data.error) {
-      showToast("Erro: " + data.error);
-    } else {
-      rawCifraText = transposedText;
-      var newKey = detectBaseNote(transposedText);
-      if (newKey) {
-        currentModal.key = newKey;
-        _metaStore.set(currentModal.fileId || currentModal.path, {
-          artist: currentModal.artist || "", key: newKey, capo: currentModal.capo || "", tags: currentModal.tags || []
-        });
-        // Persiste o novo tom no frontmatter do arquivo .md automaticamente
-        if (currentModal.fileId || currentModal.path) {
-          var metaPayload = {
-            title:  currentModal.name   || "",
-            artist: currentModal.artist || "",
-            key:    newKey,
-            tags:   currentModal.tags   || [],
-          };
-          if (currentModal.fileId) metaPayload.fileId = currentModal.fileId;
-          else metaPayload.path = currentModal.path;
-          fetch("/api/songs/update_meta", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ fileId: metaPayload.fileId, path: metaPayload.path, meta: metaPayload })
-          }).catch(function() {});
-        }
+    var newKey = currentModal.key || detectBaseNote(rawCifraText) || "";
+
+    if (currentSemitone !== 0) {
+      var transposedText = transposeText(rawCifraText, currentSemitone);
+      var body = { text: transposedText };
+      if (currentModal.fileId) { body.fileId = currentModal.fileId; body.mimeType = currentModal.mimeType || ""; }
+      else { body.path = currentModal.path; }
+      var resp = await fetch("/api/save_tone", {
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body)
+      });
+      var data = await resp.json();
+      if (data.error) {
+        showToast("Erro: " + data.error);
+        btn.disabled = false;
+        btn.textContent = "\uD83D\uDCBE Salvar Tom";
+        return;
       }
+      rawCifraText = transposedText;
+      newKey = detectBaseNote(transposedText) || newKey;
       currentSemitone = 0;
-      applyTranspose(0);
-      showToast("Tom salvo com sucesso!");
     }
+
+    // Atualiza frontmatter com novo tom e capotraste
+    currentModal.key = newKey;
+    currentModal.capo = _mtCapoValue > 0 ? String(_mtCapoValue) : "";
+    _metaStore.set(currentModal.fileId || currentModal.path, {
+      artist: currentModal.artist || "", key: newKey, capo: currentModal.capo, tags: currentModal.tags || []
+    });
+    if (currentModal.fileId || currentModal.path) {
+      var metaPayload = {
+        title:  currentModal.name   || "",
+        artist: currentModal.artist || "",
+        key:    newKey,
+        capo:   currentModal.capo,
+        tags:   currentModal.tags   || [],
+      };
+      if (currentModal.fileId) metaPayload.fileId = currentModal.fileId;
+      else metaPayload.path = currentModal.path;
+      fetch("/api/songs/update_meta", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ fileId: metaPayload.fileId, path: metaPayload.path, meta: metaPayload })
+      }).catch(function() {});
+    }
+    applyTranspose(0);
+    showToast("Tom salvo com sucesso!");
   } catch(e) {
     showToast("Falha ao salvar tom.");
   }
