@@ -4334,10 +4334,12 @@ function enterEditMode() {
   editMode = true;
   document.getElementById("modal-body").classList.add("edit-mode");
   document.getElementById("cifra-edit").value = rawCifraText;
-  document.getElementById("btn-edit-toggle").textContent = "\u2716 Cancelar";
-  document.getElementById("btn-edit-toggle").classList.add("editing");
-  document.getElementById("btn-save-edit").style.display = "inline-block";
-  document.getElementById("btn-save-tone").style.display = "none";
+  var _et = document.getElementById("btn-edit-toggle");
+  var _se = document.getElementById("btn-save-edit");
+  var _st = document.getElementById("btn-save-tone");
+  if (_et) { _et.textContent = "\u2716 Cancelar"; _et.classList.add("editing"); }
+  if (_se) _se.style.display = "inline-block";
+  if (_st) _st.style.display = "none";
   document.getElementById("transpose-toolbar").style.display = "none";
   document.getElementById("cifra-edit").focus();
 }
@@ -4345,11 +4347,11 @@ function enterEditMode() {
 function exitEditMode() {
   editMode = false;
   document.getElementById("modal-body").classList.remove("edit-mode");
-  document.getElementById("btn-edit-toggle").textContent = "\u270E Editar";
-  document.getElementById("btn-edit-toggle").classList.remove("editing");
-  document.getElementById("btn-save-edit").style.display = "none";
+  var _et = document.getElementById("btn-edit-toggle");
+  var _se = document.getElementById("btn-save-edit");
+  if (_et) { _et.textContent = "\u270E Editar"; _et.classList.remove("editing"); }
+  if (_se) _se.style.display = "none";
   document.getElementById("transpose-toolbar").style.display = "";
-  // Reaplica transposição para atualizar chord-line highlights
   if (rawCifraText) applyTranspose(currentSemitone);
 }
 
@@ -6411,30 +6413,38 @@ function init() {
   document.getElementById("btn-tp-up").addEventListener("click", function() { applyTranspose(currentSemitone + 1); });
   document.getElementById("btn-tp-reset").addEventListener("click", function() { applyTranspose(0); });
 
-  // Salvar tom
-  document.getElementById("btn-save-tone").addEventListener("click", saveTone);
+  // Salvar tom (owner only)
+  var _elSaveTone = document.getElementById("btn-save-tone");
+  if (_elSaveTone) _elSaveTone.addEventListener("click", saveTone);
 
-  // Editar / Salvar edição
-  document.getElementById("btn-edit-toggle").addEventListener("click", function() {
+  // Editar / Salvar edição (owner only)
+  var _elEditToggle = document.getElementById("btn-edit-toggle");
+  if (_elEditToggle) _elEditToggle.addEventListener("click", function() {
     if (editMode) {
       _confirmLeaveEdit(function() { exitEditMode(); }, "Cancelar edição? As alterações serão perdidas.");
     } else {
       enterEditMode();
     }
   });
-  document.getElementById("btn-save-edit").addEventListener("click", saveEdit);
+  var _elSaveEdit = document.getElementById("btn-save-edit");
+  if (_elSaveEdit) _elSaveEdit.addEventListener("click", saveEdit);
 
-  // Toolbar do editor
-  document.getElementById("etb-select-all").addEventListener("click", _etbSelectAll);
-  document.getElementById("etb-copy").addEventListener("click", _etbCopy);
+  // Toolbar do editor (owner only)
+  var _elEtbAll = document.getElementById("etb-select-all");
+  if (_elEtbAll) _elEtbAll.addEventListener("click", _etbSelectAll);
+  var _elEtbCopy = document.getElementById("etb-copy");
+  if (_elEtbCopy) _elEtbCopy.addEventListener("click", _etbCopy);
   document.getElementById("btn-two-col").addEventListener("click", _toggleTwoCol);
 
-  // Metadados
-  document.getElementById("btn-meta-toggle").addEventListener("click", function() {
+  // Metadados (owner only)
+  var _elMetaToggle = document.getElementById("btn-meta-toggle");
+  if (_elMetaToggle) _elMetaToggle.addEventListener("click", function() {
     if (metaMode) closeMetaPanel(); else openMetaPanel();
   });
-  document.getElementById("btn-meta-back").addEventListener("click", closeMetaPanel);
-  document.getElementById("btn-save-meta").addEventListener("click", saveMetadata);
+  var _elMetaBack = document.getElementById("btn-meta-back");
+  if (_elMetaBack) _elMetaBack.addEventListener("click", closeMetaPanel);
+  var _elSaveMeta = document.getElementById("btn-save-meta");
+  if (_elSaveMeta) _elSaveMeta.addEventListener("click", saveMetadata);
 
   // Botão repertório no modal
   document.getElementById("btn-modal-add").addEventListener("click", function() {
@@ -6629,8 +6639,9 @@ function init() {
     }
   };
 
-  // Upload — file-input (drag-and-drop ainda funciona)
-  document.getElementById("file-input").addEventListener("change", function() {
+  // Upload — file-input (owner only)
+  var _elFileInput = document.getElementById("file-input");
+  if (_elFileInput) _elFileInput.addEventListener("change", function() {
     handleFileUpload(this.files[0]);
     this.value = "";
   });
