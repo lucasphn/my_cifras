@@ -53,6 +53,14 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
 a { color: var(--accent); text-decoration: none; }
 button { cursor: pointer; border: none; background: none; color: inherit; font: inherit; }
 input { font: inherit; }
+
+/* Elimina delay 300ms iOS Safari globalmente (independe de media query / modo desktop) */
+* { touch-action: manipulation; }
+button, a, .song-card, .home-card, .home-top-card, .sidebar-cat,
+.btn, .btn-sm, .btn-accent, .modal-vctrl, [onclick] {
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
 ::-webkit-scrollbar { width: 5px; height: 5px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: #d0d5ee; border-radius: 99px; }
