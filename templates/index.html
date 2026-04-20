@@ -2100,6 +2100,24 @@ body.android #presenter-cifra .chord-line {
   font-size: .82rem; color: var(--text-muted);
   padding: .75rem 0;
 }
+.cal-empty-cta {
+  display: flex; align-items: center; gap: .85rem;
+  width: 100%; padding: .85rem 1rem;
+  border: 1.5px dashed var(--border);
+  border-radius: var(--radius);
+  background: var(--surface2);
+  color: var(--text-muted);
+  font-size: .82rem; text-align: left; line-height: 1.45;
+  cursor: pointer;
+  transition: border-color .15s, background .15s, color .15s;
+}
+.cal-empty-cta:hover {
+  border-color: var(--primary);
+  background: var(--primary-light);
+  color: var(--primary);
+}
+.cal-empty-cta strong { color: var(--primary); }
+.cal-empty-icon { font-size: 1.5rem; flex-shrink: 0; }
 .cal-list {
   display: flex; flex-direction: column; gap: 6px;
 }
@@ -2800,6 +2818,12 @@ body.android #presenter-cifra .chord-line {
             <button class="cal-open-btn" id="btn-open-agenda">Ver agenda →</button>
           </div>
           <div id="cal-list" class="cal-list"></div>
+          <div id="cal-empty-state" style="display:none">
+            <button class="cal-empty-cta" id="btn-cal-empty">
+              <span class="cal-empty-icon">📅</span>
+              <span>Nenhum ensaio ou compromisso agendado.<br><strong>Clique para adicionar um evento.</strong></span>
+            </button>
+          </div>
         </div>
 
       </div>
@@ -4442,10 +4466,19 @@ function loadCalendar() {
       var list   = document.getElementById("cal-list");
       list.innerHTML = "";
 
-      if (data.error || !data.events || !data.events.length) {
+      var emptyState = document.getElementById("cal-empty-state");
+      if (data.error) {
         widget.style.display = "none";
         return;
       }
+      if (!data.events || !data.events.length) {
+        list.style.display = "none";
+        emptyState.style.display = "block";
+        widget.style.display = "block";
+        return;
+      }
+      list.style.display = "";
+      emptyState.style.display = "none";
 
       data.events.forEach(function(ev) {
         var startDate = new Date(ev.start);
@@ -6594,6 +6627,12 @@ function init() {
   });
   loadLiturgia(new Date(), "lit-btn-hoje");
   loadCalendar();
+
+  // Empty state do widget de calendário → abre agenda e modal de novo evento
+  document.getElementById("btn-cal-empty").addEventListener("click", function() {
+    openAgendaView();
+    setTimeout(function() { openEventModal(); }, 300);
+  });
 
   // ─── Agenda completa ──────────────────────────────────────────────────────
   document.getElementById("btn-open-agenda").addEventListener("click", openAgendaView);
