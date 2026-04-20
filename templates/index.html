@@ -1445,13 +1445,14 @@ input { font: inherit; }
 }
 .chord-line { color: var(--chord-color); font-weight: 800; }
 
-/* Android: letras mais pesadas e nítidas */
+/* Android: texto escuro e pesado para legibilidade no modo claro forçado pelo browser */
 body.android #cifra-content {
   font-weight: 700;
-  color: #f0eeff;
+  color: #1a1529;
   text-rendering: optimizeLegibility;
 }
 body.android #cifra-content .chord-line {
+  color: #5b4b8a;
   font-weight: 900;
 }
 body.android #presenter-cifra {
