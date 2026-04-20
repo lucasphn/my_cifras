@@ -4799,11 +4799,14 @@ function openMetaPanel() {
 
   document.getElementById("modal-body").classList.add("meta-mode");
   document.getElementById("meta-panel").classList.add("open");
-  document.getElementById("btn-meta-toggle").classList.add("active");
-  document.getElementById("btn-save-meta").style.display = "inline-block";
-  // Esconde botões de edição e transposição enquanto nos metadados
-  document.getElementById("btn-edit-toggle").style.display = "none";
-  document.getElementById("btn-save-tone").style.display = "none";
+  var _bmt = document.getElementById("btn-meta-toggle");
+  var _bsm = document.getElementById("btn-save-meta");
+  var _bet = document.getElementById("btn-edit-toggle");
+  var _bst = document.getElementById("btn-save-tone");
+  if (_bmt) _bmt.classList.add("active");
+  if (_bsm) _bsm.style.display = "inline-block";
+  if (_bet) _bet.style.display = "none";
+  if (_bst) _bst.style.display = "none";
   document.getElementById("transpose-toolbar").style.display = "none";
   document.getElementById("meta-title").focus();
 }
@@ -4812,11 +4815,13 @@ function closeMetaPanel() {
   metaMode = false;
   document.getElementById("modal-body").classList.remove("meta-mode");
   document.getElementById("meta-panel").classList.remove("open");
-  document.getElementById("btn-meta-toggle").classList.remove("active");
-  document.getElementById("btn-save-meta").style.display = "none";
-  // Restaura botões
+  var _bmt = document.getElementById("btn-meta-toggle");
+  var _bsm = document.getElementById("btn-save-meta");
+  var _bet = document.getElementById("btn-edit-toggle");
+  if (_bmt) _bmt.classList.remove("active");
+  if (_bsm) _bsm.style.display = "none";
   var canEdit = !!(currentModal && (currentModal.path || currentModal.fileId));
-  document.getElementById("btn-edit-toggle").style.display = canEdit ? "inline-block" : "none";
+  if (_bet) _bet.style.display = canEdit ? "inline-block" : "none";
   document.getElementById("transpose-toolbar").style.display = "";
   updateTransposeUI();
 }
@@ -4824,6 +4829,7 @@ function closeMetaPanel() {
 async function saveMetadata() {
   if (!currentModal) return;
   var btn = document.getElementById("btn-save-meta");
+  if (!btn) return;
   btn.disabled = true;
   btn.textContent = "Salvando\u2026";
 
@@ -4932,6 +4938,7 @@ async function saveEdit() {
   if (!newText) { showToast("Conteúdo vazio."); return; }
 
   var btn = document.getElementById("btn-save-edit");
+  if (!btn) return;
   btn.disabled = true;
   btn.textContent = "Salvando\u2026";
 
@@ -6167,6 +6174,7 @@ function handleFileUpload(file) {
 async function saveTone() {
   if (!currentModal || currentSemitone === 0) return;
   var btn = document.getElementById("btn-save-tone");
+  if (!btn) return;
   btn.disabled = true;
   btn.textContent = "Salvando...";
 
