@@ -17,55 +17,61 @@ Você é um desenvolvedor Python + JavaScript experiente. Vamos evoluir a aplica
 
 **My Cifras** é um produto para o músico litúrgico e gospel. Não é um app de grupo — é uma ferramenta individual. O valor central está em:
 
-1. **Transposição + tom gravado**: mudar o tom em 1 clique e salvar automaticamente no Drive
-2. **Repertórios pessoais**: montagem e organização do setlist de cada músico
-3. **Navegação litúrgica**: categorias de Missa e Ministração para encontrar a música certa no contexto certo
-4. **Liturgia diária**: integração com a liturgia do dia para preparar o repertório com antecedência
-5. **Agenda pessoal**: Google Calendar integrado para acompanhar ensaios, missas e compromissos
-
-O produto é projetado para ser comercializável. Cada músico conecta o próprio Google Drive — não existe repositório central compartilhado.
+1. **Transposição + Meu Tom:** muda o tom em 1 clique e salva no Drive do próprio usuário
+2. **Repertórios pessoais:** montagem e organização do setlist de cada músico
+3. **Navegação litúrgica:** categorias de Missa e Ministração para encontrar a música certa
+4. **Liturgia diária:** integração com a liturgia do dia
+5. **Agenda pessoal:** Google Calendar integrado para ensaios, missas e compromissos
 
 **Lucas Almeida** é músico litúrgico em Jaraguá do Sul (SC) e criador do produto.
 
 ---
 
-### Estado atual do app (v3.0)
+### Estado atual do app (v3.1)
 
-O app está **em produção** na Render.com. As seguintes funcionalidades já estão implementadas e funcionando:
+O app está **em produção** na Render.com. As seguintes funcionalidades já estão implementadas:
 
 #### Backend (`app.py` + `auth.py` + `drive.py`)
-- OAuth 2.0 completo com Google (escopos: Drive, Calendar, userinfo)
+
+- OAuth 2.0 completo com Google (escopos: `drive`, `calendar.events`, `userinfo`)
+- **Roles:** `OWNER_EMAIL` no env define owners; sem ENV → todos são owner (dev local)
+  - `@owner_required` aplicado em todas as rotas de escrita
+  - `/api/me` retorna `is_owner`
+- **Dados por usuário:** prefs, repertórios e views em `_mycifras_data` no Drive de cada usuário
+  - Caches em memória por e-mail: `_prefs_cache`, `_views_cache`, `_reps_cache`
+- **Bundle sync:** `GET /api/cifras/bundle` com ETag/304 para sync offline completo
+  - ETag de `fileId + modifiedTime`, 4 workers paralelos, só ETag em memória (sem json_bytes)
+  - `invalidate_bundle_cache()` chamado após qualquer alteração de conteúdo
+- **Cache de biblioteca:** TTL 120s, `invalidate_library_cache()` chama `invalidate_bundle_cache()`
 - Todas as rotas de CRUD de cifras, pastas e repertórios
-- `/api/track_view` — visualizações persistidas em `_views.json` no Drive (não mais em arquivo local)
-- `/api/calendar` (GET), `/api/calendar/events` (POST/PUT/DELETE) — integração com Google Calendar
-- Filtro de palavras-chave via `CALENDAR_KEYWORDS` (insensível a acentos, via `unicodedata.normalize`)
-- Cache em memória para biblioteca (`library_cache`) e views (`_views_cache`)
-- `get_calendar_service()` em `auth.py`
-- `load_views()` / `save_views()` em `drive.py`
+- Limite de 5 repertórios por usuário
+- `/api/calendar` (GET), `/api/calendar/events` (POST/PUT/DELETE)
+- Filtro de palavras-chave via `CALENDAR_KEYWORDS`
+- Páginas públicas: `/privacy`, `/terms`
+- Service Worker em `/sw.js`
 
 #### Frontend (`templates/index.html`)
-- Sidebar com seções (sem ícones nas pastas mães) e categorias com ícones
-- Home screen com: banner inspiracional, cards de volumetria, seção "Mais tocadas/Destaques" (top 8), liturgia do dia, Google Calendar
-- Cards: nome, badge de categoria (tag dourada), badge de tom, contador de views, botão `⋯`
-- Campo de busca com botão X para limpar
-- Transposição tonal no cliente (JS puro), com **Salvar Tom** que persiste no Drive via `/api/songs/update_meta`
-- Inferência automática de tom via `detectBaseNote(text)` quando `key` está vazio nos metadados
-- `_refreshCardsForSong(songKey, updates)` — atualiza cards visíveis em tempo real após salvar metadados
-- Google Calendar com FullCalendar 6 (CDN), vistas mensal/semanal/diária/lista, CRUD completo, drag-and-drop
-- Modal de evento com campos: título, all-day toggle, datetime início/fim, local, descrição
-- `_confirmDialog()` — modal de confirmação personalizado
-- Painel de metadados editável (título, artista, tom, tags)
-- Editor inline com toolbar (selecionar tudo, copiar, duas colunas)
-- Modo Apresentação (fullscreen, keyboard navigation)
-- Export HTML elegante para impressão
+
+- `<body data-owner="1|0">` + `var _isOwner = document.body.getAttribute('data-owner') === '1'`
+- Botões de admin (editar, renomear, excluir, importar) visíveis apenas para owners
+- **Cache-first:** abre cifra do IDB imediatamente → atualiza do servidor em background
+- **Bundle sync:** `_bundleSync()` com cooldown de 30 min, `_idbBulkPut()` para escrita em batch
+- **Meu Tom:** `_myTones[fileId] = { my_key, my_capo }` — exibido nos cards, export e apresentação
+- `refreshGridBtns()` — atualiza apenas o estado dos botões nos cards existentes (sem recriar o grid)
+- `_markActiveSavedRep()` — atualiza apenas o `.active` na lista de repertórios (sem recriar)
+- Pesos de fonte nas cifras: corpo `600`, acordes `.chord-line` `800`
+- Sync pill removido — sync é silencioso
+- Google Calendar com FullCalendar 6, CRUD completo, drag-and-drop
+- Modo Apresentação, Export HTML/DOCX, Busca, PWA
 
 #### Templates adicionais
-- `landing.html` — landing page pública com copy voltado para o músico individual
-- `login.html` — tela de login OAuth
+- `landing.html` — "Para Ministros de Música e Adoradores", links privacy/terms, meta verificação Google
+- `privacy.html` — Política de Privacidade pública
+- `terms.html` — Termos de Serviço público
 
 #### Static
-- `static/manifest.json` — PWA para Android/iOS (display: standalone, theme_color: #5b4b8a)
-- `static/brand/` — logos SVG + `apple-touch-icon.png`
+- `static/manifest.json` — PWA
+- `static/sw.js` — Service Worker stale-while-revalidate
 
 ---
 
@@ -73,51 +79,47 @@ O app está **em produção** na Render.com. As seguintes funcionalidades já es
 
 - **Backend:** Python 3.10+ + Flask
 - **Autenticação:** OAuth 2.0 Google (`auth.py`) — obrigatório
-- **Armazenamento:** Google Drive API v3 (`drive.py`) — único backend
+- **Armazenamento:** Google Drive API v3 (`drive.py`)
 - **Calendar:** Google Calendar API v3
 - **Frontend:** HTML + CSS + JS puro em `templates/index.html` (sem frameworks, sem npm)
 - **Calendar UI:** FullCalendar 6 via CDN
-- **Deploy:** Docker + Gunicorn + Render.com
+- **Cache offline:** IndexedDB (`mycifras-offline` / `cifras`)
+- **Deploy:** Docker + Gunicorn (1 worker gthread, 4 threads, timeout 180s) + Render.com
 
 ---
 
-### Variáveis de ambiente necessárias
+### Variáveis de ambiente
 
 ```env
-GOOGLE_CLIENT_ID=...apps.googleusercontent.com
-GOOGLE_CLIENT_SECRET=GOCSPX-...
-CIFRAS_FOLDER_ID=<id-da-pasta-raiz-do-músico-no-drive>
-FLASK_SECRET_KEY=<string-aleatoria-longa>
+GOOGLE_CLIENT_ID=...
+GOOGLE_CLIENT_SECRET=...
+CIFRAS_FOLDER_ID=<pasta-raiz-do-acervo>
+FLASK_SECRET_KEY=<string-aleatoria>
 EXTERNAL_URL=https://meu-app.onrender.com
 GOOGLE_CALENDAR_ID=primary
 CALENDAR_KEYWORDS=missa,ensaio,louvor,música,repertório,liturgia,celebração,casamento
+OWNER_EMAIL=email@exemplo.com
+GOOGLE_SITE_VERIFICATION=<token-search-console>
 ```
 
 ---
 
 ### Convenções importantes
 
-- **Acordes** são sempre `#5b4b8a` — nunca usar `#1d4ed8` (azul)
+- **Acordes** sempre `#5b4b8a` — nunca `#1d4ed8`
 - **Sem frameworks JS** — JS puro, sem npm, sem build step
-- **Dropdowns** sempre appendados ao `document.body` com `position: fixed` + `getBoundingClientRect()`
-- **`invalidate_library_cache()`** deve ser chamado após qualquer operação de escrita no Drive
+- **`invalidate_library_cache()`** após operações de escrita no Drive (chama bundle automaticamente)
+- **`invalidate_bundle_cache()`** após edições de conteúdo de cifras
+- **`data-owner` no `<body>`** para passar roles ao JS (não usar Jinja em `<script>`)
+- **`escHtml()`** obrigatório ao inserir dados via innerHTML
 - **Mobile breakpoint:** `max-width: 1024px`
-- **Evitar `:hover` com `transform`** no mobile (duplo tap no iOS Safari)
-- **`escHtml()`** obrigatório ao inserir dados no DOM via innerHTML
+- **Dropdowns** appendados ao `document.body` com `position: fixed` + `getBoundingClientRect()`
+- **Meu Tom:** sempre usar `_myTones[fileId]?.my_key || song.key` ao exibir tom
 
 ---
 
 ### Próximas funcionalidades sugeridas
 
 - Workspace compartilhado: músico convida outros membros para colaborar no mesmo acervo
-- Repertórios por usuário (`_rep_{user_id}.json`) para evitar conflitos de escrita simultânea
+- Repertórios por usuário com controle de conflito de escrita
 - Planos de assinatura por workspace (SaaS)
-
----
-
-### Observações Finais
-
-- Toda mensagem de erro e interface em **português**
-- O app não tem modo local — OAuth e Drive são obrigatórios
-- Ao reiniciar o servidor, o `load_dotenv()` recarrega as variáveis de ambiente — mudanças no `.env` requerem restart
-- Token com escopo antigo (`calendar.readonly`) gera 403 `insufficientPermissions` nas rotas de Calendar — o músico precisa fazer logout + login para reemitir com o escopo `calendar` completo
