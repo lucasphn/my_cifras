@@ -3561,7 +3561,7 @@ function transposeText(text, semitones) {
   if (semitones === 0) return text;
   return text.split("\n").map(function(line) {
     if (isChordLine(line)) {
-      return line.replace(/[A-G][b#]{0,2}(?:[mMmaj|min|dim|aug|sus|add|\d|[+\-]°ø]|\/[A-G][b#]{0,2})*(?=[^a-z]|$)/g, function(chord) {
+      return line.replace(/[A-G][b#]{0,2}(?:maj|min|dim|aug|sus|add|[mMb\d+\-°ø]|\/[A-G][b#]{0,2})*(?=[^a-z]|$)/g, function(chord) {
         return transposeChord(chord, semitones);
       });
     }
