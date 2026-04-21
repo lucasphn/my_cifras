@@ -45,6 +45,8 @@
   --font-mono: 'Fira Mono', 'Consolas', 'Courier New', monospace;
   /* compat aliases */
   --accent-blue: #5b4b8a;
+  /* section markers */
+  --section-marker: #b1abc3;
 }
 
 /* ─── Reset & Base ───────────────────────────────────────────────────────── */
@@ -1452,35 +1454,40 @@ button, a, .song-card, .home-card, .home-top-card, .sidebar-cat,
   font-weight: 600;
 }
 .chord-line { color: var(--chord-color); font-weight: 800; }
+/* ─── Section markers — monocromático tipográfico ────────────────────────── */
 .section-marker {
-  display: inline-block;
-  border-radius: 5px;
-  padding: 1px 10px;
-  font-size: 0.78em;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 12px 0 6px;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  font-size: 9px;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
-  margin: 2px 0;
-  font-family: inherit;
+  letter-spacing: 0.13em;
+  color: var(--section-marker);
+  background: none;
+  border: none;
+  padding: 0;
+  border-radius: 0;
+  white-space: nowrap;
 }
-/* Refrão / Coro — roxo escuro sólido */
-.section-marker.sm-chorus {
-  background: var(--primary);
-  color: #ede8ff;
-  border: 1px solid rgba(91,75,138,.7);
+.section-marker:first-child { margin-top: 0; }
+.section-marker::before {
+  content: '';
+  display: inline-block;
+  align-self: stretch;
+  width: 2px;
+  min-height: 12px;
+  background: var(--section-marker);
+  border-radius: 2px;
+  opacity: 0.7;
+  flex-shrink: 0;
 }
-/* Pré-Refrão — roxo médio com texto branco */
-.section-marker.sm-prechorus {
-  background: #8b7bca;
-  color: #fff;
-  border: 1px solid rgba(91,75,138,.5);
-}
-/* Verso / Parte / Estrofe / Interlúdio / Ponte / etc. — creme claro com texto escuro */
-.section-marker.sm-part {
-  background: #fef3c7;
-  color: #5c3d00;
-  border: 1px solid rgba(212,175,55,.55);
-}
+/* Refrão — mais peso, barra mais espessa */
+.section-marker.sm-chorus { font-weight: 800; }
+.section-marker.sm-chorus::before { width: 3px; opacity: 1; }
+/* Demais tipos herdam a base — sem override necessário */
 
 /* Android: texto escuro e pesado para legibilidade no modo claro forçado pelo browser */
 body.android #cifra-content {
@@ -1668,6 +1675,7 @@ body.android #presenter-cifra .chord-line {
   columns: 2; column-gap: 2.5em;
 }
 #presenter-cifra .chord-line { color: #5b4b8a; font-weight: 800; }
+#presenter-cifra .section-marker { font-size: 11px; }
 #presenter-loading {
   display: flex; align-items: center; justify-content: center;
   flex: 1; gap: 10px; color: var(--text-muted); font-size: 0.95em;
@@ -3525,10 +3533,50 @@ var ENHARMONIC = {
 // Suporta notação brasileira: F7M, F7+, Cm7-, Bdim, Baug, sus2/4, add9, etc.
 var CHORD_RE = /^[A-G][b#]{0,2}(m|M|maj|min|dim|aug|sus|add|\d|[+\-]|°|ø|\/[A-G][b#]{0,2})*$/;
 
-// Marcadores de seção (linha inteira = label estrutural)
-var SECTION_CHORUS_RE = /^\s*[\[(]?\s*(refrão|refrao|coro|chorus)\s*[\])]?\s*:?\s*$/i;
-var SECTION_PRECHORUS_RE = /^\s*[\[(]?\s*(pré.refrão|pre.refrao|pré.chorus|pre.chorus)\s*[\])]?\s*:?\s*$/i;
-var SECTION_RE = /^\s*[\[(]?\s*(refrão|refrao|coro|verso|ponte|pré.refrão|pre.refrao|bridge|chorus|verse|intro\b|introd|interlúdio|interlude|final|tag|solo|instrumental|[1-9][ªa°]?\s*(parte|estrofe|estr[oó]fe|vez))\s*[\])]?\s*:?\s*$/i;
+// Marcadores de seção — detecta [label], (label) ou bare keyword na linha inteira
+var SECTION_RE = /^\s*(?:\[[^\]]+\]|\([^)]+\)|(refr[ãa]o|refrao|coro|chorus|verso|ponte|bridge|pr[éeE].?refr[ãa]o|pre.?refrao|intro\b|introd|interlúdio|interlude|final|tag|solo|instrumental|[1-9][ªaº°]?\s*(?:parte|estrofe|estr[oó]fe|vez)))\s*:?\s*$/i;
+
+// Mapa tipo → classe CSS (avaliado em ordem)
+var _SECTION_TYPE_MAP = [
+  { re: /refr[ãa]o|coro|chorus/i,          cls: 'sm-chorus'    },
+  { re: /pr[éeE].?refr[ãa]o|pre.?refr/i,  cls: 'sm-prechorus' },
+  { re: /^(ponte|bridge)$/i,               cls: 'sm-bridge'    },
+  { re: /^intro/i,                          cls: 'sm-intro'     },
+  { re: /^solo$/i,                          cls: 'sm-solo'      },
+  { re: /interl[úu]dio/i,                   cls: 'sm-interlude' },
+  { re: /^(final|outro)$/i,                 cls: 'sm-outro'     },
+];
+
+// Extrai o texto do label tirando delimitadores e ":"
+function _extractSectionLabel(rawLine) {
+  var t = rawLine.trim().replace(/:?\s*$/, '');
+  var m = t.match(/^\[([^\]]+)\]$/) || t.match(/^\(([^)]+)\)$/);
+  return (m ? m[1] : t).trim();
+}
+
+// Normaliza ordinais (1a→1ª, 2o→2º) e converte para UPPERCASE
+function _normalizeSectionLabel(label) {
+  return label
+    .replace(/\b(\d+)\s*[aA]\b/g, '$1ª')
+    .replace(/\b(\d+)\s*[oO]\b/g, '$1º')
+    .toUpperCase();
+}
+
+// Retorna a classe CSS correta para o tipo de seção
+function _classifySection(label) {
+  for (var i = 0; i < _SECTION_TYPE_MAP.length; i++) {
+    if (_SECTION_TYPE_MAP[i].re.test(label)) return _SECTION_TYPE_MAP[i].cls;
+  }
+  return 'sm-part';
+}
+
+// Gera o HTML <div> de section marker a partir da linha bruta
+function _renderSectionMarker(rawLine) {
+  var label = _extractSectionLabel(rawLine.trim());
+  var cls   = _classifySection(label);
+  var text  = _normalizeSectionLabel(label);
+  return '<div class="section-marker ' + cls + '">' + escHtml(text) + '</div>';
+}
 
 // Linhas de introdução — ignorar na detecção de tonalidade
 var INTRO_LINE_RE = /\b(intro|introdução|introd|int\.)\b/i;
@@ -5155,13 +5203,8 @@ function applyTranspose(semitones) {
 
   // Renderiza com destaque em linhas de acordes e marcadores de seção
   var html = text.split("\n").map(function(line) {
-    if (SECTION_RE.test(line.trim())) {
-      var _smCls = SECTION_CHORUS_RE.test(line.trim()) ? 'section-marker sm-chorus' : SECTION_PRECHORUS_RE.test(line.trim()) ? 'section-marker sm-prechorus' : 'section-marker sm-part';
-      return '<span class="' + _smCls + '">' + escHtml(line.trim()) + '</span>';
-    }
-    if (isChordLine(line)) {
-      return '<span class="chord-line">' + escHtml(line) + '</span>';
-    }
+    if (SECTION_RE.test(line.trim())) return _renderSectionMarker(line);
+    if (isChordLine(line)) return '<span class="chord-line">' + escHtml(line) + '</span>';
     return escHtml(line);
   }).join("\n");
 
@@ -5973,7 +6016,7 @@ async function doDeleteSavedRep(id, name) {
 // ─── Modo Apresentação ───────────────────────────────────────────────────────
 function _cifraHtml(text) {
   return text.split("\n").map(function(line) {
-    if (SECTION_RE.test(line.trim())) { var _psmCls = SECTION_CHORUS_RE.test(line.trim()) ? 'section-marker sm-chorus' : SECTION_PRECHORUS_RE.test(line.trim()) ? 'section-marker sm-prechorus' : 'section-marker sm-part'; return '<span class="' + _psmCls + '">' + escHtml(line.trim()) + '</span>'; }
+    if (SECTION_RE.test(line.trim())) return _renderSectionMarker(line);
     if (isChordLine(line)) return '<span class="chord-line">' + escHtml(line) + '</span>';
     return escHtml(line);
   }).join("\n");
