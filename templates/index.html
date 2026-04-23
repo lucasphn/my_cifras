@@ -56,8 +56,14 @@ a { color: var(--accent); text-decoration: none; }
 button { cursor: pointer; border: none; background: none; color: inherit; font: inherit; }
 input { font: inherit; }
 
-/* Elimina delay 300ms iOS Safari globalmente (independe de media query / modo desktop) */
-* { touch-action: manipulation; }
+/* Elimina delay 300ms iOS Safari nos elementos interativos — sem bloquear scroll horizontal */
+button, a, input, select, textarea,
+.song-card, .home-card, .home-top-card, .home-top-card-wrap,
+.sidebar-cat, .btn, .btn-sm, .btn-accent, .modal-vctrl,
+.btn-hc-add, .btn-song-ops, .saved-rep-item, .rep-item,
+.sidebar-section-title, [onclick] {
+  touch-action: manipulation;
+}
 button, a, .song-card, .home-card, .home-top-card, .sidebar-cat,
 .btn, .btn-sm, .btn-accent, .modal-vctrl, [onclick] {
   cursor: pointer;
@@ -135,50 +141,62 @@ button, a, .song-card, .home-card, .home-top-card, .sidebar-cat,
   position: relative;
   display: flex;
   align-items: center;
-  min-width: 0;
-}
-#search-box {
-  flex: 1;
   background: var(--bg);
   border: 1.5px solid var(--border);
   border-radius: 99px;
-  color: var(--text);
-  padding: 7px 36px 7px 16px;
-  outline: none;
+  padding: 0 6px 0 14px;
+  gap: 6px;
+  min-width: 0;
   transition: border-color .18s, box-shadow .18s;
+}
+#search-wrap:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(74,108,247,.10);
+}
+.search-wrap-icon {
+  color: var(--text-muted);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  pointer-events: none;
+}
+#search-box {
+  flex: 1;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  color: var(--text);
+  padding: 9px 2px;
+  outline: none;
   min-width: 0;
   font-size: 0.9em;
-  width: 100%;
 }
-#search-box:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(74,108,247,.12); }
+#search-box:focus { border-color: transparent; box-shadow: none; }
 #search-box::placeholder { color: var(--text-muted); }
 #btn-search-clear {
-  position: absolute;
-  right: 10px;
-  top: 50%;
-  transform: translateY(-50%);
   background: none;
   border: none;
   color: var(--text-muted);
-  font-size: 1.1em;
+  font-size: 1.0em;
   line-height: 1;
-  padding: 2px 4px;
+  padding: 3px 5px;
   cursor: pointer;
   display: none;
   border-radius: 50%;
+  flex-shrink: 0;
   transition: color .15s, background .15s;
 }
 #btn-search-clear:hover { color: var(--text); background: var(--surface2); }
 #btn-search-clear.visible { display: flex; align-items: center; justify-content: center; }
-/* ── Modo de busca ── */
+/* ── Modo de busca (dentro do search-wrap) ── */
 #search-mode-toggle {
   display: flex;
   align-items: center;
   background: var(--surface2);
-  border: 1.5px solid var(--border);
+  border: none;
   border-radius: 99px;
   padding: 2px;
-  gap: 2px;
+  gap: 0;
   flex-shrink: 0;
 }
 #search-mode-toggle button {
@@ -186,9 +204,9 @@ button, a, .song-card, .home-card, .home-top-card, .sidebar-cat,
   border: none;
   border-radius: 99px;
   color: var(--text-muted);
-  font-size: 0.75em;
+  font-size: 0.73em;
   font-weight: 600;
-  padding: 4px 10px;
+  padding: 4px 11px;
   cursor: pointer;
   transition: background .15s, color .15s;
   white-space: nowrap;
@@ -931,6 +949,86 @@ button, a, .song-card, .home-card, .home-top-card, .sidebar-cat,
 }
 .views-badge.has-views { background: var(--primary-light); border-color: rgba(91,75,138,.2); color: var(--primary); }
 
+/* ─── View toggle (grid / list) ─────────────────────────────────────────── */
+#view-toggle-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  padding: 0 2px 10px;
+}
+.btn-view-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  border: 1.5px solid var(--border);
+  background: var(--surface);
+  color: var(--text-muted);
+  transition: all .15s;
+}
+.btn-view-toggle.active { background: var(--primary-light); border-color: var(--primary); color: var(--primary); }
+.btn-view-toggle:hover:not(.active) { background: var(--surface2); color: var(--text); }
+
+/* ─── Song grid: list view mode ─────────────────────────────────────────── */
+#song-grid.list-view {
+  grid-template-columns: 1fr;
+  gap: 3px;
+}
+#song-grid.list-view .home-card {
+  flex-direction: row;
+  align-items: center;
+  padding: 9px 14px;
+  border-radius: 9px;
+  gap: 10px;
+  transition: background .12s, border-color .12s;
+}
+#song-grid.list-view .home-card:hover {
+  transform: none;
+  box-shadow: var(--shadow-sm);
+  background: var(--surface);
+}
+#song-grid.list-view .home-card-name {
+  flex: 1;
+  min-width: 0;
+  min-height: unset;
+  -webkit-line-clamp: 1;
+  line-clamp: 1;
+  font-size: 0.87em;
+  color: var(--text);
+}
+#song-grid.list-view .home-card-meta {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  margin-top: 0;
+  min-height: unset;
+  flex: 0 0 auto;
+}
+#song-grid.list-view .home-card-tags {
+  margin-top: 0;
+  min-height: unset;
+  gap: 5px;
+  flex-wrap: nowrap;
+}
+#song-grid.list-view .hc-artist { display: none; }
+#song-grid.list-view .home-card-actions {
+  padding-top: 0;
+  margin-top: 0;
+}
+#song-grid.list-view .btn-hc-add {
+  white-space: nowrap;
+  font-size: 0.72em;
+  padding: 4px 10px;
+  border-radius: 7px;
+}
+#song-grid.list-view .song-ops-wrap {
+  position: static;
+  opacity: 1;
+}
+
 /* ─── Painel de Metadados ────────────────────────────────────────────────── */
 #meta-panel {
   display: none;
@@ -1154,10 +1252,12 @@ button, a, .song-card, .home-card, .home-top-card, .sidebar-cat,
 .rep-item .btn-remove { color: #ccc; font-size: 0.95em; flex-shrink: 0; padding: 3px 5px; border-radius: 5px; transition: all .15s; }
 .rep-item .btn-remove:hover { color: var(--danger); background: rgba(220,38,38,.1); }
 .rep-tone-badge {
-  display: inline-block; font-size: 0.72em; font-weight: 700;
-  background: rgba(91,75,138,.1); color: #5b4b8a; border-radius: 99px;
-  padding: 1px 6px; margin-left: 5px; vertical-align: middle;
-  font-family: var(--font-mono); letter-spacing: 0;
+  display: inline-block; font-size: 0.68em; font-weight: 800;
+  background: rgba(212,175,55,.12); color: var(--accent);
+  border: 1px solid rgba(212,175,55,.28);
+  border-radius: 99px;
+  padding: 1px 7px; margin-left: 5px; vertical-align: middle;
+  letter-spacing: 0.01em;
 }
 #rep-empty {
   padding: 40px 16px;
@@ -1225,25 +1325,45 @@ button, a, .song-card, .home-card, .home-top-card, .sidebar-cat,
 .saved-rep-item {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 7px 8px;
-  border-radius: 8px;
+  gap: 10px;
+  padding: 9px 10px;
+  border-radius: 10px;
   cursor: pointer;
   transition: background .15s;
-  border: 1.5px solid transparent;
+  border: 1px solid transparent;
+  background: var(--bg);
+  margin-bottom: 5px;
 }
-.saved-rep-item:hover { background: var(--surface2); }
-.saved-rep-item.active { background: rgba(91,75,138,.08); border-color: rgba(91,75,138,.2); }
-.saved-rep-item .sri-name {
+.saved-rep-item:hover { background: var(--surface2); border-color: var(--border); }
+.saved-rep-item.active { background: rgba(91,75,138,.07); border-color: rgba(91,75,138,.2); }
+/* Colored icon */
+.sri-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+/* Info block */
+.sri-info {
   flex: 1;
-  font-size: 0.85em;
-  font-weight: 600;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.saved-rep-item .sri-name {
+  font-size: 0.87em;
+  font-weight: 700;
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
+  color: var(--text);
 }
 .saved-rep-item .sri-count {
-  font-size: 0.72em;
+  font-size: 0.68em;
   color: var(--text-muted);
   flex-shrink: 0;
 }
@@ -2275,8 +2395,9 @@ body.android #presenter-cifra .chord-line {
   #btn-menu-toggle { display: flex; align-items: center; justify-content: center; }
   #header h1 { font-size: 0.95em; }
   #header-main { flex: 1; padding: 0 4px; border-top: none; gap: 6px; min-width: 0; }
-  #search-box { font-size: 16px; padding: 7px 36px 7px 14px; }
-  #search-mode-toggle button { padding: 3px 7px; font-size: 0.7em; }
+  #search-box { font-size: 16px; padding: 8px 2px; }
+  #search-mode-toggle button { padding: 3px 8px; font-size: 0.68em; }
+  #search-wrap { padding: 0 6px 0 12px; }
 
   /* Esconde botões secundários — mobile usa bottom nav */
   #btn-import,
@@ -2809,12 +2930,15 @@ body.android #presenter-cifra .chord-line {
     </div>
     <div id="header-main">
       <div id="search-wrap">
+        <span class="search-wrap-icon">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+        </span>
         <input type="text" id="search-box" placeholder="Buscar música..." autocomplete="off">
         <button id="btn-search-clear" title="Limpar busca">&#215;</button>
-      </div>
-      <div id="search-mode-toggle">
-        <button id="btn-search-name" class="active" title="Buscar por nome">Nome</button>
-        <button id="btn-search-content" title="Buscar na letra">Letra</button>
+        <div id="search-mode-toggle">
+          <button id="btn-search-name" class="active" title="Buscar por nome">Nome</button>
+          <button id="btn-search-content" title="Buscar na letra">Letra</button>
+        </div>
       </div>
       <div id="search-content-spinner"></div>
       {% if is_owner %}
@@ -2926,6 +3050,14 @@ body.android #presenter-cifra .chord-line {
           <button class="btn btn-accent" id="btn-ev-new">+ Novo evento</button>
         </div>
         <div id="fc-wrap"></div>
+      </div>
+      <div id="view-toggle-wrap" style="display:none">
+        <button class="btn-view-toggle active" id="btn-view-grid" title="Grade">
+          <svg width="13" height="13" viewBox="0 0 13 13" fill="currentColor"><rect x="0" y="0" width="5.5" height="5.5" rx="1.2"/><rect x="7.5" y="0" width="5.5" height="5.5" rx="1.2"/><rect x="0" y="7.5" width="5.5" height="5.5" rx="1.2"/><rect x="7.5" y="7.5" width="5.5" height="5.5" rx="1.2"/></svg>
+        </button>
+        <button class="btn-view-toggle" id="btn-view-list" title="Lista">
+          <svg width="13" height="11" viewBox="0 0 13 11" fill="currentColor"><rect x="0" y="0" width="13" height="2.5" rx="1.2"/><rect x="0" y="4.25" width="13" height="2.5" rx="1.2"/><rect x="0" y="8.5" width="13" height="2.5" rx="1.2"/></svg>
+        </button>
       </div>
       <div id="song-grid"></div>
       <div id="empty-state" style="display:none">
@@ -4353,10 +4485,12 @@ function _songWithViews(song) {
 function renderSongGrid(songs) {
   var grid = document.getElementById("song-grid");
   var empty = document.getElementById("empty-state");
+  var toggleWrap = document.getElementById("view-toggle-wrap");
   grid.innerHTML = "";
 
   if (!songs.length) {
     grid.style.display = "none";
+    if (toggleWrap) toggleWrap.style.display = "none";
     empty.style.display = "flex";
     document.getElementById("empty-msg").textContent = searchActive
       ? "Nenhuma música encontrada."
@@ -4365,7 +4499,9 @@ function renderSongGrid(songs) {
   }
 
   grid.style.display = "grid";
+  if (toggleWrap) toggleWrap.style.display = "flex";
   empty.style.display = "none";
+  _applyViewMode(_viewMode);
 
   songs.forEach(function(song) {
     var enriched = _songWithViews(song);
@@ -5535,11 +5671,21 @@ async function toggleRepertorio(song, btnEl) {
 
     if (isModalSong) {
       // Modal aberto: usa estado atual (transposição + capo pessoal)
+      // Capo: usa apenas o valor pessoal atual (não herda capo do arquivo)
+      delete entry.capo;
+      if (_mtCapoValue > 0) entry.capo = String(_mtCapoValue);
+
       if (currentSemitone !== 0 && rawCifraText) {
         entry.text = transposeText(rawCifraText, currentSemitone);
-        entry._transposedKey = currentSemitone > 0 ? "+" + currentSemitone : String(currentSemitone);
+        // Usa a nota real resultante, não o offset de semitons
+        var _effKey = _getCurrentKey();
+        entry._transposedKey = _effKey || (currentSemitone > 0 ? "+" + currentSemitone : String(currentSemitone));
+        if (_effKey) entry.key = _effKey;
+      } else if (currentSemitone === 0) {
+        // Tom original — usa nota detectada/base
+        var _origKey = _getCurrentKey();
+        if (_origKey) entry.key = _origKey;
       }
-      if (_mtCapoValue > 0) entry.capo = String(_mtCapoValue);
       var toggleInput = document.getElementById("mt-toggle-input");
       if (toggleInput && toggleInput.checked && _myTones[songId] && _myTones[songId].my_key) {
         entry.key = _myTones[songId].my_key;
@@ -5879,12 +6025,19 @@ function renderSavedReps() {
         doDeleteSavedRep(id, rep.name);
       });
     } else {
+      var _repColors = ['#5b4b8a','#7b6ca8','#8b7bca','#6d5ba5','#a090c0'];
+      var _repColor = _repColors[keys.indexOf(id) % _repColors.length];
       item.className = "saved-rep-item" + (id === currentRepId ? " active" : "");
       item.dataset.id = id;
       item.innerHTML =
-        '<span class="sri-name">' + escHtml(rep.name) + '</span>' +
-        '<span class="sri-count">' + count + ' &#9835;</span>' +
-        '<button class="sri-play" title="Apresentar ▶">&#9654;</button>' +
+        '<div class="sri-icon" style="background:' + _repColor + '">' +
+          '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V6l12-2v12"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>' +
+        '</div>' +
+        '<div class="sri-info">' +
+          '<span class="sri-name">' + escHtml(rep.name) + '</span>' +
+          '<span class="sri-count">' + count + ' m&#250;sicas</span>' +
+        '</div>' +
+        '<button class="sri-play" title="Apresentar &#9654;">&#9654;</button>' +
         '<button class="sri-del" title="Excluir">&#10005;</button>';
       item.addEventListener("click", function(e) {
         if (e.target.classList.contains("sri-del")) return;
@@ -7177,6 +7330,27 @@ document.addEventListener("DOMContentLoaded", function() {
     btn.disabled = false;
     btn.textContent = "Corrigir automaticamente";
   });
+});
+
+// ── View toggle (grid / list) ──────────────────────────────────────────────
+var _viewMode = localStorage.getItem("mycifras_view_mode") || "grid";
+function _applyViewMode(mode) {
+  var grid = document.getElementById("song-grid");
+  var btnGrid = document.getElementById("btn-view-grid");
+  var btnList = document.getElementById("btn-view-list");
+  if (!grid) return;
+  _viewMode = mode;
+  localStorage.setItem("mycifras_view_mode", mode);
+  grid.classList.toggle("list-view", mode === "list");
+  if (btnGrid) btnGrid.classList.toggle("active", mode === "grid");
+  if (btnList) btnList.classList.toggle("active", mode === "list");
+}
+document.addEventListener("DOMContentLoaded", function() {
+  var btnGrid = document.getElementById("btn-view-grid");
+  var btnList = document.getElementById("btn-view-list");
+  if (btnGrid) btnGrid.addEventListener("click", function() { _applyViewMode("grid"); });
+  if (btnList) btnList.addEventListener("click", function() { _applyViewMode("list"); });
+  _applyViewMode(_viewMode);
 });
 
 document.addEventListener("DOMContentLoaded", init);
