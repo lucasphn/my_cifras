@@ -2425,9 +2425,14 @@ body.android #presenter-cifra .chord-line {
   #search-mode-toggle button { padding: 3px 8px; font-size: 0.68em; }
   #search-wrap { padding: 0 6px 0 12px; }
 
-  /* Esconde tudo no header exceto a busca */
-  #btn-import, #btn-menu-toggle,
-  #header-right { display: none; }
+  /* Esconde tudo no header exceto a busca e o menu */
+  #btn-import, #header-right { display: none; }
+  #btn-menu-toggle {
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; font-size: 1.3em; padding: 6px 9px;
+    border-radius: 8px; color: var(--text-muted);
+    background: none; border: none; cursor: pointer;
+  }
 
   /* Elimina delay 300ms iOS: touch-action + cursor:pointer (iOS Safari checa cursor) */
   * { touch-action: manipulation; }
@@ -2458,6 +2463,8 @@ body.android #presenter-cifra .chord-line {
   input, textarea, select {
     font-size: 16px !important;
   }
+  /* Exceção: busca pode ser menor — texto longo e zoom não é problema aqui */
+  #search-box { font-size: 13px !important; }
 
   /* Body vira coluna */
   #body { flex-direction: column; overflow: visible; }
@@ -2822,6 +2829,26 @@ body.android #presenter-cifra .chord-line {
   }
 }
 
+/* ── Tablet (1025–1280px): rep panel vira drawer lateral ────────────────── */
+@media (min-width: 1025px) and (max-width: 1280px) {
+  #rep-panel {
+    position: fixed;
+    top: var(--header-h); right: 0; bottom: 0;
+    width: var(--rep-w);
+    transform: translateX(110%);
+    transition: transform .32s cubic-bezier(.4,0,.2,1);
+    z-index: 51;
+    box-shadow: -8px 0 40px rgba(91,75,138,.18);
+    border-left: none;
+  }
+  #rep-panel.mobile-open { transform: translateX(0); }
+  /* Bottom nav visível no tablet para acionar repertório */
+  #mobile-bottom-nav { display: block; }
+  #app { padding-bottom: 90px; height: auto; min-height: 100vh; }
+  /* Modal sem reserva de espaço do rep panel (que está fora do fluxo) */
+  #modal-overlay { right: 0 !important; }
+}
+
 /* ═══════════════════════════════════════════════════════════════════════════
    DESKTOP REDESIGN — Home, Category table, Inline cifra
    ═══════════════════════════════════════════════════════════════════════════ */
@@ -2948,7 +2975,9 @@ body.android #presenter-cifra .chord-line {
   width: 28px; height: 28px; border-radius: 99px; background: transparent;
   border: 1px solid var(--border); color: var(--text-muted); font-size: 14px;
   font-weight: 800; cursor: pointer; display: flex; align-items: center; justify-content: center;
+  opacity: 1; position: static;
 }
+.song-table-actions .btn-ops:hover { color: var(--primary); border-color: var(--primary); background: var(--primary-light); }
 
 /* Mobile: cat-header hidden, cat-filter hidden */
 @media (max-width: 1024px) {
@@ -2977,17 +3006,21 @@ body.android #presenter-cifra .chord-line {
   font-size: 13px; color: var(--text-muted); margin-top: 5px;
   font-style: italic; display: flex; align-items: center; gap: 6px; line-height: 1.4;
 }
+@media (max-width: 1024px) {
+  .home-greeting-quote { font-size: 10.5px; gap: 4px; white-space: nowrap; overflow: hidden; }
+  .home-greeting-quote #home-greeting-quote-text { overflow: hidden; text-overflow: ellipsis; }
+}
 
 #home-2col {
-  display: grid; grid-template-columns: 1.1fr 1fr; gap: 18px; margin-bottom: 22px;
-  align-items: stretch;
+  display: flex; flex-direction: row; gap: 18px; margin-bottom: 22px; align-items: stretch;
 }
 @media (max-width: 900px) {
-  #home-2col { grid-template-columns: 1fr; }
+  #home-2col { flex-direction: column; }
 }
 
 /* Restyle liturgy card inside 2col */
 #home-2col #liturgia-widget {
+  flex: 1.1; min-width: 0;
   background: var(--surface); border: 1.5px solid var(--border);
   border-radius: 18px; padding: 18px 20px; margin: 0;
   display: flex; flex-direction: column;
@@ -3001,6 +3034,7 @@ body.android #presenter-cifra .chord-line {
 
 /* Restyle calendar inside 2col */
 #home-2col #calendar-widget {
+  flex: 1; min-width: 0; margin: 0;
   background: var(--surface); border: 1.5px solid var(--border);
   border-radius: 18px; padding: 18px 20px;
   display: flex; flex-direction: column;
@@ -3085,7 +3119,32 @@ body.android #presenter-cifra .chord-line {
 
 /* Category explore chips */
 #home-cat-chips-section { margin-bottom: 8px; }
-#home-cat-chips { display: flex; gap: 7px; flex-wrap: wrap; }
+#home-cat-chips-row { display: flex; align-items: center; gap: 8px; }
+#home-cat-chips {
+  display: flex; gap: 7px; flex-wrap: wrap; flex: 1; min-width: 0;
+}
+#btn-cat-more {
+  flex-shrink: 0; height: 34px; padding: 0 12px;
+  border-radius: 99px; background: var(--surface); border: 1.5px solid var(--border);
+  font-size: 12px; font-weight: 700; color: var(--text-muted); cursor: pointer;
+  transition: all .15s; white-space: nowrap;
+}
+#btn-cat-more:hover { border-color: var(--primary); color: var(--primary); }
+#btn-cat-more.expanded { color: var(--primary); border-color: var(--primary); background: var(--primary-light); }
+#home-cat-inline { margin-top: 14px; }
+#home-cat-inline-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 10px;
+}
+@media (max-width: 1024px) {
+  #home-cat-chips-row { overflow: hidden; }
+  #home-cat-chips {
+    flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch;
+    scroll-snap-type: x mandatory; scrollbar-width: none; padding-bottom: 2px;
+  }
+  #home-cat-chips::-webkit-scrollbar { display: none; }
+  #home-cat-chips .home-cat-chip { scroll-snap-align: start; flex-shrink: 0; }
+  #btn-cat-more { display: none; }
+}
 .home-cat-chip {
   padding: 6px 13px; border-radius: 99px;
   background: var(--surface); border: 1.5px solid var(--border);
@@ -3196,11 +3255,11 @@ body.android #presenter-cifra .chord-line {
   <!-- Header -->
   <div id="header">
     <div id="header-brand">
-      <button id="btn-menu-toggle" title="Menu">&#9776;</button>
       <img src="/static/brand/logo-light.svg" alt="My Cifras" height="30">
       <button id="btn-home" title="Página inicial" class="active">&#8962;</button>
     </div>
     <div id="header-main">
+      <button id="btn-menu-toggle" title="Menu">&#9776;</button>
       <div id="search-wrap">
         <span class="search-wrap-icon">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
@@ -3351,10 +3410,10 @@ body.android #presenter-cifra .chord-line {
         <!-- Stats row (hidden on desktop, kept for JS) -->
         <div id="home-stats-row" style="display:none"></div>
 
-        <!-- Continue de onde parou -->
+        <!-- Mais tocadas -->
         <div id="home-top-section" style="display:none">
           <div class="home-section-header">
-            <h2 id="home-top-label">Continue de onde parou</h2>
+            <h2 id="home-top-label">Mais tocadas por você</h2>
             <span class="home-section-link" id="home-top-link">Ver todas →</span>
           </div>
           <div id="home-top-grid"></div>
@@ -3380,7 +3439,11 @@ body.android #presenter-cifra .chord-line {
           <div class="home-section-header" style="margin-top:4px">
             <h2>Explorar por categoria</h2>
           </div>
-          <div id="home-cat-chips"></div>
+          <div id="home-cat-chips-row">
+            <div id="home-cat-chips"></div>
+            <button id="btn-cat-more" style="display:none">Ver mais ▾</button>
+          </div>
+          <div id="home-cat-inline" style="display:none"></div>
         </div>
 
       </div>
@@ -4219,13 +4282,11 @@ function _makeHomeCard(song, cls) {
     '</div>' +
     '<div class="home-card-actions">' +
       '<button class="btn-hc-add' + (inRep ? ' added' : '') + '">' + (inRep ? '✓ Adicionado' : '+ Repertório') + '</button>' +
-    '</div>' +
-    (_isOwner ? '<div class="song-ops-wrap"><button class="btn-song-ops" title="Opções">⋯</button></div>' : '');
+    '</div>';
 
   card.querySelector(".btn-hc-add").addEventListener("click", async function(e) {
     e.stopPropagation();
     var btn = this;
-    var prevText = btn.textContent;
     btn.disabled = true;
     btn.innerHTML = '<span class="loading-spinner" style="width:10px;height:10px;border-width:2px;vertical-align:middle;margin-right:4px;display:inline-block;"></span>Adicionando...';
     await toggleRepertorio(song, btn);
@@ -4235,46 +4296,7 @@ function _makeHomeCard(song, cls) {
     btn.textContent = nowIn ? "✓ Adicionado" : "+ Repertório";
   });
 
-  var opsBtn = card.querySelector(".btn-song-ops");
-  if (opsBtn) opsBtn.addEventListener("click", function(e) {
-    e.stopPropagation();
-    if (_openSongMenu && _openSongMenu._owner === opsBtn) { closeOpenSongMenu(); return; }
-    closeOpenSongMenu();
-    var dd = document.createElement("div");
-    dd.className = "song-ops-dropdown";
-    dd._owner = opsBtn;
-    dd.innerHTML =
-      '<button class="sop-rename">✏️ Renomear</button>' +
-      '<button class="sop-copy">📋 Copiar para...</button>' +
-      '<button class="sop-move">📂 Mover para...</button>' +
-      '<div class="divider"></div>' +
-      '<button class="sop-delete danger">🗑️ Excluir</button>';
-    document.body.appendChild(dd);
-    var rect = opsBtn.getBoundingClientRect();
-    dd.style.top = (rect.bottom + 4) + "px";
-    dd.style.right = (window.innerWidth - rect.right) + "px";
-    _openSongMenu = dd;
-
-    dd.querySelector(".sop-rename").addEventListener("click", function(ev) {
-      ev.stopPropagation(); closeOpenSongMenu();
-      startRenameSong(card, song);
-    });
-    dd.querySelector(".sop-copy").addEventListener("click", function(ev) {
-      ev.stopPropagation(); closeOpenSongMenu();
-      openFolderPicker("copy", song);
-    });
-    dd.querySelector(".sop-move").addEventListener("click", function(ev) {
-      ev.stopPropagation(); closeOpenSongMenu();
-      openFolderPicker("move", song);
-    });
-    dd.querySelector(".sop-delete").addEventListener("click", function(ev) {
-      ev.stopPropagation(); closeOpenSongMenu();
-      confirmDeleteSong(card, song);
-    });
-  });
-
   card.addEventListener("click", function(e) {
-    if (e.target.closest(".song-ops-wrap")) return;
     openModal(song);
   });
   return card;
@@ -4303,7 +4325,7 @@ function renderHomeTable(songs) {
   var topSection = document.getElementById("home-top-section");
   var topGrid = document.getElementById("home-top-grid");
   var topLabel = document.getElementById("home-top-label");
-  if (topLabel) topLabel.textContent = hasViews ? "Continue de onde parou" : "Destaques";
+  if (topLabel) topLabel.textContent = hasViews ? "As mais tocadas por você" : "Destaques";
   topGrid.innerHTML = "";
 
   topSongs.forEach(function(song, i) {
@@ -4334,6 +4356,7 @@ function renderHomeTable(songs) {
   // ── Category chips ──
   var chipsSection = document.getElementById("home-cat-chips-section");
   var chipsWrap = document.getElementById("home-cat-chips");
+  var btnCatMore = document.getElementById("btn-cat-more");
   if (chipsSection && chipsWrap) {
     chipsWrap.innerHTML = "";
     // Collect all categories from library
@@ -4344,23 +4367,71 @@ function renderHomeTable(songs) {
         if (count > 0) cats.push({ section: sec, cat: cat, count: count });
       });
     });
-    // Sort by count desc, take top 10
     cats.sort(function(a, b) { return b.count - a.count; });
-    cats.slice(0, 10).forEach(function(c) {
+    var CHIPS_VISIBLE = 8;
+    var _catsExpanded = false;
+    function _renderChips() {
+      var displayed = _catsExpanded ? cats : cats.slice(0, CHIPS_VISIBLE);
+      chipsWrap.innerHTML = "";
+      displayed.forEach(function(c) {
       var chip = document.createElement("button");
       chip.className = "home-cat-chip";
       chip.innerHTML = escHtml(cleanLabel(c.cat || c.section)) + ' <span class="chip-count">' + c.count + '</span>';
       chip.addEventListener("click", function() {
-        // Find and click the sidebar category
-        var catEls = document.querySelectorAll(".sidebar-cat");
-        for (var i = 0; i < catEls.length; i++) {
-          if (catEls[i].dataset.section === c.section && catEls[i].dataset.cat === c.cat) {
-            catEls[i].click(); return;
+        var wasActive = chip.classList.contains("active");
+        // Deactivate all chips
+        chipsWrap.querySelectorAll(".home-cat-chip").forEach(function(ch) { ch.classList.remove("active"); });
+        var inlineEl = document.getElementById("home-cat-inline");
+        if (wasActive) {
+          if (inlineEl) inlineEl.style.display = "none";
+          return;
+        }
+        chip.classList.add("active");
+        // Render songs for this category inline
+        var songs = (library[c.section] && library[c.section][c.cat]) || [];
+        if (inlineEl) {
+          inlineEl.innerHTML = "";
+          if (!songs.length) {
+            inlineEl.innerHTML = '<div style="color:var(--text-muted);font-size:13px;padding:8px 0">Nenhuma música nesta categoria.</div>';
+          } else {
+            var grid = document.createElement("div");
+            grid.id = "home-cat-inline-grid";
+            songs.forEach(function(song) {
+              var card = _makeHomeCard(song, "home-card");
+              card.addEventListener("click", function() { openModal(song); });
+              grid.appendChild(card);
+            });
+            inlineEl.appendChild(grid);
           }
+          inlineEl.style.display = "block";
+          inlineEl.scrollIntoView({ behavior: "smooth", block: "nearest" });
         }
       });
-      chipsWrap.appendChild(chip);
-    });
+        chipsWrap.appendChild(chip);
+      });
+      // Ver mais button visibility
+      if (btnCatMore) {
+        if (cats.length > CHIPS_VISIBLE) {
+          btnCatMore.style.display = "";
+          btnCatMore.textContent = _catsExpanded ? "Ver menos ▴" : "Ver mais ▾";
+          btnCatMore.classList.toggle("expanded", _catsExpanded);
+        } else {
+          btnCatMore.style.display = "none";
+        }
+      }
+    }
+    _renderChips();
+    if (btnCatMore) {
+      btnCatMore.addEventListener("click", function() {
+        _catsExpanded = !_catsExpanded;
+        // Close any open inline result when collapsing
+        if (!_catsExpanded) {
+          var inlineEl = document.getElementById("home-cat-inline");
+          if (inlineEl) inlineEl.style.display = "none";
+        }
+        _renderChips();
+      });
+    }
     chipsSection.style.display = "block";
   }
 
@@ -4434,6 +4505,8 @@ function showHomeTable() {
   document.getElementById("home-table-wrap").style.display = "block";
   document.getElementById("song-grid").style.display = "none";
   document.getElementById("empty-state").style.display = "none";
+  var tw = document.getElementById("view-toggle-wrap");
+  if (tw) tw.style.display = "none";
   var ch = document.getElementById("cat-header");
   if (ch) ch.classList.remove("show");
 }
@@ -4519,48 +4592,12 @@ function renderSidebar() {
       item.innerHTML =
         iconHtml +
         '<span>' + escHtml(displayName) + '</span>' +
-        '<span class="count">' + categories[cat].length + '</span>' +
-        (_isOwner ? '<div class="cat-menu-wrap"><button class="btn-cat-menu" title="Opções">⋯</button></div>' : '');
+        '<span class="count">' + categories[cat].length + '</span>';
       item.dataset.section = section;
       item.dataset.cat = cat;
 
-      // Clique na linha navega; clique no botão ⋯ abre menu
       item.addEventListener("click", function(e) {
-        if (e.target.closest(".cat-menu-wrap")) return;
         selectCategory(section, cat);
-      });
-
-      var menuBtn = item.querySelector(".btn-cat-menu");
-      if (!menuBtn) { cats.appendChild(item); return; }
-      menuBtn.addEventListener("click", function(e) {
-        e.stopPropagation();
-        // toggle: se o menu já está aberto neste botão, fecha e sai
-        if (_openCatMenu && _openCatMenu._owner === menuBtn) { closeCatMenu(); return; }
-        closeCatMenu();
-        var dd = document.createElement("div");
-        dd.className = "cat-dropdown";
-        dd._owner = menuBtn;
-        dd.innerHTML =
-          '<button class="rename-btn">✏️ Renomear</button>' +
-          '<button class="delete-btn danger">🗑️ Excluir</button>';
-        document.body.appendChild(dd);
-        var rect = menuBtn.getBoundingClientRect();
-        dd.style.position = "fixed";
-        dd.style.top = (rect.bottom + 4) + "px";
-        dd.style.right = (window.innerWidth - rect.right) + "px";
-        dd.style.zIndex = "9999";
-        _openCatMenu = dd;
-
-        dd.querySelector(".rename-btn").addEventListener("click", function(ev) {
-          ev.stopPropagation();
-          closeCatMenu();
-          startRenameCategory(item, section, cat, displayName);
-        });
-        dd.querySelector(".delete-btn").addEventListener("click", function(ev) {
-          ev.stopPropagation();
-          closeCatMenu();
-          confirmDeleteCategory(item, section, cat, displayName);
-        });
       });
 
       cats.appendChild(item);
@@ -5313,7 +5350,7 @@ function loadCalendar() {
       if (!data.events || !data.events.length) {
         list.style.display = "none";
         emptyState.style.display = "block";
-        widget.style.display = "";
+        widget.style.display = "flex";
         return;
       }
       list.style.display = "";
@@ -5367,7 +5404,7 @@ function loadCalendar() {
         list.appendChild(a);
       });
 
-      widget.style.display = "block";
+      widget.style.display = "flex";
     })
     .catch(function() {
       document.getElementById("calendar-widget").style.display = "none";
