@@ -97,6 +97,16 @@ button, a, .song-card, .home-card, .home-top-card, .sidebar-cat,
   gap: 10px;
 }
 #header h1 { font-size: 1.05em; font-weight: 800; color: var(--primary); letter-spacing: 0.02em; white-space: nowrap; }
+#header-brand-info { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+#header-brand-name { font-size: 15px; font-weight: 800; color: var(--primary); letter-spacing: -0.2px; white-space: nowrap; }
+.btn-import-header {
+  display: flex; align-items: center; gap: 6px; flex-shrink: 0;
+  background: var(--surface); border: 1.5px solid var(--border);
+  color: var(--text); font-size: 12.5px; font-weight: 700;
+  padding: 7px 14px; border-radius: 99px;
+  transition: border-color .15s, color .15s, background .15s;
+}
+.btn-import-header:hover { border-color: var(--primary); color: var(--primary); background: var(--primary-light); }
 /* Home na sidebar */
 #sidebar-home-item {
   display: flex;
@@ -283,7 +293,7 @@ button, a, .song-card, .home-card, .home-top-card, .sidebar-cat,
 /* Sidebar */
 #sidebar {
   width: var(--sidebar-w);
-  background: #f7f6fb;
+  background: var(--surface);
   border-right: 1px solid var(--border);
   overflow-y: auto;
   flex-shrink: 0;
@@ -1173,7 +1183,7 @@ button, a, .song-card, .home-card, .home-top-card, .sidebar-cat,
 /* ─── Repertório (painel direito) ────────────────────────────────────────── */
 #rep-panel {
   width: var(--rep-w);
-  background: var(--bg);
+  background: var(--surface);
   border-left: 1px solid var(--border);
   display: flex;
   flex-direction: column;
@@ -2376,10 +2386,10 @@ body.android #presenter-cifra .chord-line {
 .mbn-btn:active { background: var(--primary-light); }
 .mbn-btn.active {
   background: var(--primary); color: #fff;
-  flex: none; padding: 10px 20px;
+  flex: 2; padding: 10px 14px;
 }
 .mbn-label { display: none; }
-.mbn-btn.active .mbn-label { display: inline; }
+.mbn-btn.active .mbn-label { display: inline; font-size: 0.75rem; font-weight: 700; }
 .mbn-btn .mbn-badge {
   position: absolute; top: 5px; right: 4px;
   background: var(--accent); color: #1f1b2e;
@@ -2938,6 +2948,7 @@ body.android #presenter-cifra .chord-line {
 /* Mobile: cat-header hidden, cat-filter hidden */
 @media (max-width: 1024px) {
   #cat-header { display: none !important; }
+  #rep-draft-toprow { display: none; }
   .song-table-head { display: none; }
   .song-table-row {
     display: flex; flex-wrap: wrap;
@@ -3181,7 +3192,11 @@ body.android #presenter-cifra .chord-line {
   <div id="header">
     <div id="header-brand">
       <button id="btn-menu-toggle" title="Menu">&#9776;</button>
-      <img src="/static/brand/logo-light.svg" alt="My Cifras" height="34">
+      <img src="/static/brand/logo-light.svg" alt="My Cifras" height="30">
+      <div id="header-brand-info">
+        <div id="header-brand-name">My Cifras</div>
+        <div id="header-brand-stats" style="font-size:11px;color:var(--text-muted);font-weight:500;white-space:nowrap"></div>
+      </div>
       <button id="btn-home" title="Página inicial" class="active">&#8962;</button>
     </div>
     <div id="header-main">
@@ -3189,7 +3204,7 @@ body.android #presenter-cifra .chord-line {
         <span class="search-wrap-icon">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
         </span>
-        <input type="text" id="search-box" placeholder="Buscar música..." autocomplete="off">
+        <input type="text" id="search-box" placeholder="Buscar música, artista ou trecho da letra..." autocomplete="off">
         <button id="btn-search-clear" title="Limpar busca">&#215;</button>
         <div id="search-mode-toggle">
           <button id="btn-search-name" class="active" title="Buscar por nome">Nome</button>
@@ -3198,7 +3213,10 @@ body.android #presenter-cifra .chord-line {
       </div>
       <div id="search-content-spinner"></div>
       {% if is_owner %}
-      <button class="btn" id="btn-import" title="Importar cifra">&#43; Importar</button>
+      <button class="btn btn-import-header" id="btn-import" title="Importar cifra">
+        <svg width="12" height="12" viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M11 4v14M4 11h14"/></svg>
+        Importar cifra
+      </button>
       <input type="file" id="file-input" accept=".docx,.doc,.pdf,.txt" style="display:none">
       {% endif %}
       {% if user %}
@@ -3206,8 +3224,7 @@ body.android #presenter-cifra .chord-line {
         {% if user.picture %}
         <img src="{{ user.picture }}" alt="{{ user.name }}" referrerpolicy="no-referrer">
         {% endif %}
-        <span class="user-name">{{ user.name or user.email }}</span>
-        <a href="/logout" id="btn-logout">Sair</a>
+        <a href="/logout" id="btn-logout" title="Sair">Sair</a>
       </div>
       {% endif %}
     </div>
@@ -3235,9 +3252,9 @@ body.android #presenter-cifra .chord-line {
           </div>
           <div class="cat-title-actions">
             {% if is_owner %}
-            <button class="btn" id="btn-cat-new-song" style="display:none;align-items:center;gap:6px">
+            <button class="btn btn-import-header" id="btn-cat-new-song" style="display:none;align-items:center;gap:6px">
               <svg width="12" height="12" viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M11 4v14M4 11h14"/></svg>
-              Nova música
+              Importar
             </button>
             {% endif %}
           </div>
@@ -3246,7 +3263,6 @@ body.android #presenter-cifra .chord-line {
           <span class="cat-filter-label">Filtrar</span>
           <span class="cat-filter-sep"></span>
           <button class="cat-filter-btn active" id="cat-filter-all">Todas</button>
-          <button class="cat-filter-btn" id="cat-filter-my-key">Meu tom</button>
           <button class="cat-filter-btn" id="cat-filter-recent">Recentes</button>
           <div class="cat-sort-wrap">
             <span class="cat-sort-label">Ordenar:</span>
@@ -3275,7 +3291,7 @@ body.android #presenter-cifra .chord-line {
           <div class="home-greeting-name" id="home-greeting-name">Olá!</div>
           <div class="home-greeting-quote">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 21 12 17.77 5.82 21 7 14.14l-5-4.87 6.91-1.01z"/></svg>
-            <span id="home-greeting-quote-text">"Cantar é orar duas vezes." — Santo Agostinho</span>
+            <span id="home-greeting-quote-text">"O canto exige, acima de tudo, uma profunda vida interior." — Papa Leão XIV</span>
           </div>
         </div>
 
@@ -4399,6 +4415,17 @@ function updateHomeTableViews(song, newCount) {
   });
 }
 
+function _updateHeaderStats() {
+  var el = document.getElementById("header-brand-stats");
+  if (!el) return;
+  var nSongs = allSongs.length;
+  var nReps  = (typeof savedReps !== "undefined" && savedReps) ? Object.keys(savedReps).length : 0;
+  var parts = [];
+  if (nSongs) parts.push(nSongs + " música" + (nSongs !== 1 ? "s" : ""));
+  if (nReps)  parts.push(nReps  + " repertório" + (nReps  !== 1 ? "s" : ""));
+  el.textContent = parts.join(" · ");
+}
+
 function showHomeTable() {
   document.getElementById("home-table-wrap").style.display = "block";
   document.getElementById("song-grid").style.display = "none";
@@ -4632,6 +4659,7 @@ async function reloadLibrary() {
     });
     renderSidebar();
     _checkFixKeys(allSongs);
+    _updateHeaderStats();
     // Re-renderiza categoria atual se ainda existir
     if (currentCategory) {
       var songs = (library[currentCategory.section] || {})[currentCategory.cat];
@@ -4867,13 +4895,35 @@ function _updateCatHeader(songs) {
   if (crumbSepCat) crumbSepCat.style.display = catLabel ? "" : "none";
   if (titleEl) titleEl.textContent = catLabel || secLabel;
   if (subtitleEl) subtitleEl.innerHTML = "<b style='color:var(--primary)'>" + songs.length + "</b> músicas";
-  if (newSongBtn) newSongBtn.style.display = "inline-flex";
+  if (newSongBtn) {
+    newSongBtn.style.display = "inline-flex";
+    newSongBtn.onclick = function() {
+      openImportModal();
+      // Pre-select section and category after sections load
+      var waitSel = setInterval(function() {
+        var secSel = document.getElementById("import-section");
+        if (!secSel || !secSel.options.length || secSel.options[0].value === "") return;
+        clearInterval(waitSel);
+        if (currentCategory) {
+          secSel.value = currentCategory.section;
+          secSel.dispatchEvent(new Event("change"));
+          setTimeout(function() {
+            var catSel = document.getElementById("import-category");
+            if (catSel) catSel.value = currentCategory.cat || "_raiz";
+          }, 80);
+        }
+      }, 50);
+    };
+  }
 }
 
 function _makeTableRow(song, rank) {
   var enriched = _songWithViews(song);
   var inRep = repertorio.some(function(r) { return (r.fileId || r.path) === (song.fileId || song.path); });
-  var keyDisplay = (song.fileId && _myTones[song.fileId] && _myTones[song.fileId].my_key) || song.key || "";
+  var meta = (song.fileId && _metaCache && _metaCache[song.fileId]) || {};
+  var keyDisplay = (song.fileId && _myTones[song.fileId] && _myTones[song.fileId].my_key)
+                 || meta.key || song.key || "";
+  var artistDisplay = meta.artist || song.artist || "";
   var views = enriched.views || 0;
 
   var row = document.createElement("div");
@@ -4884,7 +4934,7 @@ function _makeTableRow(song, rank) {
   row.innerHTML =
     '<span class="song-table-rank">' + String(rank).padStart(2, "0") + '</span>' +
     '<div class="song-table-name">' + escHtml(song.name) + '</div>' +
-    '<div class="song-table-artist">' + escHtml(song.artist || "") + '</div>' +
+    '<div class="song-table-artist">' + escHtml(artistDisplay) + '</div>' +
     '<div>' + (keyDisplay ? '<span class="song-table-key">' + escHtml(keyDisplay) + '</span>' : '') + '</div>' +
     '<div class="song-table-views">' +
       '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>' +
@@ -6486,6 +6536,7 @@ async function loadSavedReps() {
     if (!r.ok) return;
     savedReps = await r.json();
     renderSavedReps();
+    _updateHeaderStats();
   } catch(e) {
     // silencia — Drive pode não estar disponível
   }
@@ -7878,25 +7929,17 @@ document.addEventListener("DOMContentLoaded", function() {
     return (library[currentCategory.section] || {})[currentCategory.cat] || [];
   }
   var filterAll = document.getElementById("cat-filter-all");
-  var filterMyKey = document.getElementById("cat-filter-my-key");
   var filterRecent = document.getElementById("cat-filter-recent");
   var sortSel = document.getElementById("cat-sort-select");
 
   function _setActiveFilter(btn) {
-    [filterAll, filterMyKey, filterRecent].forEach(function(b) { if (b) b.classList.remove("active"); });
+    [filterAll, filterRecent].forEach(function(b) { if (b) b.classList.remove("active"); });
     if (btn) btn.classList.add("active");
   }
 
   if (filterAll) filterAll.addEventListener("click", function() {
     _setActiveFilter(filterAll);
     renderSongGrid(_getCatSongs());
-  });
-  if (filterMyKey) filterMyKey.addEventListener("click", function() {
-    _setActiveFilter(filterMyKey);
-    var songs = _getCatSongs().filter(function(s) {
-      return !!(s.fileId && _myTones[s.fileId] && _myTones[s.fileId].my_key);
-    });
-    renderSongGrid(songs);
   });
   if (filterRecent) filterRecent.addEventListener("click", function() {
     _setActiveFilter(filterRecent);
