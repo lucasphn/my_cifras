@@ -1993,6 +1993,211 @@ body.android #presenter-cifra .chord-line {
 }
 #btn-logout:hover { border-color: var(--danger); color: var(--danger); }
 
+/* ─── Bell / notificações ───────────────────────────────────────────────── */
+#btn-notif {
+  position: relative;
+  display: flex; align-items: center; justify-content: center;
+  width: 34px; height: 34px; border-radius: 50%;
+  color: var(--text-muted); border: 1.5px solid transparent;
+  transition: color .15s, border-color .15s, background .15s;
+  flex-shrink: 0;
+}
+#btn-notif:hover { color: var(--primary); background: var(--primary-light); border-color: var(--border); }
+#btn-notif.has-notif { color: var(--primary); }
+#notif-badge {
+  position: absolute; top: 2px; right: 2px;
+  min-width: 16px; height: 16px; padding: 0 4px;
+  background: var(--danger); color: #fff;
+  font-size: 9px; font-weight: 800; border-radius: 99px;
+  display: flex; align-items: center; justify-content: center;
+  line-height: 1; pointer-events: none;
+}
+/* Notification panel */
+#notif-panel {
+  position: fixed; top: calc(var(--header-h) + 8px); right: 16px;
+  width: 320px; max-height: 420px; overflow-y: auto;
+  background: var(--surface); border: 1.5px solid var(--border);
+  border-radius: var(--radius-lg); box-shadow: var(--shadow-lg);
+  z-index: 300; display: none; flex-direction: column;
+}
+#notif-panel.open { display: flex; }
+@media (max-width: 1024px) {
+  #notif-panel { right: 8px; width: min(310px, calc(100vw - 16px)); }
+}
+.notif-panel-header {
+  padding: 12px 16px 10px; border-bottom: 1px solid var(--border);
+  font-size: 11px; font-weight: 800; text-transform: uppercase;
+  letter-spacing: 1.2px; color: var(--text-muted); flex-shrink: 0;
+}
+.notif-item {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 12px 16px; border-bottom: 1px solid var(--border);
+  cursor: pointer; transition: background .12s;
+}
+.notif-item:last-child { border-bottom: none; }
+.notif-item:hover { background: var(--primary-light); }
+.notif-item.seen { opacity: .7; }
+.notif-avatar {
+  width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0;
+  background: var(--primary-light2); display: flex; align-items: center; justify-content: center;
+  overflow: hidden;
+}
+.notif-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.notif-avatar svg { flex-shrink: 0; }
+.notif-body { flex: 1; min-width: 0; }
+.notif-body strong { font-size: 0.84em; font-weight: 700; color: var(--text); }
+.notif-body p { font-size: 0.78em; color: var(--text-muted); margin-top: 2px; line-height: 1.35; }
+.notif-time { font-size: 0.7em; color: var(--text-muted); margin-top: 3px; }
+.notif-dot {
+  width: 8px; height: 8px; border-radius: 50%; background: var(--primary);
+  flex-shrink: 0; margin-top: 4px;
+}
+#notif-empty {
+  padding: 24px 16px; font-size: 0.82em; color: var(--text-muted);
+  text-align: center;
+}
+
+/* ─── Three-dot menu nos saved-rep items ────────────────────────────────── */
+.sri-menu-wrap { position: relative; flex-shrink: 0; }
+.sri-menu-btn {
+  color: var(--text-muted); font-size: 1.1em; line-height: 1;
+  padding: 2px 6px; border-radius: 6px; opacity: 0;
+  transition: opacity .15s, color .15s, background .15s;
+  letter-spacing: 1px;
+}
+.saved-rep-item:hover .sri-menu-btn { opacity: 1; }
+.sri-menu-btn:hover { color: var(--text); background: var(--surface2); }
+.sri-dropdown {
+  display: none; position: absolute; right: 0; top: calc(100% + 4px);
+  background: var(--surface); border: 1.5px solid var(--border);
+  border-radius: var(--radius); box-shadow: var(--shadow-md);
+  z-index: 200; min-width: 148px; overflow: hidden;
+}
+.sri-dropdown.open { display: block; }
+.sri-dd-btn {
+  display: flex; align-items: center; gap: 8px;
+  width: 100%; padding: 9px 14px;
+  font-size: 0.83em; font-weight: 600; text-align: left;
+  color: var(--text); transition: background .12s;
+}
+.sri-dd-btn:hover { background: var(--primary-light); color: var(--primary); }
+.sri-dd-btn.danger { color: var(--danger); }
+.sri-dd-btn.danger:hover { background: rgba(220,38,38,.08); color: var(--danger); }
+
+/* Tag "Compartilhado" no item salvo */
+.sri-shared-tag {
+  font-size: 0.65em; font-weight: 700; padding: 2px 6px;
+  background: rgba(91,75,138,.12); color: var(--primary);
+  border-radius: 99px; flex-shrink: 0; letter-spacing: .3px;
+  white-space: nowrap;
+}
+
+/* ─── Share dialog ──────────────────────────────────────────────────────── */
+#share-dialog-overlay {
+  position: fixed; inset: 0; z-index: 1000;
+  background: rgba(0,0,0,.45); display: none;
+  align-items: center; justify-content: center;
+}
+#share-dialog-overlay.open { display: flex; }
+#share-dialog {
+  background: var(--surface); border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg); padding: 28px 28px 24px;
+  width: min(440px, calc(100vw - 32px)); display: flex; flex-direction: column; gap: 16px;
+}
+#share-dialog h3 { font-size: 1em; font-weight: 800; color: var(--text); }
+#share-dialog p { font-size: 0.83em; color: var(--text-muted); margin-top: -8px; line-height: 1.5; }
+#share-email-input {
+  width: 100%; padding: 10px 14px; font-size: 0.88em;
+  border: 1.5px solid var(--border); border-radius: var(--radius);
+  background: var(--bg); color: var(--text); outline: none;
+  transition: border-color .15s;
+}
+#share-email-input:focus { border-color: var(--primary); }
+#share-dialog-error { font-size: 0.8em; color: var(--danger); min-height: 16px; }
+.share-dialog-actions { display: flex; gap: 10px; justify-content: flex-end; }
+#btn-share-cancel { font-size: 0.84em; padding: 8px 16px; border-radius: 8px; color: var(--text-muted); transition: background .12s; }
+#btn-share-cancel:hover { background: var(--surface2); }
+#btn-share-confirm {
+  font-size: 0.84em; font-weight: 700; padding: 8px 20px;
+  border-radius: 8px; background: var(--primary); color: #fff;
+  transition: background .12s;
+}
+#btn-share-confirm:hover { background: var(--primary-hover); }
+#btn-share-confirm:disabled { opacity: .55; cursor: default; }
+
+/* ─── Manage shares dialog ──────────────────────────────────────────────── */
+#manage-shares-list { display: flex; flex-direction: column; gap: 8px; max-height: 260px; overflow-y: auto; }
+.msl-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 12px; border-radius: var(--radius);
+  border: 1.5px solid var(--border); background: var(--bg);
+}
+.msl-email { flex: 1; min-width: 0; font-size: 0.83em; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.msl-unshare {
+  font-size: 0.75em; font-weight: 700; padding: 4px 10px;
+  border-radius: 6px; color: var(--danger);
+  border: 1.5px solid rgba(220,38,38,.3);
+  transition: background .12s, border-color .12s;
+}
+.msl-unshare:hover { background: rgba(220,38,38,.08); border-color: var(--danger); }
+
+/* ─── Compartilhados comigo ─────────────────────────────────────────────── */
+#shared-reps-section {
+  border-top: 1px solid var(--border);
+  flex-shrink: 0; display: flex; flex-direction: column;
+  padding: 0 12px 16px;
+}
+#shared-reps-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 0 8px; flex-shrink: 0;
+}
+#shared-reps-header .section-label {
+  font-size: 10.5px; font-weight: 800; text-transform: uppercase;
+  letter-spacing: 1.4px; color: var(--text-muted);
+}
+#shared-reps-list { padding: 0; }
+.shared-rep-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 10px; border-radius: var(--radius);
+  border: 1.5px solid var(--border); cursor: pointer;
+  background: var(--bg); margin-bottom: 5px;
+  transition: background .12s, border-color .12s;
+}
+.shared-rep-item:hover { background: var(--surface2); border-color: var(--border); }
+.shared-rep-item.active { background: rgba(91,75,138,.07); border-color: rgba(91,75,138,.2); }
+.sri2-icon {
+  width: 34px; height: 34px; border-radius: 8px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(212,175,55,.18);
+}
+.sri2-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.sri2-name {
+  font-size: 0.87em; font-weight: 700;
+  overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
+  color: var(--text);
+}
+.sri2-from { font-size: 0.71em; color: var(--text-muted); }
+.sri2-play {
+  background: var(--accent); color: #fff; border-radius: 50%;
+  width: 28px; height: 28px; display: flex; align-items: center;
+  justify-content: center; font-size: 0.72em; flex-shrink: 0;
+  transition: background .12s; cursor: pointer;
+}
+.sri2-play:hover { background: var(--accent-hover); }
+.sri2-dismiss {
+  color: var(--text-muted); font-size: 0.8em; padding: 2px 5px;
+  border-radius: 5px; flex-shrink: 0; opacity: 0;
+  transition: opacity .15s, color .15s, background .15s;
+}
+.shared-rep-item:hover .sri2-dismiss { opacity: 1; }
+.sri2-dismiss:hover { color: var(--danger); background: rgba(220,38,38,.1); }
+/* badge novo */
+.sri2-new {
+  font-size: 0.62em; font-weight: 800; padding: 1px 5px;
+  background: var(--primary); color: #fff; border-radius: 99px;
+  flex-shrink: 0; letter-spacing: .3px;
+}
+
 #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
 /* ─── Modal de importação ────────────────────────────────────────────────── */
@@ -3284,6 +3489,13 @@ body.android #presenter-cifra .chord-line {
       </div>
       <div id="search-content-spinner"></div>
     </div>
+    <!-- Bell: outside header-right so it stays visible on mobile -->
+    {% if user %}
+    <button id="btn-notif" title="Notificações">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+      <span id="notif-badge" style="display:none">0</span>
+    </button>
+    {% endif %}
     <!-- Right section alinhado ao rep-panel -->
     <div id="header-right">
       {% if is_owner %}
@@ -3302,6 +3514,12 @@ body.android #presenter-cifra .chord-line {
       </div>
       {% endif %}
     </div>
+  </div>
+  <!-- Notification panel (positional, tied to header) -->
+  <div id="notif-panel" role="dialog" aria-label="Notificações">
+    <div class="notif-panel-header">Notificações</div>
+    <div id="notif-list"></div>
+    <div id="notif-empty" style="display:none">Nenhuma notificação.</div>
   </div>
 
   <div id="body">
@@ -3521,6 +3739,40 @@ body.android #presenter-cifra .chord-line {
         <div id="saved-reps-list"></div>
         <div id="saved-reps-empty">Nenhum repertório salvo.</div>
       </div>
+      <!-- Shared with me -->
+      <div id="shared-reps-section" style="display:none">
+        <div id="shared-reps-header">
+          <span class="section-label">Compartilhados comigo</span>
+        </div>
+        <div id="shared-reps-list"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Manage shares dialog (reutiliza overlay do share-dialog) -->
+<div id="manage-shares-overlay" style="position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;">
+  <div id="manage-shares-dialog" style="background:var(--surface);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);padding:28px 28px 24px;width:min(420px,calc(100vw - 32px));display:flex;flex-direction:column;gap:16px;">
+    <h3 style="font-size:1em;font-weight:800;">Compartilhamentos ativos</h3>
+    <p id="manage-shares-title" style="font-size:0.83em;color:var(--text-muted);margin-top:-8px;"></p>
+    <div id="manage-shares-list"></div>
+    <div id="manage-shares-empty" style="font-size:0.82em;color:var(--text-muted);text-align:center;padding:12px 0;display:none;">Nenhum compartilhamento ativo.</div>
+    <div style="display:flex;justify-content:flex-end;">
+      <button id="btn-manage-shares-close" style="font-size:0.84em;padding:8px 20px;border-radius:8px;background:var(--primary);color:#fff;font-weight:700;">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Share dialog -->
+<div id="share-dialog-overlay">
+  <div id="share-dialog">
+    <h3>Compartilhar repertório</h3>
+    <p id="share-dialog-desc">Digite o e-mail Google do colaborador. Ele verá este repertório na seção <em>Compartilhados comigo</em>.</p>
+    <input type="email" id="share-email-input" placeholder="email@gmail.com" autocomplete="off" spellcheck="false">
+    <div id="share-dialog-error"></div>
+    <div class="share-dialog-actions">
+      <button id="btn-share-cancel">Cancelar</button>
+      <button id="btn-share-confirm">Compartilhar</button>
     </div>
   </div>
 </div>
@@ -4071,6 +4323,10 @@ var editMode = false;
 var currentRepId = null;   // ID do repertório salvo atualmente aberto
 var savedReps = {};        // cache local dos repertórios salvos
 var _pendingDelete = null; // ID aguardando confirmação de exclusão
+var sharedWithMe = [];     // repertórios compartilhados comigo
+var sharesByMe = {};       // { rep_id: [share, ...] } — meus shares ativos
+var currentSharedId = null;// ID do share atualmente aberto (compartilhado comigo)
+var _shareTargetRepId = null; // rep sendo compartilhado no diálogo
 var _isSaving = false;     // impede múltiplos saves simultâneos
 var presenterSongs = [];   // cifras carregadas no modo apresentação
 var presenterIdx = 0;
@@ -6702,6 +6958,12 @@ async function loadSavedReps() {
 }
 
 var _REP_LIMIT = 5;
+var _openDropdownId = null; // ID do rep com dropdown aberto
+
+function _closeAllDropdowns() {
+  document.querySelectorAll(".sri-dropdown.open").forEach(function(d) { d.classList.remove("open"); });
+  _openDropdownId = null;
+}
 
 function renderSavedReps() {
   var list = document.getElementById("saved-reps-list");
@@ -6728,6 +6990,8 @@ function renderSavedReps() {
     var rep = savedReps[id];
     var item = document.createElement("div");
     var count = (rep.songs || []).length;
+    // Tag "Compartilhado" se há shares ativos para este rep
+    var isShared = !!(sharesByMe[id] && sharesByMe[id].length);
 
     if (_pendingDelete === id) {
       // Estado de confirmação inline (sem confirm() nativo)
@@ -6761,22 +7025,57 @@ function renderSavedReps() {
         '</div>' +
         '<div class="sri-info">' +
           '<span class="sri-name">' + escHtml(rep.name) + '</span>' +
-          '<span class="sri-count">' + count + ' m&#250;sicas</span>' +
+          '<span class="sri-count">' + count + ' m&#250;sica' + (count !== 1 ? 's' : '') + '</span>' +
         '</div>' +
-        '<button class="sri-play" title="Apresentar &#9654;">&#9654;</button>' +
-        '<button class="sri-del" title="Excluir">&#10005;</button>';
+        (isShared ? '<span class="sri-shared-tag">Compartilhado</span>' : '') +
+        '<button class="sri-play" title="Apresentar">&#9654;</button>' +
+        '<div class="sri-menu-wrap">' +
+          '<button class="sri-menu-btn" title="Opções">&#8943;</button>' +
+          '<div class="sri-dropdown">' +
+            '<button class="sri-dd-btn sri-dd-share"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg> Compartilhar</button>' +
+            (isShared ? '<button class="sri-dd-btn sri-dd-manage-shares"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> Gerenciar</button>' : '') +
+            '<button class="sri-dd-btn sri-dd-del danger"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg> Excluir</button>' +
+          '</div>' +
+        '</div>';
+
       item.addEventListener("click", function(e) {
-        if (e.target.classList.contains("sri-del")) return;
+        if (e.target.closest(".sri-menu-wrap")) return;
         if (e.target.classList.contains("sri-play")) return;
         _pendingDelete = null;
+        _closeAllDropdowns();
         openSavedRep(id);
       });
       item.querySelector(".sri-play").addEventListener("click", function(e) {
         e.stopPropagation();
+        _closeAllDropdowns();
         openPresenter(id);
       });
-      item.querySelector(".sri-del").addEventListener("click", function(e) {
+      item.querySelector(".sri-menu-btn").addEventListener("click", function(e) {
         e.stopPropagation();
+        var dropdown = item.querySelector(".sri-dropdown");
+        var isOpen = dropdown.classList.contains("open");
+        _closeAllDropdowns();
+        if (!isOpen) {
+          dropdown.classList.add("open");
+          _openDropdownId = id;
+        }
+      });
+      item.querySelector(".sri-dd-share").addEventListener("click", function(e) {
+        e.stopPropagation();
+        _closeAllDropdowns();
+        openShareDialog(id);
+      });
+      var manageBtn = item.querySelector(".sri-dd-manage-shares");
+      if (manageBtn) {
+        manageBtn.addEventListener("click", function(e) {
+          e.stopPropagation();
+          _closeAllDropdowns();
+          openManageSharesDialog(id);
+        });
+      }
+      item.querySelector(".sri-dd-del").addEventListener("click", function(e) {
+        e.stopPropagation();
+        _closeAllDropdowns();
         _pendingDelete = id;
         renderSavedReps();
       });
@@ -6795,13 +7094,331 @@ function openSavedRep(id) {
   var rep = savedReps[id];
   if (!rep) return;
   currentRepId = id;
+  currentSharedId = null;
   repertorio = (rep.songs || []).slice();
   document.getElementById("rep-title-input").value = rep.name;
   renderRepList();
   updateRepBadge();
   refreshGridBtns();
   _markActiveSavedRep();
+  _markActiveSharedRep();
   showToast(rep.name + " aberto.");
+}
+
+// ─── Compartilhamento ──────────────────────────────────────────────────────
+
+async function loadSharedWithMe() {
+  try {
+    var r = await fetch("/api/shared-with-me");
+    if (r.status === 401) return;
+    if (!r.ok) return;
+    sharedWithMe = await r.json();
+    renderSharedWithMe();
+    _updateNotifBadge();
+  } catch(e) { /* silencia */ }
+}
+
+async function loadSharesByMe() {
+  try {
+    var r = await fetch("/api/shares-by-me");
+    if (r.status === 401) return;
+    if (!r.ok) return;
+    var list = await r.json();
+    sharesByMe = {};
+    list.forEach(function(s) {
+      var key = s.rep_id;
+      if (!sharesByMe[key]) sharesByMe[key] = [];
+      sharesByMe[key].push(s);
+    });
+    renderSavedReps(); // re-render com tags "Compartilhado"
+  } catch(e) { /* silencia */ }
+}
+
+function _updateNotifBadge() {
+  var btn = document.getElementById("btn-notif");
+  var badge = document.getElementById("notif-badge");
+  if (!btn || !badge) return;
+  var userEmail = (document.body.dataset.userEmail || "").toLowerCase();
+  var unseen = sharedWithMe.filter(function(s) {
+    return !(s.seen_by || []).map(function(e){ return e.toLowerCase(); }).includes(userEmail);
+  }).length;
+  if (unseen > 0) {
+    badge.textContent = unseen > 9 ? "9+" : String(unseen);
+    badge.style.display = "flex";
+    btn.classList.add("has-notif");
+  } else {
+    badge.style.display = "none";
+    btn.classList.remove("has-notif");
+  }
+}
+
+function renderSharedWithMe() {
+  var section = document.getElementById("shared-reps-section");
+  var list = document.getElementById("shared-reps-list");
+  if (!section || !list) return;
+  list.innerHTML = "";
+  if (!sharedWithMe.length) {
+    section.style.display = "none";
+    return;
+  }
+  section.style.display = "flex";
+  var userEmail = (document.body.dataset.userEmail || "").toLowerCase();
+  sharedWithMe.forEach(function(share) {
+    var item = document.createElement("div");
+    var count = (share.songs || []).length;
+    var isSeen = (share.seen_by || []).map(function(e){ return e.toLowerCase(); }).includes(userEmail);
+    var isActive = share.id === currentSharedId;
+    item.className = "shared-rep-item" + (isActive ? " active" : "");
+    item.dataset.shareId = share.id;
+    var fromLabel = escHtml(share.from_name || share.from_email || "Alguém");
+    item.innerHTML =
+      '<div class="sri2-icon">' +
+        '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#b8961f" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">' +
+          '<circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>' +
+          '<line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>' +
+        '</svg>' +
+      '</div>' +
+      '<div class="sri2-info">' +
+        '<span class="sri2-name">' + escHtml(share.rep_name) + '</span>' +
+        '<span class="sri2-from">De: ' + fromLabel + ' &bull; ' + count + ' m&#250;sica' + (count !== 1 ? 's' : '') + '</span>' +
+      '</div>' +
+      (!isSeen ? '<span class="sri2-new">Novo</span>' : '') +
+      '<button class="sri2-play" title="Apresentar">&#9654;</button>' +
+      '<button class="sri2-dismiss" title="Remover">&#10005;</button>';
+
+    item.addEventListener("click", function(e) {
+      if (e.target.classList.contains("sri2-dismiss")) return;
+      if (e.target.classList.contains("sri2-play")) return;
+      openSharedRep(share.id);
+    });
+    item.querySelector(".sri2-play").addEventListener("click", function(e) {
+      e.stopPropagation();
+      openSharedRepPresenter(share.id);
+    });
+    item.querySelector(".sri2-dismiss").addEventListener("click", function(e) {
+      e.stopPropagation();
+      doDismissShare(share.id);
+    });
+    list.appendChild(item);
+  });
+}
+
+function openSharedRep(shareId) {
+  var share = sharedWithMe.find(function(s){ return s.id === shareId; });
+  if (!share) return;
+  currentSharedId = shareId;
+  currentRepId = null;
+  repertorio = (share.songs || []).slice();
+  document.getElementById("rep-title-input").value = share.rep_name;
+  renderRepList();
+  updateRepBadge();
+  refreshGridBtns();
+  _markActiveSavedRep();
+  _markActiveSharedRep();
+  showToast(share.rep_name + " aberto.");
+  // Marcar como visto no servidor (background)
+  fetch("/api/share/" + encodeURIComponent(shareId) + "/seen", { method: "POST" }).then(function() {
+    // Atualiza cache local
+    var s = sharedWithMe.find(function(x){ return x.id === shareId; });
+    if (s) {
+      var email = (document.body.dataset.userEmail || "").toLowerCase();
+      if (!s.seen_by) s.seen_by = [];
+      if (!s.seen_by.map(function(e){return e.toLowerCase();}).includes(email)) s.seen_by.push(email);
+    }
+    renderSharedWithMe();
+    _updateNotifBadge();
+  }).catch(function(){});
+}
+
+function _markActiveSharedRep() {
+  document.querySelectorAll(".shared-rep-item[data-share-id]").forEach(function(item) {
+    item.classList.toggle("active", item.dataset.shareId === currentSharedId);
+  });
+}
+
+async function openSharedRepPresenter(shareId) {
+  var share = sharedWithMe.find(function(s){ return s.id === shareId; });
+  if (!share || !(share.songs || []).length) { showToast("Repertório vazio."); return; }
+  // Insere temporariamente no cache para reutilizar openPresenter, remove logo após
+  savedReps["__tmp_shared__"] = { id: "__tmp_shared__", name: share.rep_name, songs: share.songs };
+  var p = openPresenter("__tmp_shared__");
+  // Remove entrada temporária (ref a rep.songs já foi capturado dentro de openPresenter)
+  delete savedReps["__tmp_shared__"];
+  return p;
+}
+
+async function doDismissShare(shareId) {
+  try {
+    var r = await fetch("/api/share/" + encodeURIComponent(shareId) + "/dismiss", { method: "POST" });
+    if (!r.ok) { showToast("Erro ao remover."); return; }
+    sharedWithMe = sharedWithMe.filter(function(s){ return s.id !== shareId; });
+    if (currentSharedId === shareId) {
+      currentSharedId = null;
+      repertorio = [];
+      document.getElementById("rep-title-input").value = "";
+      renderRepList();
+      updateRepBadge();
+    }
+    renderSharedWithMe();
+    _updateNotifBadge();
+    showToast("Repertório removido da lista.");
+  } catch(e) { showToast("Erro: " + e.message); }
+}
+
+// ─── Share dialog ────────────────────────────────────────────────────────────
+
+function openShareDialog(repId) {
+  _shareTargetRepId = repId;
+  var rep = savedReps[repId];
+  var desc = document.getElementById("share-dialog-desc");
+  if (desc && rep) desc.innerHTML = 'Digite o e-mail Google do colaborador para compartilhar <strong>' + escHtml(rep.name) + '</strong>.';
+  var inp = document.getElementById("share-email-input");
+  if (inp) { inp.value = ""; inp.focus(); }
+  var err = document.getElementById("share-dialog-error");
+  if (err) err.textContent = "";
+  document.getElementById("share-dialog-overlay").classList.add("open");
+}
+
+function closeShareDialog() {
+  document.getElementById("share-dialog-overlay").classList.remove("open");
+  _shareTargetRepId = null;
+}
+
+function openManageSharesDialog(repId) {
+  var rep = savedReps[repId];
+  var titleEl = document.getElementById("manage-shares-title");
+  var listEl = document.getElementById("manage-shares-list");
+  var emptyEl = document.getElementById("manage-shares-empty");
+  if (titleEl && rep) titleEl.textContent = '"' + rep.name + '"';
+  listEl.innerHTML = "";
+  var shares = sharesByMe[repId] || [];
+  if (!shares.length) {
+    emptyEl.style.display = "block";
+  } else {
+    emptyEl.style.display = "none";
+    shares.forEach(function(share) {
+      var item = document.createElement("div");
+      item.className = "msl-item";
+      item.innerHTML =
+        '<span class="msl-email">' + escHtml(share.to_email) + '</span>' +
+        '<button class="msl-unshare">Remover</button>';
+      item.querySelector(".msl-unshare").addEventListener("click", function() {
+        doUnshare(share.id, repId, share.to_email);
+      });
+      listEl.appendChild(item);
+    });
+  }
+  var overlay = document.getElementById("manage-shares-overlay");
+  overlay.style.display = "flex";
+}
+
+function closeManageSharesDialog() {
+  document.getElementById("manage-shares-overlay").style.display = "none";
+}
+
+async function doUnshare(shareId, repId, toEmail) {
+  try {
+    var r = await fetch("/api/share/" + encodeURIComponent(shareId), { method: "DELETE" });
+    if (!r.ok) { showToast("Erro ao remover compartilhamento."); return; }
+    // Atualiza cache local
+    if (sharesByMe[repId]) {
+      sharesByMe[repId] = sharesByMe[repId].filter(function(s){ return s.id !== shareId; });
+      if (!sharesByMe[repId].length) delete sharesByMe[repId];
+    }
+    showToast("Compartilhamento com " + toEmail + " removido.");
+    // Re-abre o diálogo atualizado
+    if (!sharesByMe[repId] || !sharesByMe[repId].length) {
+      closeManageSharesDialog();
+    } else {
+      openManageSharesDialog(repId);
+    }
+    renderSavedReps(); // atualiza tag "Compartilhado"
+  } catch(e) { showToast("Erro: " + e.message); }
+}
+
+async function doShareRep() {
+  var email = (document.getElementById("share-email-input").value || "").trim().toLowerCase();
+  var err = document.getElementById("share-dialog-error");
+  var btn = document.getElementById("btn-share-confirm");
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    err.textContent = "Digite um e-mail válido.";
+    return;
+  }
+  err.textContent = "";
+  btn.disabled = true;
+  btn.textContent = "Compartilhando...";
+  try {
+    var r = await fetch("/api/share-rep", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ rep_id: _shareTargetRepId, to_email: email })
+    });
+    var data = await r.json();
+    if (!r.ok) { err.textContent = data.error || "Erro ao compartilhar."; return; }
+    showToast("Compartilhado com " + email + "!");
+    closeShareDialog();
+    loadSharesByMe(); // atualiza tag "Compartilhado"
+  } catch(e) {
+    err.textContent = "Erro: " + e.message;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Compartilhar";
+  }
+}
+
+// ─── Notif panel ─────────────────────────────────────────────────────────────
+
+function toggleNotifPanel() {
+  var panel = document.getElementById("notif-panel");
+  var isOpen = panel.classList.contains("open");
+  if (isOpen) {
+    panel.classList.remove("open");
+    return;
+  }
+  renderNotifPanel();
+  panel.classList.add("open");
+}
+
+function renderNotifPanel() {
+  var listEl = document.getElementById("notif-list");
+  var emptyEl = document.getElementById("notif-empty");
+  listEl.innerHTML = "";
+  if (!sharedWithMe.length) {
+    emptyEl.style.display = "block";
+    return;
+  }
+  emptyEl.style.display = "none";
+  var userEmail = (document.body.dataset.userEmail || "").toLowerCase();
+  sharedWithMe.forEach(function(share) {
+    var item = document.createElement("div");
+    var isSeen = (share.seen_by || []).map(function(e){ return e.toLowerCase(); }).includes(userEmail);
+    item.className = "notif-item" + (isSeen ? " seen" : "");
+    var fromLabel = escHtml(share.from_name || share.from_email || "Alguém");
+    var dt = share.shared_at ? new Date(share.shared_at + "Z").toLocaleDateString("pt-BR") : "";
+    item.innerHTML =
+      '<div class="notif-avatar">' +
+        (share.from_picture
+          ? '<img src="' + escHtml(share.from_picture) + '" referrerpolicy="no-referrer" alt="">'
+          : '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5b4b8a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="7" r="4"/><path d="M20 21a8 8 0 1 0-16 0"/></svg>') +
+      '</div>' +
+      '<div class="notif-body">' +
+        '<strong>' + fromLabel + '</strong>' +
+        '<p>Compartilhou <em>' + escHtml(share.rep_name) + '</em> com voc\xea</p>' +
+        (dt ? '<div class="notif-time">' + dt + '</div>' : '') +
+      '</div>' +
+      (!isSeen ? '<div class="notif-dot"></div>' : '');
+    item.addEventListener("click", function() {
+      document.getElementById("notif-panel").classList.remove("open");
+      // Abre o painel de repertório e o share
+      if (!repOpen) {
+        var mbnRep = document.getElementById("mbn-rep");
+        if (mbnRep) mbnRep.click();
+        else toggleRepPanel();
+      }
+      setTimeout(function() { openSharedRep(share.id); }, 120);
+    });
+    listEl.appendChild(item);
+  });
 }
 
 function newRep() {
@@ -7660,6 +8277,43 @@ function init() {
     showToast("Exportação cancelada.");
   });
   loadSavedReps();
+  loadSharedWithMe();
+  loadSharesByMe();
+
+  // ─── Bell / notificações ───────────────────────────────────────────────────
+  var _btnNotif = document.getElementById("btn-notif");
+  if (_btnNotif) {
+    _btnNotif.addEventListener("click", function(e) {
+      e.stopPropagation();
+      toggleNotifPanel();
+    });
+  }
+
+  // ─── Share dialog ──────────────────────────────────────────────────────────
+  document.getElementById("btn-share-cancel").addEventListener("click", closeShareDialog);
+  document.getElementById("btn-share-confirm").addEventListener("click", doShareRep);
+  document.getElementById("share-dialog-overlay").addEventListener("click", function(e) {
+    if (e.target === this) closeShareDialog();
+  });
+  document.getElementById("share-email-input").addEventListener("keydown", function(e) {
+    if (e.key === "Enter") doShareRep();
+    if (e.key === "Escape") closeShareDialog();
+  });
+
+  // ─── Manage shares dialog ──────────────────────────────────────────────────
+  document.getElementById("btn-manage-shares-close").addEventListener("click", closeManageSharesDialog);
+  document.getElementById("manage-shares-overlay").addEventListener("click", function(e) {
+    if (e.target === this) closeManageSharesDialog();
+  });
+
+  // ─── Fechar dropdowns e notif panel ao clicar fora ────────────────────────
+  document.addEventListener("click", function(e) {
+    if (!e.target.closest(".sri-menu-wrap")) _closeAllDropdowns();
+    if (!e.target.closest("#notif-panel") && !e.target.closest("#btn-notif")) {
+      var panel = document.getElementById("notif-panel");
+      if (panel) panel.classList.remove("open");
+    }
+  });
 
   // ─── Liturgia do Dia ─────────────────────────────────────────────────────
   document.getElementById("lit-prev").addEventListener("click", function() {

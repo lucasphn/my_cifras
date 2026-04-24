@@ -405,6 +405,183 @@ def api_reps_delete(rep_id):
 
 
 # ---------------------------------------------------------------------------
+# Compartilhamento de repertórios
+# ---------------------------------------------------------------------------
+
+SHARES_LOCAL = Path(__file__).parent / "_shares.json"
+_shares_lock = threading.Lock()
+_shares_drive_file_id: str | None = None  # cache do file_id no Drive
+
+
+def _load_shares_raw():
+    """Lê o registro central de shares. Tenta Drive (CIFRAS_FOLDER_ID), cai em arquivo local."""
+    global _shares_drive_file_id
+    if _use_drive() and CIFRAS_FOLDER_ID:
+        try:
+            import drive as drv
+            svc = get_service()
+            data, fid = drv.load_shares(svc, CIFRAS_FOLDER_ID)
+            _shares_drive_file_id = fid
+            return data
+        except Exception:
+            pass
+    try:
+        return json.loads(SHARES_LOCAL.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+
+
+def _save_shares_raw(data):
+    """Persiste o registro de shares. Tenta Drive, cai em arquivo local."""
+    global _shares_drive_file_id
+    if _use_drive() and CIFRAS_FOLDER_ID:
+        try:
+            import drive as drv
+            svc = get_service()
+            if not _shares_drive_file_id:
+                _, _shares_drive_file_id = drv.load_shares(svc, CIFRAS_FOLDER_ID)
+            drv.save_shares(svc, _shares_drive_file_id, data)
+            return
+        except Exception:
+            pass
+    SHARES_LOCAL.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+@app.route("/api/share-rep", methods=["POST"])
+@login_required
+def api_share_rep():
+    from datetime import datetime
+    body = request.get_json(force=True)
+    rep_id = (body.get("rep_id") or "").strip()
+    to_email = (body.get("to_email") or "").strip().lower()
+    if not rep_id or not to_email:
+        return jsonify({"error": "rep_id e to_email são obrigatórios"}), 400
+    reps = _load_reps()
+    rep = reps.get(rep_id)
+    if not rep:
+        return jsonify({"error": "Repertório não encontrado"}), 404
+    me = current_user()
+    my_email = me.get("email", "").lower()
+    if to_email == my_email:
+        return jsonify({"error": "Você não pode compartilhar com você mesmo"}), 400
+    with _shares_lock:
+        shares = _load_shares_raw()
+        for s in shares.values():
+            if (s.get("rep_id") == rep_id
+                    and s.get("from_email", "").lower() == my_email
+                    and s.get("to_email", "").lower() == to_email):
+                return jsonify({"error": "Já compartilhado com este usuário"}), 400
+        share_id = "shr_" + os.urandom(6).hex()
+        share = {
+            "id": share_id,
+            "rep_id": rep_id,
+            "rep_name": rep["name"],
+            "songs": rep.get("songs", []),
+            "from_email": my_email,
+            "from_name": me.get("name", my_email),
+            "from_picture": me.get("picture", ""),
+            "to_email": to_email,
+            "shared_at": datetime.utcnow().isoformat(),
+            "seen_by": [],
+            "dismissed_by": [],
+        }
+        shares[share_id] = share
+        _save_shares_raw(shares)
+    return jsonify(share), 201
+
+
+@app.route("/api/shares-by-me", methods=["GET"])
+@login_required
+def api_shares_by_me():
+    my_email = current_user().get("email", "").lower()
+    shares = _load_shares_raw()
+    result = [s for s in shares.values() if s.get("from_email", "").lower() == my_email]
+    return jsonify(result)
+
+
+@app.route("/api/shared-with-me", methods=["GET"])
+@login_required
+def api_shared_with_me():
+    my_email = current_user().get("email", "").lower()
+    shares = _load_shares_raw()
+    result = []
+    for s in shares.values():
+        if s.get("to_email", "").lower() != my_email:
+            continue
+        if my_email in [e.lower() for e in s.get("dismissed_by", [])]:
+            continue
+        result.append(s)
+    result.sort(key=lambda x: x.get("shared_at", ""), reverse=True)
+    return jsonify(result)
+
+
+@app.route("/api/share/<share_id>", methods=["DELETE"])
+@login_required
+def api_unshare(share_id):
+    my_email = current_user().get("email", "").lower()
+    with _shares_lock:
+        shares = _load_shares_raw()
+        s = shares.get(share_id)
+        if not s:
+            return jsonify({"error": "Não encontrado"}), 404
+        if s.get("from_email", "").lower() != my_email:
+            return jsonify({"error": "Permissão negada"}), 403
+        del shares[share_id]
+        _save_shares_raw(shares)
+    return jsonify({"ok": True})
+
+
+@app.route("/api/share/<share_id>/dismiss", methods=["POST"])
+@login_required
+def api_dismiss_share(share_id):
+    my_email = current_user().get("email", "").lower()
+    with _shares_lock:
+        shares = _load_shares_raw()
+        s = shares.get(share_id)
+        if not s:
+            return jsonify({"error": "Não encontrado"}), 404
+        if s.get("to_email", "").lower() != my_email:
+            return jsonify({"error": "Permissão negada"}), 403
+        dismissed = [e.lower() for e in s.get("dismissed_by", [])]
+        if my_email not in dismissed:
+            s.setdefault("dismissed_by", []).append(my_email)
+        _save_shares_raw(shares)
+    return jsonify({"ok": True})
+
+
+@app.route("/api/share/<share_id>/seen", methods=["POST"])
+@login_required
+def api_mark_share_seen(share_id):
+    my_email = current_user().get("email", "").lower()
+    with _shares_lock:
+        shares = _load_shares_raw()
+        s = shares.get(share_id)
+        if not s:
+            return jsonify({"error": "Não encontrado"}), 404
+        if s.get("to_email", "").lower() != my_email:
+            return jsonify({"error": "Permissão negada"}), 403
+        seen = [e.lower() for e in s.get("seen_by", [])]
+        if my_email not in seen:
+            s.setdefault("seen_by", []).append(my_email)
+        _save_shares_raw(shares)
+    return jsonify({"ok": True})
+
+
+@app.route("/api/notifications/count", methods=["GET"])
+@login_required
+def api_notif_count():
+    my_email = current_user().get("email", "").lower()
+    shares = _load_shares_raw()
+    count = sum(
+        1 for s in shares.values()
+        if s.get("to_email", "").lower() == my_email
+        and my_email not in [e.lower() for e in s.get("seen_by", [])]
+        and my_email not in [e.lower() for e in s.get("dismissed_by", [])]
+    )
+    return jsonify({"count": count})
+
+
+# ---------------------------------------------------------------------------
 # Views tracking (persistido em views.json com lock para concorrência)
 # ---------------------------------------------------------------------------
 

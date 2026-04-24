@@ -167,6 +167,30 @@ def save_preferences(service, file_id, data):
     service.files().update(fileId=file_id, media_body=media).execute()
 
 
+# ─── Compartilhamento de repertórios ────────────────────────────────────────
+
+SHARES_FILENAME = "_shares.json"
+
+def load_shares(service, root_folder_id):
+    """Carrega dict de shares do Drive. Retorna (data, file_id)."""
+    import json
+    file_id = _get_or_create_json_file(service, SHARES_FILENAME, root_folder_id)
+    try:
+        content = download_bytes(service, file_id)
+        return json.loads(content.decode("utf-8") or "{}"), file_id
+    except Exception:
+        return {}, file_id
+
+
+def save_shares(service, file_id, data):
+    """Salva dict de shares no Drive."""
+    import json
+    from googleapiclient.http import MediaIoBaseUpload
+    content = json.dumps(data, ensure_ascii=False, indent=2).encode("utf-8")
+    media = MediaIoBaseUpload(io.BytesIO(content), mimetype="application/json")
+    service.files().update(fileId=file_id, media_body=media).execute()
+
+
 # ─── Upload ──────────────────────────────────────────────────────────────────
 
 def update_md_content(service, file_id, content):
