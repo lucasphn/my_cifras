@@ -3133,8 +3133,11 @@ body.android #presenter-cifra .chord-line {
 #btn-cat-more.expanded { color: var(--primary); border-color: var(--primary); background: var(--primary-light); }
 #home-cat-inline { margin-top: 14px; }
 #home-cat-inline-grid {
-  display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 10px;
+  display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px;
 }
+@media (max-width: 1400px) { #home-cat-inline-grid { grid-template-columns: repeat(4, 1fr); } }
+@media (max-width: 900px)  { #home-cat-inline-grid { grid-template-columns: repeat(3, 1fr); } }
+@media (max-width: 600px)  { #home-cat-inline-grid { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 1024px) {
   #home-cat-chips-row { overflow: hidden; }
   #home-cat-chips {
@@ -4298,6 +4301,50 @@ function _makeHomeCard(song, cls) {
   return card;
 }
 
+// Card no estilo de referência (ícone + nome + tags + botão rep) para seção "Explorar por categoria"
+function _makeCatExploreCard(song) {
+  var inRep = repertorio.some(function(r) { return (r.fileId || r.path) === (song.fileId || song.path); });
+  var catLabel = cleanLabel(song.category === "_raiz" ? song.section : (song.category || song.section));
+  var keyDisplay = (song.fileId && _myTones[song.fileId] && _myTones[song.fileId].my_key) || song.key || "";
+
+  var card = document.createElement("div");
+  card.className = "home-top-card-wrap";
+  card.dataset.songPath = song.path || "";
+  card.dataset.songFileId = song.fileId || "";
+
+  card.innerHTML =
+    '<div class="home-top-icon-wrap">' +
+      '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">' +
+        '<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>' +
+      '</svg>' +
+    '</div>' +
+    '<div class="home-card-name">' + escHtml(song.name) + '</div>' +
+    '<div class="home-top-foot">' +
+      '<span class="hc-cat">' + escHtml(catLabel) + '</span>' +
+      (keyDisplay ? '<span class="hc-key">' + escHtml(keyDisplay) + '</span>' : '') +
+    '</div>' +
+    '<div class="home-card-actions">' +
+      '<button class="btn-hc-add' + (inRep ? ' added' : '') + '">' + (inRep ? '✓ Adicionado' : '+ Repertório') + '</button>' +
+    '</div>';
+
+  card.querySelector(".btn-hc-add").addEventListener("click", async function(e) {
+    e.stopPropagation();
+    var btn = this;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="loading-spinner" style="width:10px;height:10px;border-width:2px;vertical-align:middle;margin-right:4px;display:inline-block;"></span>Adicionando...';
+    await toggleRepertorio(song, btn);
+    btn.disabled = false;
+    var nowIn = repertorio.some(function(r) { return (r.fileId || r.path) === (song.fileId || song.path); });
+    btn.classList.toggle("added", nowIn);
+    btn.textContent = nowIn ? "✓ Adicionado" : "+ Repertório";
+  });
+
+  card.addEventListener("click", function(e) {
+    openModal(song);
+  });
+  return card;
+}
+
 function renderHomeTable(songs) {
   var wrap = document.getElementById("home-table-wrap");
   if (!songs.length) { wrap.style.display = "none"; return; }
@@ -4393,8 +4440,7 @@ function renderHomeTable(songs) {
             var grid = document.createElement("div");
             grid.id = "home-cat-inline-grid";
             songs.forEach(function(song) {
-              var card = _makeHomeCard(song, "home-card");
-              card.addEventListener("click", function() { openModal(song); });
+              var card = _makeCatExploreCard(song);
               grid.appendChild(card);
             });
             inlineEl.appendChild(grid);
