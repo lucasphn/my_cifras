@@ -1173,69 +1173,76 @@ button, a, .song-card, .home-card, .home-top-card, .sidebar-cat,
 /* ─── Repertório (painel direito) ────────────────────────────────────────── */
 #rep-panel {
   width: var(--rep-w);
-  background: #f7f6fb;
+  background: var(--bg);
   border-left: 1px solid var(--border);
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
   box-shadow: -4px 0 16px rgba(91,75,138,.06);
+  overflow-y: auto;
+  overflow-x: hidden;
 }
+
+/* ─── "Em montagem" draft section ───────────────────────────────────────── */
+#rep-draft-outer { padding: 12px 12px 0; flex-shrink: 0; }
+
+#rep-draft-toprow {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 10px;
+}
+.rep-em-montagem { display: flex; align-items: center; gap: 7px; }
+.rep-em-dot {
+  width: 8px; height: 8px; border-radius: 99px;
+  background: var(--accent);
+  box-shadow: 0 0 0 3px rgba(212,175,55,.22);
+  flex-shrink: 0;
+}
+.rep-em-label {
+  font-size: 10.5px; font-weight: 800; letter-spacing: 1.4px;
+  text-transform: uppercase; color: var(--text-muted);
+}
+#rep-count { font-size: 0.75em; color: var(--text-muted); font-weight: 600; }
+
+/* Draft card */
 #rep-header {
-  padding: 14px 14px 10px;
-  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  border: 1.5px solid var(--primary);
+  border-radius: 14px;
+  padding: 10px;
+  box-shadow: 0 4px 16px rgba(91,75,138,.12);
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  flex-shrink: 0;
-  background: var(--surface);
+  gap: 0;
 }
 #rep-title-wrap {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  background: var(--bg);
-  border: 1.5px solid var(--border);
-  border-radius: 10px;
-  padding: 7px 11px;
+  display: flex; align-items: center; gap: 6px;
+  background: var(--bg); border: 1.5px solid var(--border);
+  border-radius: 10px; padding: 8px 12px; margin-bottom: 6px;
   transition: border-color .18s, box-shadow .18s;
 }
 #rep-title-wrap:focus-within {
   border-color: var(--primary);
   box-shadow: 0 0 0 3px rgba(91,75,138,.12);
 }
-#rep-title-wrap .rep-title-icon { font-size: 0.9em; color: var(--primary); flex-shrink: 0; }
+#rep-title-wrap .rep-title-icon { display: none; }
 #rep-title-input {
-  flex: 1;
-  background: transparent;
-  border: none;
-  color: var(--text);
-  font-weight: 700;
-  font-size: 0.92em;
-  outline: none;
-  min-width: 0;
+  flex: 1; background: transparent; border: none;
+  color: var(--text); font-weight: 700; font-size: 0.92em;
+  outline: none; min-width: 0;
 }
 #rep-title-input::placeholder { color: var(--text-muted); font-weight: 400; }
-#rep-meta-row { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
-#rep-count { font-size: 0.75em; color: var(--text-muted); font-weight: 600; }
-#rep-list {
-  flex: 1;
-  overflow-y: auto;
-  padding: 8px 6px;
-}
+#rep-meta-row { display: none; }
+
+#rep-list { padding: 2px 0; }
 .rep-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 9px 10px;
-  cursor: grab;
-  transition: background .15s;
-  user-select: none;
-  border-radius: 10px;
-  margin: 3px 0;
-  background: var(--surface);
-  border: 1px solid var(--border);
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 6px; cursor: grab; transition: background .15s;
+  user-select: none; border-radius: 8px; margin: 1px 0;
+  background: transparent; border: none;
+  border-bottom: 1px solid var(--border);
 }
-.rep-item:hover { background: #faf9fd; border-color: rgba(91,75,138,.2); }
+.rep-item:last-child { border-bottom: none; }
+.rep-item:hover { background: rgba(91,75,138,.04); }
 .rep-item.dragging { opacity: 0.5; }
 .rep-item.drag-over { border-top: 2px solid var(--primary); }
 .rep-item .drag-handle { color: #ccc; font-size: 0.85em; cursor: grab; flex-shrink: 0; }
@@ -1260,67 +1267,63 @@ button, a, .song-card, .home-card, .home-top-card, .sidebar-cat,
   letter-spacing: 0.01em;
 }
 #rep-empty {
-  padding: 40px 16px;
-  text-align: center;
-  color: var(--text-muted);
-  font-size: 0.88em;
-  line-height: 1.6;
+  padding: 20px 8px; text-align: center;
+  color: var(--text-muted); font-size: 0.85em; line-height: 1.6;
 }
 #rep-footer {
-  padding: 10px 12px;
-  border-top: 1px solid var(--border);
-  display: flex;
-  gap: 8px;
-  flex-shrink: 0;
-  background: var(--surface);
+  display: flex; gap: 6px; padding: 8px 0 0;
+  border-top: 1px solid var(--border); margin-top: 6px;
 }
-#rep-footer .btn { flex: 1; text-align: center; font-size: 0.85em; justify-content: center; }
+#btn-rep-save {
+  flex: 1; background: var(--primary); color: #fff; border: none;
+  border-radius: 99px; padding: 9px 12px; font-size: 0.82em;
+  font-weight: 800; display: flex; align-items: center;
+  justify-content: center; gap: 5px;
+  box-shadow: 0 2px 8px rgba(91,75,138,.28);
+}
+#btn-rep-save:hover { background: var(--primary-hover); }
+#btn-rep-clear {
+  background: transparent; color: var(--text-muted);
+  border: 1.5px solid var(--border); border-radius: 99px;
+  padding: 9px 13px; font-size: 0.82em; font-weight: 600;
+}
+#btn-rep-clear:hover { background: var(--surface2); }
+
+/* Export row (doc + pdf) */
+#rep-export-row {
+  display: flex; gap: 8px; padding: 8px 0 12px;
+}
+#rep-export-row .btn { flex: 1; font-size: 0.82em; justify-content: center; }
 
 /* ─── Saved Repertórios ──────────────────────────────────────────────────── */
 #saved-reps-section {
-  border-bottom: 2px solid var(--border);
+  border-top: 1px solid var(--border);
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
-  max-height: 220px;
+  padding: 0 12px 16px;
 }
 #saved-reps-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 10px 14px 8px;
-  flex-shrink: 0;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 0 8px; flex-shrink: 0;
 }
 #saved-reps-header .section-label {
-  font-size: 0.78em;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.07em;
-  color: var(--text-muted);
+  font-size: 10.5px; font-weight: 800; text-transform: uppercase;
+  letter-spacing: 1.4px; color: var(--text-muted);
 }
 .btn-sm {
-  font-size: 0.78em;
-  padding: 4px 10px;
-  border-radius: 7px;
-  border: 1.5px solid var(--border);
-  background: var(--surface);
-  color: var(--text);
-  font-weight: 600;
+  font-size: 0.78em; padding: 4px 10px; border-radius: 7px;
+  border: 1.5px solid var(--border); background: var(--surface);
+  color: var(--text); font-weight: 600;
   transition: background .15s, border-color .15s;
 }
 .btn-sm:hover { background: var(--surface2); border-color: #aab; }
 .btn-sm.btn-accent { background: var(--primary); border-color: var(--primary); color: #fff; }
 .btn-sm.btn-accent:hover { background: var(--primary-hover); border-color: var(--primary-hover); }
-#saved-reps-list {
-  overflow-y: auto;
-  flex: 1;
-  padding: 0 8px 6px;
-}
+#saved-reps-list { padding: 0; }
 #saved-reps-empty {
-  padding: 10px 14px 14px;
-  font-size: 0.82em;
-  color: var(--text-muted);
-  text-align: center;
+  padding: 10px 0 14px; font-size: 0.82em;
+  color: var(--text-muted); text-align: center;
 }
 .saved-rep-item {
   display: flex;
@@ -1390,13 +1393,8 @@ button, a, .song-card, .home-card, .home-top-card, .sidebar-cat,
 .sri-confirm-no { background: var(--surface); border-color: var(--border); color: var(--text); }
 .sri-confirm-no:hover { background: var(--surface2); }
 
-/* Active rep header shows save button */
-#rep-meta-row { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
-#btn-rep-save {
-  font-size: 0.75em;
-  padding: 3px 9px;
-  flex-shrink: 0;
-}
+/* Rep meta row hidden (count shown in draft header) */
+#rep-meta-row { display: none; }
 
 /* ─── Modal de cifra ─────────────────────────────────────────────────────── */
 #modal-overlay {
@@ -2352,28 +2350,39 @@ body.android #presenter-cifra .chord-line {
 /* ─── Bottom nav bar (mobile only) ─────────────────────────────────────── */
 #mobile-bottom-nav {
   display: none;
-  position: fixed; bottom: 0; left: 0; right: 0; z-index: 48;
-  background: var(--surface); border-top: 1px solid var(--border);
-  height: 64px; box-shadow: 0 -4px 20px rgba(91,75,138,.1);
-  padding-bottom: env(safe-area-inset-bottom, 0px);
+  position: fixed; left: 14px; right: 14px;
+  bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+  z-index: 48; background: transparent;
+  height: auto;
 }
 #mobile-bottom-nav .mbn-inner {
-  display: flex; width: 100%; height: 100%; align-items: stretch;
+  display: flex; width: 100%; align-items: center;
+  background: rgba(255,255,255,0.88);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border-radius: 99px; padding: 5px;
+  box-shadow: 0 8px 24px rgba(60,40,100,.18), 0 1px 3px rgba(60,40,100,.08);
+  border: 1px solid rgba(255,255,255,0.65);
 }
 .mbn-btn {
-  flex: 1; display: flex; flex-direction: column; align-items: center;
-  justify-content: center; gap: 2px; font-size: 0.58rem; font-weight: 600;
-  color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em;
-  transition: color .15s, background .15s; position: relative;
-  cursor: pointer; -webkit-tap-highlight-color: transparent;
-  touch-action: manipulation;
+  flex: 1; display: flex; align-items: center; justify-content: center;
+  gap: 6px; padding: 10px 8px; border-radius: 99px;
+  background: transparent; color: var(--text-muted);
+  border: none; cursor: pointer; position: relative;
+  transition: all .18s; -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation; font-size: 0.78rem; font-weight: 700;
 }
-.mbn-btn .mbn-icon { font-size: 1.35rem; line-height: 1; }
-.mbn-btn:active { background: var(--primary-light); color: var(--primary); }
-.mbn-btn.active { color: var(--primary); }
-.mbn-btn .mbn-badge {
-  position: absolute; top: 7px; right: calc(50% - 20px);
+.mbn-btn .mbn-icon { display: flex; align-items: center; line-height: 1; }
+.mbn-btn:active { background: var(--primary-light); }
+.mbn-btn.active {
   background: var(--primary); color: #fff;
+  flex: none; padding: 10px 20px;
+}
+.mbn-label { display: none; }
+.mbn-btn.active .mbn-label { display: inline; }
+.mbn-btn .mbn-badge {
+  position: absolute; top: 5px; right: 4px;
+  background: var(--accent); color: #1f1b2e;
   font-size: 0.65em; font-weight: 800; border-radius: 99px;
   min-width: 16px; height: 16px; display: none; align-items: center;
   justify-content: center; padding: 0 4px; line-height: 1;
@@ -2383,10 +2392,10 @@ body.android #presenter-cifra .chord-line {
 
 @media (max-width: 1024px) {
   html, body { overflow: auto; }
-  #app { height: auto; min-height: 100vh; padding-bottom: 64px; }
+  #app { height: auto; min-height: 100vh; padding-bottom: 90px; }
 
   /* Bottom nav visible */
-  #mobile-bottom-nav { display: flex; }
+  #mobile-bottom-nav { display: block; }
 
   /* Header mobile: single compact row — logo oculta, search ocupa tudo */
   #header { flex-wrap: nowrap; height: var(--header-h); padding: 0 8px; gap: 4px; }
@@ -2475,7 +2484,7 @@ body.android #presenter-cifra .chord-line {
 
   /* Painel repertório vira drawer inferior */
   #rep-panel {
-    position: fixed; bottom: 64px; left: 0; right: 0;
+    position: fixed; bottom: 88px; left: 0; right: 0;
     width: 100%; height: 75vh;
     border-left: none; border-top: none;
     border-radius: 22px 22px 0 0;
@@ -2695,40 +2704,11 @@ body.android #presenter-cifra .chord-line {
 /* ── Rep panel: playlist feel ─────────────────────────────────────────────── */
 #rep-panel { border-left-color: var(--border-subtle); }
 #btn-rep-close { display: none; }
-.rep-item {
-  border-color: transparent;
-  background: var(--surface);
-  border-radius: 10px;
-  margin: 2px 4px;
-  padding: 10px 10px;
-  transition: background var(--transition), box-shadow var(--transition),
-              transform var(--transition);
-}
-.rep-item:hover {
-  background: var(--surface-hover);
-  box-shadow: 0 2px 8px rgba(91,75,138,.08);
-  transform: translateX(2px);
-}
 .rep-item .rep-name { font-size: 0.87em; font-weight: 600; }
 .rep-item .drag-handle { color: rgba(91,75,138,.25); font-size: 0.9em; }
 .rep-item:hover .drag-handle { color: rgba(91,75,138,.5); }
 .rep-item .btn-remove { opacity: 0; transition: opacity var(--transition), color var(--transition); }
 .rep-item:hover .btn-remove { opacity: 1; }
-
-/* Empty state mais amigável */
-#rep-empty {
-  padding: 32px 16px;
-  font-size: 0.85em;
-  line-height: 1.7;
-  color: var(--text-muted);
-}
-#rep-empty::before {
-  content: "♪";
-  display: block;
-  font-size: 2em;
-  margin-bottom: 8px;
-  opacity: 0.35;
-}
 
 /* Saved reps: hover mais suave */
 .saved-rep-item {
@@ -2900,21 +2880,22 @@ body.android #presenter-cifra .chord-line {
 <nav id="mobile-bottom-nav" aria-label="Navegação">
   <div class="mbn-inner">
     <button class="mbn-btn active" id="mbn-home" title="Início">
-      <span class="mbn-icon">&#9836;</span>
-      <span>Início</span>
+      <span class="mbn-icon">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 3l9 8h-2v9h-5v-6h-4v6H5v-9H3l9-8z"/></svg>
+      </span>
+      <span class="mbn-label">Início</span>
     </button>
     <button class="mbn-btn" id="mbn-search" title="Pesquisar">
       <span class="mbn-icon">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <circle cx="10.5" cy="10.5" r="6.5"/>
-          <line x1="15.5" y1="15.5" x2="21" y2="21"/>
-        </svg>
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
       </span>
-      <span>Pesquisar</span>
+      <span class="mbn-label">Pesquisar</span>
     </button>
     <button class="mbn-btn" id="mbn-rep" title="Repertório">
-      <span class="mbn-icon">&#9835;</span>
-      <span>Repertório</span>
+      <span class="mbn-icon">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h12M4 12h12M4 18h8"/><path d="M18 14l5 4-5 4z" fill="currentColor"/></svg>
+      </span>
+      <span class="mbn-label">Repertório</span>
       <span class="mbn-badge" id="mbn-rep-badge"></span>
     </button>
   </div>
@@ -3068,33 +3049,46 @@ body.android #presenter-cifra .chord-line {
 
     <!-- Repertório -->
     <div id="rep-panel">
+      <!-- Draft "Em montagem" -->
+      <div id="rep-draft-outer">
+        <div id="rep-draft-toprow">
+          <div class="rep-em-montagem">
+            <span class="rep-em-dot"></span>
+            <span class="rep-em-label">Em montagem</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span id="rep-count">0 músicas</span>
+            <button id="btn-rep-close" title="Fechar">&#10005;</button>
+          </div>
+        </div>
+        <div id="rep-header">
+          <div id="rep-title-wrap">
+            <input type="text" id="rep-title-input" placeholder="Dê um nome ao repertório..." maxlength="60">
+          </div>
+          <div id="rep-meta-row"></div>
+          <div id="rep-list"></div>
+          <div id="rep-empty">Adicione músicas pelo<br>botão <b style="color:var(--primary)">+ Repertório</b> nos cards.</div>
+          <div id="rep-footer">
+            <button id="btn-rep-save" title="Salvar repertório">
+              <svg width="13" height="13" viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M11 4v14M4 11h14"/></svg>
+              Salvar repertório
+            </button>
+            <button id="btn-rep-clear">Limpar</button>
+          </div>
+        </div>
+        <div id="rep-export-row">
+          <button class="btn btn-accent" id="btn-rep-docx">&#128196; .doc</button>
+          <button class="btn btn-accent" id="btn-rep-pdf">&#128247; PDF</button>
+        </div>
+      </div>
       <!-- Saved repertórios list -->
       <div id="saved-reps-section">
         <div id="saved-reps-header">
-          <span class="section-label">Meus Repertórios</span>
+          <span class="section-label">Salvos</span>
           <button class="btn-sm" id="btn-rep-new">+ Novo</button>
-          <button id="btn-rep-close" title="Fechar">✕</button>
         </div>
         <div id="saved-reps-list"></div>
         <div id="saved-reps-empty">Nenhum repertório salvo.</div>
-      </div>
-      <!-- Active working rep -->
-      <div id="rep-header">
-        <div id="rep-title-wrap">
-          <span class="rep-title-icon">&#127926;</span>
-          <input type="text" id="rep-title-input" placeholder="Nome do repertório..." maxlength="60">
-        </div>
-        <div id="rep-meta-row">
-          <span id="rep-count">0 músicas</span>
-          <button class="btn-sm btn-accent" id="btn-rep-save" title="Salvar repertório">&#128190; Salvar</button>
-        </div>
-      </div>
-      <div id="rep-list"></div>
-      <div id="rep-empty">Adicione músicas pelo<br>botão "+ Repertório" nos cards.</div>
-      <div id="rep-footer">
-        <button class="btn" id="btn-rep-clear">Limpar</button>
-        <button class="btn btn-accent" id="btn-rep-docx">&#128196; .doc</button>
-        <button class="btn btn-accent" id="btn-rep-pdf">&#128247; PDF</button>
       </div>
     </div>
   </div>
@@ -6131,7 +6125,7 @@ async function saveCurrentRep() {
     showToast("Erro ao salvar: " + e.message);
   } finally {
     _isSaving = false;
-    saveBtn.innerHTML = "&#128190; Salvar";
+    saveBtn.innerHTML = '<svg width="13" height="13" viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M11 4v14M4 11h14"/></svg> Salvar repert\xf3rio';
     saveBtn.disabled = false;
   }
 }
