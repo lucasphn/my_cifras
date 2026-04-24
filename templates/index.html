@@ -1942,6 +1942,16 @@ body.android #presenter-cifra .chord-line {
   box-shadow: 0 4px 20px rgba(0,0,0,.22);
 }
 /* ─── User badge ─────────────────────────────────────────────────────────── */
+#header-right {
+  width: var(--rep-w);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 0 16px;
+  border-left: 1px solid var(--border);
+  gap: 8px;
+}
 #user-badge {
   display: flex;
   align-items: center;
@@ -2407,22 +2417,17 @@ body.android #presenter-cifra .chord-line {
   /* Bottom nav visible */
   #mobile-bottom-nav { display: block; }
 
-  /* Header mobile: single compact row — logo oculta, search ocupa tudo */
+  /* Header mobile: só a barra de pesquisa */
   #header { flex-wrap: nowrap; height: var(--header-h); padding: 0 8px; gap: 4px; }
-  #header-brand { width: auto; flex-shrink: 0; border-right: none; padding: 0; gap: 0; }
-  #header-brand img, #btn-home { display: none; }
-  #btn-menu-toggle { display: flex; align-items: center; justify-content: center; }
-  #header h1 { font-size: 0.95em; }
-  #header-main { flex: 1; padding: 0 4px; border-top: none; gap: 6px; min-width: 0; }
+  #header-brand { display: none; }
+  #header-main { flex: 1; padding: 0 4px; border-top: none; gap: 0; min-width: 0; }
   #search-box { font-size: 16px; padding: 8px 2px; }
   #search-mode-toggle button { padding: 3px 8px; font-size: 0.68em; }
   #search-wrap { padding: 0 6px 0 12px; }
 
-  /* Esconde botões secundários — mobile usa bottom nav */
-  #btn-import,
-  #user-badge .user-name, #user-badge #btn-logout { display: none; }
-  #user-badge { padding: 2px; border: none; background: transparent; gap: 0; }
-  #user-badge img { width: 28px; height: 28px; }
+  /* Esconde tudo no header exceto a busca */
+  #btn-import, #btn-menu-toggle,
+  #header-right { display: none; }
 
   /* Elimina delay 300ms iOS: touch-action + cursor:pointer (iOS Safari checa cursor) */
   * { touch-action: manipulation; }
@@ -3193,10 +3198,7 @@ body.android #presenter-cifra .chord-line {
     <div id="header-brand">
       <button id="btn-menu-toggle" title="Menu">&#9776;</button>
       <img src="/static/brand/logo-light.svg" alt="My Cifras" height="30">
-      <div id="header-brand-info">
-        <div id="header-brand-name">My Cifras</div>
-        <div id="header-brand-stats" style="font-size:11px;color:var(--text-muted);font-weight:500;white-space:nowrap"></div>
-      </div>
+      <div id="header-brand-stats" style="font-size:11px;color:var(--text-muted);font-weight:500;white-space:nowrap;line-height:1.3"></div>
       <button id="btn-home" title="Página inicial" class="active">&#8962;</button>
     </div>
     <div id="header-main">
@@ -3219,6 +3221,9 @@ body.android #presenter-cifra .chord-line {
       </button>
       <input type="file" id="file-input" accept=".docx,.doc,.pdf,.txt" style="display:none">
       {% endif %}
+    </div>
+    <!-- Right section alinhado ao rep-panel -->
+    <div id="header-right">
       {% if user %}
       <div id="user-badge">
         {% if user.picture %}
@@ -4920,7 +4925,7 @@ function _updateCatHeader(songs) {
 function _makeTableRow(song, rank) {
   var enriched = _songWithViews(song);
   var inRep = repertorio.some(function(r) { return (r.fileId || r.path) === (song.fileId || song.path); });
-  var meta = (song.fileId && _metaCache && _metaCache[song.fileId]) || {};
+  var meta = (song.fileId && _metaStore && _metaStore.get(song.fileId)) || {};
   var keyDisplay = (song.fileId && _myTones[song.fileId] && _myTones[song.fileId].my_key)
                  || meta.key || song.key || "";
   var artistDisplay = meta.artist || song.artist || "";
