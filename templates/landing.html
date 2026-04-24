@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>My Cifras — Seu acervo musical sempre à mão</title>
+  <link rel="icon" type="image/svg+xml" href="/static/brand/favicon.svg">
+  <link rel="manifest" href="/static/manifest.json">
+  <meta name="theme-color" content="#5b4b8a">
+  {% if google_verification %}
+  <meta name="google-site-verification" content="{{ google_verification }}">
+  {% endif %}
+  <link rel="privacy-policy" href="https://my-cifras.onrender.com/privacy">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --primary: #5b4b8a;
+      --primary-hover: #4a3a78;
+      --primary-light: rgba(91,75,138,.12);
+      --accent: #d4af37;
+      --accent-dark: #b8941f;
+      --bg: #0f0e17;
+      --surface: #1a1826;
+      --surface2: #241f35;
+      --text: #e8e6f0;
+      --text-muted: #9b97b0;
+      --border: rgba(255,255,255,.08);
+      --radius: 14px;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    a { color: inherit; text-decoration: none; }
+
+    /* ── NAV ── */
+    nav {
+      position: fixed; top: 0; left: 0; right: 0;
+      z-index: 100;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 2rem;
+      height: 60px;
+      background: rgba(15,14,23,.85);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+    }
+    .nav-logo {
+      display: flex; align-items: center; gap: .5rem;
+      font-size: 1.15rem; font-weight: 700; letter-spacing: -.3px;
+    }
+    .nav-logo .note { font-size: 1.4rem; }
+    .nav-logo span { color: var(--accent); }
+    .btn-nav {
+      background: var(--primary);
+      color: #fff;
+      border: none; border-radius: 8px;
+      padding: .5rem 1.2rem;
+      font-size: .9rem; font-weight: 600;
+      cursor: pointer;
+      transition: background 150ms ease, transform 100ms ease;
+    }
+    .btn-nav:hover { background: var(--primary-hover); transform: translateY(-1px); }
+
+    /* ── HERO ── */
+    .hero {
+      min-height: 100vh;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      text-align: center;
+      padding: 6rem 1.5rem 4rem;
+      position: relative;
+      overflow: hidden;
+    }
+    .hero-glow {
+      position: absolute; top: -120px; left: 50%; transform: translateX(-50%);
+      width: 700px; height: 700px;
+      background: radial-gradient(circle, rgba(91,75,138,.35) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .hero-badge {
+      display: inline-block;
+      background: var(--primary-light);
+      border: 1px solid rgba(91,75,138,.4);
+      color: var(--accent);
+      font-size: .78rem; font-weight: 600; letter-spacing: .5px;
+      text-transform: uppercase;
+      padding: .3rem .9rem;
+      border-radius: 100px;
+      margin-bottom: 1.5rem;
+    }
+    h1 {
+      font-size: clamp(2.2rem, 6vw, 4rem);
+      font-weight: 800;
+      line-height: 1.15;
+      letter-spacing: -.5px;
+      margin-bottom: 1.2rem;
+      max-width: 720px;
+    }
+    h1 em {
+      font-style: normal;
+      background: linear-gradient(135deg, var(--primary) 0%, #8b6fd4 50%, var(--accent) 100%);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .hero-sub {
+      font-size: clamp(1rem, 2.5vw, 1.2rem);
+      color: var(--text-muted);
+      max-width: 560px;
+      margin-bottom: 2.5rem;
+    }
+    .hero-cta {
+      display: flex; gap: 1rem; flex-wrap: wrap; justify-content: center;
+    }
+    .btn-primary {
+      display: inline-flex; align-items: center; gap: .6rem;
+      background: var(--primary);
+      color: #fff;
+      border: none; border-radius: 10px;
+      padding: .85rem 1.8rem;
+      font-size: 1rem; font-weight: 700;
+      cursor: pointer;
+      transition: background 150ms ease, transform 100ms ease, box-shadow 150ms ease;
+      box-shadow: 0 4px 20px rgba(91,75,138,.4);
+    }
+    .btn-primary:hover {
+      background: var(--primary-hover);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 28px rgba(91,75,138,.55);
+    }
+    .btn-primary svg { flex-shrink: 0; }
+    .btn-secondary {
+      display: inline-flex; align-items: center; gap: .5rem;
+      background: transparent;
+      color: var(--text-muted);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: .85rem 1.6rem;
+      font-size: 1rem; font-weight: 600;
+      cursor: pointer;
+      transition: border-color 150ms, color 150ms, transform 100ms;
+    }
+    .btn-secondary:hover {
+      border-color: rgba(255,255,255,.2);
+      color: var(--text);
+      transform: translateY(-1px);
+    }
+    .hero-note {
+      margin-top: 1rem;
+      font-size: .8rem; color: var(--text-muted);
+    }
+
+    /* ── APP PREVIEW ── */
+    .preview-wrap {
+      width: 100%; max-width: 860px;
+      margin: 4rem auto 0;
+      padding: 0 1.5rem;
+      position: relative;
+    }
+    .preview-frame {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      box-shadow: 0 32px 80px rgba(0,0,0,.6), 0 0 0 1px var(--border);
+    }
+    .preview-bar {
+      background: var(--surface2);
+      padding: .6rem 1rem;
+      display: flex; align-items: center; gap: .5rem;
+    }
+    .preview-dot {
+      width: 10px; height: 10px; border-radius: 50%;
+    }
+    .preview-dot:nth-child(1) { background: #ff5f57; }
+    .preview-dot:nth-child(2) { background: #febc2e; }
+    .preview-dot:nth-child(3) { background: #28c840; }
+    .preview-url {
+      flex: 1;
+      background: rgba(255,255,255,.05);
+      border-radius: 6px;
+      padding: .2rem .7rem;
+      font-size: .75rem; color: var(--text-muted);
+      margin: 0 .5rem;
+    }
+    .preview-body {
+      display: grid;
+      grid-template-columns: 200px 1fr;
+      height: 340px;
+    }
+    .preview-sidebar {
+      background: var(--surface2);
+      border-right: 1px solid var(--border);
+      padding: 1rem .75rem;
+      display: flex; flex-direction: column; gap: .4rem;
+    }
+    .p-sidebar-label {
+      font-size: .65rem; font-weight: 700; letter-spacing: .8px; text-transform: uppercase;
+      color: var(--text-muted); margin-bottom: .3rem; padding: 0 .4rem;
+    }
+    .p-sidebar-item {
+      padding: .4rem .6rem;
+      border-radius: 7px;
+      font-size: .78rem; color: var(--text-muted);
+      cursor: default;
+    }
+    .p-sidebar-item.active {
+      background: var(--primary-light);
+      color: var(--text);
+    }
+    .p-sidebar-item.active::before {
+      content: '';
+      display: inline-block;
+      width: 3px; height: 3px;
+      border-radius: 50%;
+      background: var(--accent);
+      margin-right: .45rem;
+      vertical-align: middle;
+      margin-bottom: 1px;
+    }
+    .preview-main {
+      padding: 1rem;
+      display: flex; flex-direction: column; gap: .6rem;
+      overflow: hidden;
+    }
+    .p-search {
+      background: rgba(255,255,255,.05);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: .4rem .8rem;
+      font-size: .75rem; color: var(--text-muted);
+    }
+    .p-cards {
+      display: grid; grid-template-columns: 1fr 1fr 1fr;
+      gap: .5rem; flex: 1;
+    }
+    .p-card {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      padding: .65rem .7rem;
+      font-size: .72rem;
+    }
+    .p-card-title { font-weight: 600; color: var(--text); margin-bottom: .2rem; }
+    .p-card-sub { color: var(--text-muted); }
+    .p-card-key {
+      display: inline-block;
+      background: var(--primary-light);
+      color: var(--accent);
+      border-radius: 4px;
+      padding: .05rem .3rem;
+      font-size: .65rem; font-weight: 700;
+      margin-top: .35rem;
+    }
+    .p-card.highlight { border-color: rgba(91,75,138,.5); }
+
+    /* ── FEATURES ── */
+    .section {
+      padding: 5rem 1.5rem;
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+    .section-label {
+      text-align: center;
+      font-size: .78rem; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;
+      color: var(--accent); margin-bottom: .8rem;
+    }
+    .section-title {
+      text-align: center;
+      font-size: clamp(1.6rem, 4vw, 2.4rem);
+      font-weight: 800; letter-spacing: -.3px;
+      margin-bottom: .8rem;
+    }
+    .section-sub {
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 1.05rem;
+      max-width: 560px; margin: 0 auto 3.5rem;
+    }
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 1.25rem;
+    }
+    .feature-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.75rem 1.5rem;
+      transition: border-color 200ms, transform 200ms, box-shadow 200ms;
+    }
+    .feature-card:hover {
+      border-color: rgba(91,75,138,.45);
+      transform: translateY(-3px);
+      box-shadow: 0 12px 36px rgba(0,0,0,.4);
+    }
+    .feature-icon {
+      width: 44px; height: 44px;
+      background: var(--primary-light);
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.3rem;
+      margin-bottom: 1rem;
+    }
+    .feature-title {
+      font-size: 1.05rem; font-weight: 700; margin-bottom: .4rem;
+    }
+    .feature-desc {
+      font-size: .88rem; color: var(--text-muted); line-height: 1.55;
+    }
+
+    /* ── HOW IT WORKS ── */
+    .steps {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 0;
+      position: relative;
+      margin-top: 3rem;
+    }
+    .steps::before {
+      content: '';
+      position: absolute; top: 30px; left: calc(16.6% + 1rem); right: calc(16.6% + 1rem);
+      height: 2px;
+      background: linear-gradient(90deg, var(--primary), var(--accent));
+      opacity: .3;
+    }
+    .step {
+      display: flex; flex-direction: column; align-items: center;
+      text-align: center;
+      padding: 0 1rem 2rem;
+    }
+    .step-num {
+      width: 60px; height: 60px;
+      background: var(--surface);
+      border: 2px solid var(--primary);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.3rem; font-weight: 800; color: var(--accent);
+      margin-bottom: 1rem;
+      position: relative; z-index: 1;
+    }
+    .step-title { font-size: .95rem; font-weight: 700; margin-bottom: .35rem; }
+    .step-desc { font-size: .83rem; color: var(--text-muted); }
+
+    /* ── CTA FINAL ── */
+    .cta-section {
+      padding: 5rem 1.5rem;
+      text-align: center;
+      position: relative;
+    }
+    .cta-box {
+      max-width: 600px;
+      margin: 0 auto;
+      background: var(--surface);
+      border: 1px solid rgba(91,75,138,.35);
+      border-radius: 20px;
+      padding: 3.5rem 2rem;
+      position: relative;
+      overflow: hidden;
+    }
+    .cta-box::before {
+      content: '';
+      position: absolute; top: -80px; left: 50%; transform: translateX(-50%);
+      width: 400px; height: 400px;
+      background: radial-gradient(circle, rgba(91,75,138,.18) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .cta-box h2 {
+      font-size: 1.9rem; font-weight: 800; letter-spacing: -.3px; margin-bottom: .75rem;
+    }
+    .cta-box p {
+      color: var(--text-muted); font-size: 1rem; margin-bottom: 2rem;
+    }
+
+    /* ── QUOTE BANNER ── */
+    .quote-banner {
+      position: relative;
+      overflow: hidden;
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      padding: 5rem 1.5rem;
+      text-align: center;
+    }
+    .quote-banner::before {
+      content: '';
+      position: absolute; inset: 0;
+      background:
+        radial-gradient(ellipse 80% 60% at 20% 50%, rgba(91,75,138,.18) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 40% at 80% 50%, rgba(212,175,55,.08) 0%, transparent 60%);
+      pointer-events: none;
+    }
+    .quote-inner {
+      position: relative;
+      max-width: 760px;
+      margin: 0 auto;
+    }
+    .quote-mark {
+      display: block;
+      font-size: 5rem;
+      line-height: .6;
+      color: var(--accent);
+      opacity: .4;
+      font-family: Georgia, serif;
+      margin-bottom: 1rem;
+      user-select: none;
+    }
+    .quote-text {
+      font-size: clamp(1.2rem, 3vw, 1.75rem);
+      font-weight: 600;
+      line-height: 1.5;
+      letter-spacing: -.02em;
+      color: var(--text);
+      margin-bottom: 1.75rem;
+    }
+    .quote-text em {
+      font-style: normal;
+      color: var(--accent);
+    }
+    .quote-divider {
+      width: 48px; height: 2px;
+      background: linear-gradient(90deg, transparent, var(--accent), transparent);
+      margin: 0 auto 1.25rem;
+    }
+    .quote-author {
+      font-size: .85rem;
+      font-weight: 700;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+    }
+    .quote-author span {
+      color: var(--accent);
+    }
+
+    /* ── FOOTER ── */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 2rem 1.5rem;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: .82rem;
+    }
+    footer a { color: var(--accent); }
+
+    /* ── MOBILE ── */
+    @media (max-width: 680px) {
+      .preview-body { grid-template-columns: 1fr; }
+      .preview-sidebar { display: none; }
+      .p-cards { grid-template-columns: 1fr 1fr; }
+      .steps::before { display: none; }
+      .step { padding-bottom: 1.5rem; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-logo">
+    <img src="/static/brand/logo-dark.svg" alt="My Cifras" height="30">
+  </div>
+  <a href="/privacy" style="font-size:.8em;opacity:.6;margin-right:auto;margin-left:1.5rem">Privacidade</a>
+  <a href="/login/google">
+    <button class="btn-nav">Entrar</button>
+  </a>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-glow"></div>
+  <div class="hero-badge">Para Ministros de Música e Adoradores</div>
+  <h1>Toque no tom certo,<br><em>sempre que precisar</em></h1>
+  <p class="hero-sub">
+    Seu acervo pessoal de cifras no Google Drive — transponha tons em 1 clique, salve o tom preferido
+    e monte seus repertórios em qualquer dispositivo.
+  </p>
+  <div class="hero-cta">
+    <a href="/login/google">
+      <button class="btn-primary">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+          <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+          <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+          <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
+          <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+        </svg>
+        Entrar com Google
+      </button>
+    </a>
+    <a href="#features">
+      <button class="btn-secondary">Ver funcionalidades ↓</button>
+    </a>
+  </div>
+  <p class="hero-note">Acesso gratuito · Conecte o seu Google Drive</p>
+
+  <!-- App Preview -->
+  <div class="preview-wrap">
+    <div class="preview-frame">
+      <div class="preview-bar">
+        <div class="preview-dot"></div>
+        <div class="preview-dot"></div>
+        <div class="preview-dot"></div>
+        <div class="preview-url">cifras.app / biblioteca</div>
+      </div>
+      <div class="preview-body">
+        <div class="preview-sidebar">
+          <div class="p-sidebar-label">Biblioteca</div>
+          <div class="p-sidebar-item active">Missa</div>
+          <div class="p-sidebar-item" style="padding-left:1.2rem;font-size:.72rem;">Entrada</div>
+          <div class="p-sidebar-item" style="padding-left:1.2rem;font-size:.72rem;">Comunhão</div>
+          <div class="p-sidebar-item" style="padding-left:1.2rem;font-size:.72rem;">Final</div>
+          <div class="p-sidebar-item" style="margin-top:.5rem;">Gospel</div>
+          <div class="p-sidebar-item" style="padding-left:1.2rem;font-size:.72rem;">Adoração</div>
+          <div class="p-sidebar-item" style="padding-left:1.2rem;font-size:.72rem;">Louvor</div>
+        </div>
+        <div class="preview-main">
+          <div class="p-search">🔍 &nbsp;Buscar música...</div>
+          <div class="p-cards">
+            <div class="p-card highlight">
+              <div class="p-card-title">Além do Véu</div>
+              <div class="p-card-sub">Min. Zoe</div>
+              <span class="p-card-key">G</span>
+            </div>
+            <div class="p-card">
+              <div class="p-card-title">Oceans</div>
+              <div class="p-card-sub">Hillsong</div>
+              <span class="p-card-key">D</span>
+            </div>
+            <div class="p-card">
+              <div class="p-card-title">Reckless Love</div>
+              <div class="p-card-sub">Cory Asbury</div>
+              <span class="p-card-key">E</span>
+            </div>
+            <div class="p-card">
+              <div class="p-card-title">Glória a Deus</div>
+              <div class="p-card-sub">Tradicional</div>
+              <span class="p-card-key">A</span>
+            </div>
+            <div class="p-card">
+              <div class="p-card-title">Entrada — Dom.</div>
+              <div class="p-card-sub">Liturgia</div>
+              <span class="p-card-key">C</span>
+            </div>
+            <div class="p-card">
+              <div class="p-card-title">Santo</div>
+              <div class="p-card-sub">Missa Brasil</div>
+              <span class="p-card-key">F</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section class="section" id="features">
+  <div class="section-label">Funcionalidades</div>
+  <h2 class="section-title">Tudo que você precisa para tocar</h2>
+  <p class="section-sub">
+    Do acervo pessoal à performance, sem precisar trocar de ferramenta.
+  </p>
+  <div class="features-grid">
+    <div class="feature-card">
+      <div class="feature-icon">🎼</div>
+      <div class="feature-title">Transposição + tom salvo</div>
+      <div class="feature-desc">
+        Transponha qualquer cifra em 1 clique e salve o tom preferido direto no arquivo —
+        para nunca mais perder a afinação que funciona pra você.
+      </div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">📚</div>
+      <div class="feature-title">Acervo pessoal no Drive</div>
+      <div class="feature-desc">
+        Seu acervo organizado por seção e categoria no seu próprio Google Drive.
+        Suporta .md, .docx, .pdf, .txt e Google Docs.
+      </div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🗂️</div>
+      <div class="feature-title">Repertórios pessoais</div>
+      <div class="feature-desc">
+        Crie, nomeie e salve múltiplos repertórios. Monte o setlist da missa
+        ou do ensaio em minutos e exporte para impressão.
+      </div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">📖</div>
+      <div class="feature-title">Liturgia do Dia</div>
+      <div class="feature-desc">
+        Consulte a liturgia do dia diretamente no app e prepare o repertório
+        com as leituras e o salmo de cada celebração.
+      </div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">📅</div>
+      <div class="feature-title">Agenda integrada</div>
+      <div class="feature-desc">
+        Google Calendar embutido para acompanhar missas, ensaios e
+        celebrações — com filtro para exibir só os eventos do seu ministério.
+      </div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">▶️</div>
+      <div class="feature-title">Modo Apresentação</div>
+      <div class="feature-desc">
+        Abra um repertório em tela cheia e navegue cifra a cifra com
+        teclado, zoom e fullscreen — pronto para o palco.
+      </div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🔍</div>
+      <div class="feature-title">Busca por nome ou letra</div>
+      <div class="feature-desc">
+        Encontre músicas instantaneamente pelo nome ou busque por
+        qualquer trecho da letra dentro do acervo.
+      </div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">📥</div>
+      <div class="feature-title">Importar por URL</div>
+      <div class="feature-desc">
+        Cole um link do CifraClub ou texto de qualquer site.
+        A cifra é salva no seu acervo com metadados estruturados.
+      </div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">📤</div>
+      <div class="feature-title">Exportação HTML</div>
+      <div class="feature-desc">
+        Gere um único HTML com todas as cifras do repertório —
+        pronto para imprimir ou salvar como PDF.
+      </div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">📱</div>
+      <div class="feature-title">Funciona como app</div>
+      <div class="feature-desc">
+        Instale na tela inicial do iPhone ou Android. Interface responsiva
+        com drawer lateral e barra de ações inferior.
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section class="section">
+  <div class="section-label">Como funciona</div>
+  <h2 class="section-title">Pronto em 3 passos</h2>
+  <p class="section-sub">Sem instalação. Sem cadastro. Só precisa da sua conta Google.</p>
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-title">Entre com Google</div>
+      <div class="step-desc">OAuth seguro — suas credenciais ficam com o Google, nunca no servidor. Seu Drive é o backend.</div>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-title">Organize seu acervo</div>
+      <div class="step-desc">Suas cifras carregam automaticamente — organize por seção e categoria, importe novas por URL e edite metadados inline.</div>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-title">Toque com confiança</div>
+      <div class="step-desc">Transponha, salve o tom, monte o repertório da missa e abra em modo apresentação — no celular ou no notebook.</div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA FINAL -->
+<section class="cta-section">
+  <div class="cta-box">
+    <h2>Comece agora</h2>
+    <p>Gratuito. Seu acervo sempre sincronizado no Google Drive.<br>Sem instalação — funciona no celular, tablet e computador.</p>
+    <a href="/login/google">
+      <button class="btn-primary" style="font-size:1.05rem; padding: 1rem 2.2rem;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+          <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+          <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+          <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
+          <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+        </svg>
+        Entrar com Google
+      </button>
+    </a>
+  </div>
+</section>
+
+<!-- QUOTE BANNER -->
+<section class="quote-banner">
+  <div class="quote-inner">
+    <span class="quote-mark">"</span>
+    <p class="quote-text">
+      O canto exige, acima de tudo,<br>
+      uma profunda <em>vida espiritual</em>
+    </p>
+    <div class="quote-divider"></div>
+    <p class="quote-author">— Papa <span>Leão XIV</span></p>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  Feito com ♪ para Ministros de Música e Adoradores. &nbsp;·&nbsp;
+  <a href="/privacy">Política de Privacidade</a> &nbsp;·&nbsp;
+  <a href="/terms">Termos de Serviço</a>
+</footer>
+
+</body>
+</html>

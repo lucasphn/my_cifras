@@ -1,0 +1,32 @@
+{
+  "name": "My Cifras",
+  "short_name": "My Cifras",
+  "description": "Acervo pessoal de cifras para músicos litúrgicos e gospel",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#5b4b8a",
+  "theme_color": "#5b4b8a",
+  "lang": "pt-BR",
+  "icons": [
+    {
+      "src": "/static/brand/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/static/brand/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/static/brand/maskable-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ]
+}

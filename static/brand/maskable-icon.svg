@@ -1,0 +1,18 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Fundo sólido sem border-radius, cobre 100% do canvas (obrigatório para maskable) -->
+  <rect width="512" height="512" fill="#5b4b8a"/>
+  <rect width="512" height="512" fill="url(#gm)" opacity="0.45"/>
+  <!-- Ícone de nota musical centralizado dentro do safe zone (80% interno = ~410px) -->
+  <!-- Design original 52×52 escalado ~5.4× e centralizado em 512×512 -->
+  <g transform="translate(116,116) scale(5.385)">
+    <path d="M17 34 L17 21 L35 18 L35 24 L22 26.5 L22 34 Z" fill="white" opacity="0.95"/>
+    <circle cx="19.5" cy="34" r="4" fill="#d4af37"/>
+    <circle cx="24.5" cy="33" r="4" fill="white" opacity="0.9"/>
+  </g>
+  <defs>
+    <linearGradient id="gm" x1="0" y1="0" x2="512" y2="512" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#8b7ff0"/>
+      <stop offset="100%" stop-color="#4a3fd4"/>
+    </linearGradient>
+  </defs>
+</svg>
