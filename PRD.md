@@ -1,42 +1,43 @@
 # PRD — My Cifras
-**Versão:** 3.1
-**Produto:** Aplicação web para o músico individual gerenciar cifras, transpor tons, criar repertórios e acompanhar sua agenda litúrgica
+**Versão:** 3.2
+**Produto:** Aplicação web para o músico individual gerenciar cifras, transpor tons, criar e compartilhar repertórios, e acompanhar sua agenda litúrgica
 **Autor:** Lucas Almeida
-**Status:** Em produção (v3.1)
+**Status:** Em produção (v3.2)
 
 ---
 
 ## 1. Visão Geral
 
-**My Cifras** é uma aplicação web que centraliza o acervo pessoal de cifras de um músico no Google Drive e oferece ferramentas para transposição de tom, montagem de repertórios, geração de documentos exportáveis, liturgia diária e agenda via Google Calendar.
+**My Cifras** centraliza o acervo pessoal de cifras de um músico no Google Drive e oferece ferramentas para transposição de tom, montagem de repertórios, compartilhamento de repertórios com colaboradores, geração de documentos exportáveis, liturgia diária e agenda via Google Calendar.
 
-O produto é projetado para ser **comercializável**: cada músico tem sua própria instância conectada ao seu Drive pessoal. Não é um app de grupo — é uma ferramenta individual, que resolve dores reais do músico litúrgico e gospel no dia a dia.
+O produto é **comercializável**: cada músico tem sua própria instância conectada ao seu Drive pessoal. Não é um app de grupo — é uma ferramenta individual que também permite colaboração pontual via compartilhamento de repertórios.
 
 ---
 
 ## 2. Problema
 
-Músicos litúrgicos e gospel enfrentam dificuldades práticas na preparação e execução do seu ministério:
+Músicos litúrgicos e gospel enfrentam dificuldades práticas na preparação e execução do ministério:
 
-- As cifras estão espalhadas em pastas do computador, grupos de WhatsApp e drives sem organização
-- Transpor um tom manualmente é demorado e sujeito a erros — e o tom escolhido se perde
-- Montar um repertório para a missa ou ensaio exige trabalho repetitivo
-- Não há visão integrada da agenda de compromissos (missas, ensaios, celebrações)
-- A liturgia do dia precisa ser consultada em outro site para preparar o repertório
+- Cifras espalhadas em pastas, WhatsApp e drives sem organização
+- Transpor um tom manualmente é demorado — e o tom escolhido se perde
+- Montar um repertório para a missa ou ensaio é trabalho repetitivo
+- Sem visão integrada da agenda (missas, ensaios, celebrações)
+- A liturgia do dia precisa ser consultada em outro site
 - O acervo não está acessível no celular durante a performance
+- Compartilhar um setlist com outro músico exige copiar e colar manualmente
 
 ---
 
 ## 3. Objetivo
 
-Oferecer ao músico um acervo pessoal, sempre sincronizado com seu Google Drive, acessível de qualquer dispositivo, com transposição em 1 clique, tom salvo automaticamente, busca por nome ou letra, metadados estruturados, liturgia do dia, agenda integrada e exportação elegante para PDF.
+Oferecer ao músico um acervo pessoal, sempre sincronizado com o Google Drive, acessível em qualquer dispositivo, com transposição em 1 clique, tom salvo automaticamente, busca por nome ou letra, metadados estruturados, mini-player de YouTube, liturgia do dia, agenda integrada, exportação elegante para PDF e compartilhamento de repertórios com outros usuários.
 
 ---
 
 ## 4. Usuários
 
 - **Owner (administrador):** cria e gerencia o acervo — pode editar, renomear, excluir músicas e pastas
-- **Viewer (músico convidado):** acessa o acervo compartilhado — pode transpor, salvar Meu Tom e criar repertórios pessoais, mas não altera o acervo
+- **Viewer (músico convidado):** acessa o acervo compartilhado — pode transpor, salvar Meu Tom, criar e compartilhar repertórios, mas não altera o acervo
 - **Perfil técnico:** básico — não deve exigir conhecimento de código para operar
 - **Dispositivos:** celular (uso principal em ensaios/missas), tablet, computador
 
@@ -45,131 +46,94 @@ Oferecer ao músico um acervo pessoal, sempre sincronizado com seu Google Drive,
 ## 5. Funcionalidades
 
 ### 5.1 Landing Page pública (`/`)
-
-Página de apresentação da aplicação para visitantes não autenticados.
-- Hero com headline "Para Ministros de Música e Adoradores", CTA "Entrar com Google" e preview do app
-- Seção de features (10 cards)
-- Seção "Como funciona" (3 passos)
-- Links para Política de Privacidade e Termos de Serviço no footer e navbar
-- `<link rel="privacy-policy">` no head (para Google OAuth consent screen)
+Página de apresentação para visitantes não autenticados. Hero com CTA "Entrar com Google", seção de features, "Como funciona", links de privacidade/termos.
 
 ### 5.2 Páginas legais
-
-- `/privacy` — Política de Privacidade (pública, sem autenticação)
-- `/terms` — Termos de Serviço (público, sem autenticação)
-- Necessárias para aprovação do Google OAuth consent screen
+`/privacy` e `/terms` — públicas, necessárias para o Google OAuth consent screen.
 
 ### 5.3 Biblioteca de cifras
-
-- Lê automaticamente a estrutura de pastas do Google Drive (`CIFRAS_FOLDER_ID`)
+- Lê automaticamente a estrutura do Google Drive (`CIFRAS_FOLDER_ID`)
 - Organização: **Seção** → **Categoria/pasta**
 - Suporte a `.md`, `.docx`, `.pdf`, `.txt` e Google Docs nativos
-- Cache de biblioteca invalidado após operações de escrita
 
 ### 5.4 Home screen
-
-- **Banner inspiracional** com fundo na cor primária
-- **Cards de volumetria** (`#home-stats-row`): total de músicas + quantidade por seção
-- **Seção "Mais tocadas" / "Destaques"**: até 8 músicas com mais visualizações
-- Cards com nome, badge de categoria (tag dourada), badge de tom (mostra **Meu Tom** quando definido), contador de views e menu `⋯`
+- Cards de volumetria (total de músicas + por seção)
+- **Seção "Mais tocadas"**: até 8 músicas com mais visualizações
+- **Seção "Explorar por categoria"**: grid responsivo de cards com ícone, nome e tags, no padrão visual dos cards de destaque (ícone, nome, categoria, tom)
 
 ### 5.5 Grade de músicas por categoria
-
-- Exibe músicas da categoria selecionada na sidebar
-- Menu `⋯` (visível apenas para owners): renomear, copiar, mover, excluir
+- Músicas da categoria selecionada
+- Menu `⋯` (owner only): renomear, copiar, mover, excluir
 
 ### 5.6 Visualização de cifra — cache-first
-
-- Modal com texto completo da cifra
-- **Cache-first:** serve IDB imediatamente → atualiza do servidor em background se texto mudou
-- Fonte: `font-weight: 600` no corpo, `font-weight: 800` nas linhas de acordes
-- Controles de zoom, fullscreen
-- Registro automático de visualização
+- Modal com texto completo
+- Cache-first: IDB imediatamente → atualiza em background
+- Fonte: corpo `600`, acordes `.chord-line` `800`
+- Controles: zoom, fullscreen
+- **Mini-player YouTube**: se a cifra tem link YouTube, exibe iframe `height: 72px` (somente controles, sem vídeo visível)
 
 ### 5.7 Transposição tonal e Meu Tom
-
-- Roda inteiramente no cliente (JS), sem chamar o servidor
-- **Meu Tom:** preferência de tonalidade salva por música, por usuário, no próprio Drive do usuário (`_mycifras_data/_preferences.json`)
-- Tom exibido nos cards e no export de repertório reflete o **Meu Tom** do usuário, não o metadado da música
-- `_myTones[fileId] = { my_key, my_capo }` — estado JS por sessão
+- Roda inteiramente no cliente (JS), sem chamada ao servidor
+- **Meu Tom:** tom e capo salvos por música, por usuário, em `_mycifras_data/_preferences.json`
+- Tom nos cards e no export reflete o **Meu Tom** do usuário
 
 ### 5.8 Metadados estruturados (owner only)
-
-- Painel de metadados inline no modal: título, artista, tom, tags
+- Painel inline no modal: título, artista, tom, capo, **YouTube** (substituiu Tags)
 - Salvo como frontmatter YAML via `/api/songs/update_meta`
-- Inferência automática de tom via `detectBaseNote()`
 
 ### 5.9 Busca
-
 - **Nome** (padrão): filtra `allSongs` localmente
-- **Letra**: `GET /api/search/content?q=` → Drive `fullText contains`
+- **Letra**: full-text no Drive via `GET /api/search/content?q=`
 
 ### 5.10 Gerenciamento de pastas (owner only)
-
-- Criar, renomear, excluir categorias via sidebar
+Criar, renomear, excluir categorias via sidebar.
 
 ### 5.11 Operações de arquivo (owner only)
-
-- Renomear, copiar, mover, excluir (lixeira do Drive)
+Renomear, copiar, mover, excluir (lixeira do Drive).
 
 ### 5.12 Importar cifra por URL ou texto (owner only)
-
-- Scraping de URL (CifraClub etc.) ou texto colado
-- Salva como `.md` com frontmatter YAML
+Scraping de URL (CifraClub etc.) ou texto colado → salva como `.md` com frontmatter YAML.
 
 ### 5.13 Repertórios pessoais
-
 - Criar, nomear e salvar múltiplos repertórios pessoais
 - **Limite: 5 repertórios por usuário**
 - Persistência em `_mycifras_data/_repertorios.json` no Drive do próprio usuário
-- Export de repertório usa **Meu Tom** do usuário (não metadado da música)
-- Abertura de repertório otimizada: `refreshGridBtns()` atualiza apenas os botões existentes (sem recriar o grid)
+- Menu `⋯` em cada item: **Compartilhar**, **Gerenciar compartilhamentos**, **Excluir**
+- Tag discreta "Compartilhado" nos repertórios com shares ativos
 
 ### 5.14 Modo Apresentação
-
-- Abre repertório em tela cheia
-- Navega cifra a cifra com botões, dots ou teclado
-- Controles: zoom, fullscreen
-- Tom exibido é o **Meu Tom** do usuário
+Tela cheia, navega cifra a cifra (botões, dots ou teclado). Tom = Meu Tom do usuário.
 
 ### 5.15 Exportação de repertório
-
-- Formatos: HTML (PDF-ready via browser print) e DOCX
-- Tom exportado: **Meu Tom** do usuário (não o metadado)
-- Logo inlineado, acordes em `#5b4b8a`, CSS `@media print` otimizado
+Formatos: HTML (PDF-ready) e DOCX. Tom exportado = Meu Tom do usuário.
 
 ### 5.16 Sync offline — Bundle Endpoint
-
-- `GET /api/cifras/bundle` retorna todas as cifras em JSON único
-- ETag calculado de `fileId + modifiedTime` → `304 Not Modified` quando nada mudou (zero dados trafegados)
-- Cache servidor: apenas ETag em memória (sem `json_bytes` para economizar RAM)
-- Build paralelo: 4 workers Drive para minimizar pico de RAM
-- **Cliente:** `_bundleSync()` dispara 4s após carregamento, com cooldown de 30 min entre syncs
-- Resultado: IDB populado com todo o acervo em uma transação (`_idbBulkPut`)
+- `GET /api/cifras/bundle` com ETag/304 → zero dados em sessões normais
+- `_bundleSync()` no cliente com cooldown de 30 min
 
 ### 5.17 Google Calendar integrado
+FullCalendar 6, CRUD completo, drag-and-drop, filtro por palavras-chave.
 
-- Seção na home screen com FullCalendar 6 (CDN)
-- CRUD completo: criar, editar, excluir eventos
-- Drag-and-drop e resize de eventos
-- Filtro de palavras-chave (`CALENDAR_KEYWORDS`)
-- Escopo OAuth: `https://www.googleapis.com/auth/calendar.events`
+### 5.18 PWA
+`manifest.json` + Service Worker stale-while-revalidate.
 
-### 5.18 Visualizações persistidas no Drive
+### 5.19 Liturgia do Dia
+Leituras do dia com navegação de datas na home screen.
 
-- `_views.json` por usuário em `_mycifras_data`
-- Cache em memória por e-mail
+### 5.20 Mini-player YouTube no modal
+- Campo `youtube:` no frontmatter YAML das cifras (substituiu `tags:`)
+- Modal exibe iframe `height: 72px` (apenas barra de controles — sem vídeo visível)
+- Player para ao fechar o modal (src limpo)
+- Painel de metadados tem campo de URL com hint explicativo
 
-### 5.19 PWA
-
-- `static/manifest.json` com `display: standalone`, `theme_color: #5b4b8a`
-- Service Worker (`static/sw.js`) com stale-while-revalidate para app shell
-- `apple-touch-icon.png` para iOS, manifest para Android
-
-### 5.20 Liturgia do Dia
-
-- Seção na home com leituras do dia
-- Navegação de datas
+### 5.21 Compartilhamento de repertórios
+- **Compartilhar**: menu `⋯` no item de repertório → "Compartilhar" → input de e-mail Google do destinatário
+- **Notificação**: ícone de sino no header com badge vermelho quando chega um share novo; visível em desktop e mobile
+- **COMPARTILHADOS COMIGO**: seção abaixo de "SALVOS" no painel de repertório — lista os repertórios recebidos com badge "Novo" enquanto não vistos
+- **Abrir share**: carrega as músicas no painel de trabalho (leitura); marca automaticamente como visto
+- **Descompartilhar** (remetente): "Gerenciar compartilhamentos" no menu `⋯` → lista destinatários com botão "Remover"
+- **Dispensar** (destinatário): botão `✕` no item da seção "COMPARTILHADOS COMIGO"
+- **Armazenamento**: `_shares.json` em `CIFRAS_FOLDER_ID` (Drive); fallback em arquivo local
 
 ---
 
@@ -179,13 +143,15 @@ Página de apresentação da aplicação para visitantes não autenticados.
 |---|---|---|
 | `--primary` | `#5b4b8a` | Botões, bordas ativas, acordes |
 | `--accent` | `#d4af37` | Badges dourados |
-| `--bg` | `#0f0e17` | Fundo principal |
-| `--surface` | `#13111e` | Cards, modais |
-| `--surface2` | `#1c1929` | Sidebar, painéis |
-| `--text` | `#e8e6f0` | Texto principal |
-| `--text-muted` | `#9b97b0` | Texto secundário |
+| `--bg` | `#f7f6fb` | Fundo principal (tema claro) |
+| `--surface` | `#ffffff` | Cards, modais |
+| `--surface2` | `#eeebf6` | Sidebar, painéis |
+| `--text` | `#1f2937` | Texto principal |
+| `--text-muted` | `#6b7280` | Texto secundário |
+| `--border` | `#e6e1f0` | Bordas |
 
-**Pesos de fonte nas cifras:** corpo `600`, acordes `800`.
+**Acordes sempre `#5b4b8a`. Nunca usar azul `#1d4ed8`.**
+Pesos de fonte nas cifras: corpo `600`, acordes `800`.
 
 ---
 
@@ -208,7 +174,7 @@ Página de apresentação da aplicação para visitantes não autenticados.
 
 ---
 
-## 8. Estrutura de pastas no Drive
+## 8. Estrutura de dados no Drive
 
 ```
 CIFRAS_FOLDER_ID (pasta do owner — acervo compartilhado)
@@ -217,7 +183,7 @@ CIFRAS_FOLDER_ID (pasta do owner — acervo compartilhado)
 │   └── Comunhão/
 ├── Gospel/
 │   └── Adoração/
-└── (sem arquivos de dados aqui — cada usuário tem sua pasta própria)
+└── _shares.json        ← registro de compartilhamentos de repertórios
 
 _mycifras_data/ (no Drive de cada usuário)
 ├── _preferences.json   ← Meu Tom por música
@@ -227,57 +193,62 @@ _mycifras_data/ (no Drive de cada usuário)
 
 ---
 
-## 9. Escopos OAuth (Google Cloud Console)
+## 9. Escopos OAuth
 
-| Escopo | Tipo | Uso |
-|---|---|---|
-| `openid` | Não-sensitivo | Login |
-| `userinfo.email` | Não-sensitivo | Identificar usuário |
-| `userinfo.profile` | Não-sensitivo | Nome e foto |
-| `drive` | Restrito | Ler cifras + salvar dados do usuário no Drive |
-| `calendar.events` | Sensitivo | Ler, criar, editar e excluir eventos de ensaio |
+| Escopo | Uso |
+|---|---|
+| `openid` | Login |
+| `userinfo.email` | Identificar usuário |
+| `userinfo.profile` | Nome e foto |
+| `drive` | Ler cifras + salvar dados do usuário no Drive |
+| `calendar.events` | Ler, criar, editar e excluir eventos |
 
 ---
 
 ## 10. Critérios de Aceite
 
-- [x] Landing page pública com links de privacidade/termos
-- [x] Páginas `/privacy` e `/terms` acessíveis sem login
 - [x] Login OAuth redireciona corretamente
 - [x] Roles: owner vê botões de admin, viewer não
-- [x] Viewer pode transpor, salvar Meu Tom e criar repertórios
+- [x] Viewer pode transpor, salvar Meu Tom e criar/compartilhar repertórios
 - [x] Meu Tom exibido nos cards, export e modo apresentação
 - [x] Limite de 5 repertórios por usuário
-- [x] Bundle sync com ETag/304 (zero dados em sessões normais)
+- [x] Bundle sync com ETag/304
 - [x] Cache-first: cifra exibida imediatamente do IDB
-- [x] Sync offline silencioso (sem indicador visual)
-- [x] Abertura de repertório rápida (sem recriar o grid)
 - [x] Transposição tonal no cliente
 - [x] Export HTML/DOCX com Meu Tom
 - [x] Google Calendar com CRUD completo
-- [x] Visualizações persistidas por usuário no Drive
 - [x] PWA com Service Worker
-- [x] Interface responsiva (mobile + desktop)
-- [x] Acordes sempre em `#5b4b8a`
+- [x] Campo YouTube no metadado + mini-player no modal
+- [x] Cards "Explorar por categoria" no padrão visual dos cards de destaque
+- [x] Clicar em pasta ou Início fecha o modal de cifra aberto
+- [x] Compartilhamento de repertórios por e-mail
+- [x] Notificação (sino) de novos repertórios compartilhados
+- [x] Seção "COMPARTILHADOS COMIGO" no painel de repertório
+- [x] Descompartilhar (remetente) e dispensar (destinatário)
+- [x] Interface responsiva — mobile (iOS + Android) + desktop
+- [x] iOS: sem zoom ao focar na busca
+- [x] iOS: bottom nav posicionada corretamente (sem flutuar acima do home indicator)
+- [x] iOS: botões do modal footer acima do home bar
 
 ---
 
 ## 11. Fora de Escopo (v3.x)
 
-- Compartilhamento de repertórios entre músicos
+- Workspace colaborativo (múltiplos owners editando o mesmo acervo)
 - Histórico de versões de cifras
-- Notificações / lembretes de ensaio
-- Integração com YouTube / Spotify
+- Notificações push / lembretes de ensaio
+- Integração com Spotify
 - App nativo (iOS / Android)
 
 ---
 
 ## 12. Roadmap
 
-### Fase 1 — Produto individual (atual v3.1)
+### Fase 1 — Produto individual (atual v3.2)
 - Owner + viewers com roles distintos
-- Dados pessoais (Meu Tom, repertórios, views) isolados por usuário no Drive
+- Dados pessoais isolados por usuário no Drive
 - Sync offline completo via bundle endpoint
+- Compartilhamento de repertórios entre usuários
 
 ### Fase 2 — Workspace compartilhado
 - Músico convida outros membros para colaborar no mesmo acervo

@@ -1,13 +1,13 @@
 # Prompt Inicial — My Cifras
 
-> **Como usar:** Coloque este arquivo, o `CLAUDE.md` e o `PRD.md` na pasta `my_cifras_pc_owner`.
+> **Como usar:** Coloque este arquivo, o `CLAUDE.md` e o `PRD.md` na pasta `my_cifras`.
 > Abra o terminal nessa pasta, inicie o Claude Code e cole o conteúdo abaixo.
 
 ---
 
 ## PROMPT
 
-Você é um desenvolvedor Python + JavaScript experiente. Vamos evoluir a aplicação web **"My Cifras"** — uma ferramenta para o **músico individual** gerenciar seu acervo pessoal de cifras, transpor tons, criar repertórios e acompanhar sua agenda litúrgica.
+Você é um desenvolvedor Python + JavaScript experiente. Vamos evoluir a aplicação web **"My Cifras"** — uma ferramenta para o **músico individual** gerenciar seu acervo pessoal de cifras, transpor tons, criar e compartilhar repertórios, e acompanhar sua agenda litúrgica.
 
 **Antes de escrever qualquer código, leia completamente os arquivos `CLAUDE.md` e `PRD.md` nesta pasta.** Eles têm todas as especificações, convenções e regras do projeto.
 
@@ -15,19 +15,20 @@ Você é um desenvolvedor Python + JavaScript experiente. Vamos evoluir a aplica
 
 ### Contexto
 
-**My Cifras** é um produto para o músico litúrgico e gospel. Não é um app de grupo — é uma ferramenta individual. O valor central está em:
+**My Cifras** é um produto para o músico litúrgico e gospel. Não é um app de grupo — é uma ferramenta individual que também permite colaboração pontual via compartilhamento de repertórios. O valor central está em:
 
 1. **Transposição + Meu Tom:** muda o tom em 1 clique e salva no Drive do próprio usuário
-2. **Repertórios pessoais:** montagem e organização do setlist de cada músico
-3. **Navegação litúrgica:** categorias de Missa e Ministração para encontrar a música certa
-4. **Liturgia diária:** integração com a liturgia do dia
-5. **Agenda pessoal:** Google Calendar integrado para ensaios, missas e compromissos
+2. **Repertórios pessoais e compartilhados:** montagem, organização e compartilhamento do setlist
+3. **Mini-player YouTube:** link da música no metadado, player de áudio inline no modal
+4. **Navegação litúrgica:** categorias de Missa e Ministração para encontrar a música certa
+5. **Liturgia diária:** integração com a liturgia do dia
+6. **Agenda pessoal:** Google Calendar integrado para ensaios, missas e compromissos
 
 **Lucas Almeida** é músico litúrgico em Jaraguá do Sul (SC) e criador do produto.
 
 ---
 
-### Estado atual do app (v3.1)
+### Estado atual do app (v3.2)
 
 O app está **em produção** na Render.com. As seguintes funcionalidades já estão implementadas:
 
@@ -35,43 +36,51 @@ O app está **em produção** na Render.com. As seguintes funcionalidades já es
 
 - OAuth 2.0 completo com Google (escopos: `drive`, `calendar.events`, `userinfo`)
 - **Roles:** `OWNER_EMAIL` no env define owners; sem ENV → todos são owner (dev local)
-  - `@owner_required` aplicado em todas as rotas de escrita
-  - `/api/me` retorna `is_owner`
 - **Dados por usuário:** prefs, repertórios e views em `_mycifras_data` no Drive de cada usuário
-  - Caches em memória por e-mail: `_prefs_cache`, `_views_cache`, `_reps_cache`
-- **Bundle sync:** `GET /api/cifras/bundle` com ETag/304 para sync offline completo
-  - ETag de `fileId + modifiedTime`, 4 workers paralelos, só ETag em memória (sem json_bytes)
-  - `invalidate_bundle_cache()` chamado após qualquer alteração de conteúdo
-- **Cache de biblioteca:** TTL 120s, `invalidate_library_cache()` chama `invalidate_bundle_cache()`
-- Todas as rotas de CRUD de cifras, pastas e repertórios
+- **Bundle sync:** `GET /api/cifras/bundle` com ETag/304; build paralelo 4 workers
+- **Cache de biblioteca:** TTL 120s
+- CRUD completo de cifras, pastas, repertórios e eventos de calendário
 - Limite de 5 repertórios por usuário
-- `/api/calendar` (GET), `/api/calendar/events` (POST/PUT/DELETE)
-- Filtro de palavras-chave via `CALENDAR_KEYWORDS`
+- **Compartilhamento de repertórios:**
+  - `POST /api/share-rep` — compartilha via e-mail
+  - `GET /api/shares-by-me` — meus shares ativos
+  - `GET /api/shared-with-me` — recebidos por mim (filtra dispensados)
+  - `DELETE /api/share/<id>` — remetente remove
+  - `POST /api/share/<id>/dismiss` — destinatário dispensa
+  - `POST /api/share/<id>/seen` — marca como visto
+  - `GET /api/notifications/count` — badge do sino
+  - Armazenamento: `_shares.json` em `CIFRAS_FOLDER_ID` com fallback local
+- **Metadados:** campo `youtube` (substituiu `tags`) no frontmatter YAML
 - Páginas públicas: `/privacy`, `/terms`
 - Service Worker em `/sw.js`
 
 #### Frontend (`templates/index.html`)
 
-- `<body data-owner="1|0">` + `var _isOwner = document.body.getAttribute('data-owner') === '1'`
-- Botões de admin (editar, renomear, excluir, importar) visíveis apenas para owners
-- **Cache-first:** abre cifra do IDB imediatamente → atualiza do servidor em background
-- **Bundle sync:** `_bundleSync()` com cooldown de 30 min, `_idbBulkPut()` para escrita em batch
+- **Tema claro**: `--bg: #f7f6fb`, `--primary: #5b4b8a`, `--accent: #d4af37`
+- `<body data-owner="1|0" data-user-email="..." data-user-name="...">`
+- Botões de admin visíveis apenas para owners
+- **Cache-first:** abre cifra do IDB imediatamente → atualiza em background
+- **Bundle sync:** `_bundleSync()` com cooldown 30 min
 - **Meu Tom:** `_myTones[fileId] = { my_key, my_capo }` — exibido nos cards, export e apresentação
-- `refreshGridBtns()` — atualiza apenas o estado dos botões nos cards existentes (sem recriar o grid)
-- `_markActiveSavedRep()` — atualiza apenas o `.active` na lista de repertórios (sem recriar)
-- Pesos de fonte nas cifras: corpo `600`, acordes `.chord-line` `800`
-- Sync pill removido — sync é silencioso
+- **Mini-player YouTube:** iframe `height: 72px` no modal (só barra de controles); para ao fechar
+- **Cards "Explorar por categoria":** grid responsivo no padrão dos cards de destaque (ícone + nome + tags)
+- **Navegação auto-close:** clicar em pasta ou Início fecha modal de cifra aberto
+- **Compartilhamento:**
+  - Menu `⋯` nos saved-rep items (substituiu o botão ✕)
+  - Opções: Compartilhar, Gerenciar compartilhamentos, Excluir
+  - Sino no header com badge de notificações não vistas
+  - Painel de notificações ao clicar no sino
+  - Seção "COMPARTILHADOS COMIGO" abaixo de "SALVOS" no painel
+  - Tag "Compartilhado" discreta nos repertórios com shares ativos
+- **`_forceCloseModal()`** — fecha modal sem confirm (usado em navegação)
+- **`_closeAllDropdowns()`** — fecha menus antes de abrir outro
 - Google Calendar com FullCalendar 6, CRUD completo, drag-and-drop
 - Modo Apresentação, Export HTML/DOCX, Busca, PWA
-
-#### Templates adicionais
-- `landing.html` — "Para Ministros de Música e Adoradores", links privacy/terms, meta verificação Google
-- `privacy.html` — Política de Privacidade pública
-- `terms.html` — Termos de Serviço público
-
-#### Static
-- `static/manifest.json` — PWA
-- `static/sw.js` — Service Worker stale-while-revalidate
+- **iOS/Android:**
+  - `font-size: 16px` em todos os inputs (evita zoom automático do iOS Safari)
+  - Bottom nav: `bottom: env(safe-area-inset-bottom, 6px)` (sem margem extra acima da safe area)
+  - Modal footer: `padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 14px)`
+  - `#app` usa `min-height: 100dvh` (evita o bug do `100vh` no Safari)
 
 ---
 
@@ -106,20 +115,22 @@ GOOGLE_SITE_VERIFICATION=<token-search-console>
 
 ### Convenções importantes
 
+- **Tema claro** — `--bg: #f7f6fb`, `--primary: #5b4b8a`, `--accent: #d4af37`
 - **Acordes** sempre `#5b4b8a` — nunca `#1d4ed8`
 - **Sem frameworks JS** — JS puro, sem npm, sem build step
-- **`invalidate_library_cache()`** após operações de escrita no Drive (chama bundle automaticamente)
+- **`invalidate_library_cache()`** após operações de escrita no Drive
 - **`invalidate_bundle_cache()`** após edições de conteúdo de cifras
-- **`data-owner` no `<body>`** para passar roles ao JS (não usar Jinja em `<script>`)
+- **`data-owner` e `data-user-email` no `<body>`** para passar contexto ao JS (não usar Jinja em `<script>`)
 - **`escHtml()`** obrigatório ao inserir dados via innerHTML
 - **Mobile breakpoint:** `max-width: 1024px`
-- **Dropdowns** appendados ao `document.body` com `position: fixed` + `getBoundingClientRect()`
-- **Meu Tom:** sempre usar `_myTones[fileId]?.my_key || song.key` ao exibir tom
+- **iOS safe area:** `env(safe-area-inset-bottom, 0px)` — sem margem extra acima da safe area
+- **`font-size` mínimo 16px** em inputs mobile — abaixo disso o iOS Safari faz zoom ao focar
 
 ---
 
 ### Próximas funcionalidades sugeridas
 
-- Workspace compartilhado: músico convida outros membros para colaborar no mesmo acervo
-- Repertórios por usuário com controle de conflito de escrita
+- Workspace colaborativo: múltiplos owners editando o mesmo acervo
+- Notificações push para novos compartilhamentos
 - Planos de assinatura por workspace (SaaS)
+- Histórico de versões de cifras
