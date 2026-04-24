@@ -2806,9 +2806,251 @@ body.android #presenter-cifra .chord-line {
     height: 14px;
   }
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   DESKTOP REDESIGN — Home, Category table, Inline cifra
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Desktop: modal becomes inline center panel ─────────────────────────── */
+@media (min-width: 1025px) {
+  #modal-overlay {
+    inset: var(--header-h) var(--rep-w) 0 var(--sidebar-w);
+    background: var(--bg);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    align-items: stretch;
+    padding: 0;
+    z-index: 60;
+  }
+  #modal-overlay.open { animation: none; }
+  #modal {
+    width: 100%; max-height: 100%;
+    border-radius: 0; border: none;
+    box-shadow: none; animation: none;
+  }
+  #modal-header {
+    position: sticky; top: 0; z-index: 2;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 16px 24px 14px;
+  }
+  #modal-title-wrap { flex: 1; min-width: 0; }
+  #modal-title { font-size: 1.5em; font-weight: 800; letter-spacing: -0.03em; line-height: 1.15; }
+  #modal-artist { font-size: 0.82em; color: var(--text-muted); margin-top: 2px; }
+  #modal-close {
+    width: 32px; height: 32px; font-size: 1rem;
+    background: var(--surface2); border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+  }
+  #transpose-toolbar {
+    padding: 10px 24px; background: #faf9fc;
+    border-bottom: 1px solid var(--border);
+  }
+  #my-tones-bar { padding: 6px 24px; }
+  #modal-body { padding: 24px; flex: 1; overflow: auto; }
+  #cifra-content { max-width: 860px; }
+  #modal-footer { padding: 10px 24px; }
+}
+
+/* ── Category header (breadcrumb + title + filter bar) ──────────────────── */
+#cat-header { display: none; padding: 0 0 0; }
+#cat-header.show { display: block; }
+.cat-breadcrumb {
+  display: flex; align-items: center; gap: 5px;
+  font-size: 11.5px; color: var(--text-muted); margin-bottom: 8px;
+}
+.cat-breadcrumb span { cursor: pointer; transition: color .15s; }
+.cat-breadcrumb span:hover { color: var(--primary); }
+.cat-breadcrumb .crumb-active { font-weight: 700; color: var(--primary); cursor: default; }
+.cat-breadcrumb .crumb-sep { color: var(--border); font-size: 10px; }
+.cat-title-row {
+  display: flex; align-items: flex-end; justify-content: space-between;
+  margin-bottom: 20px; gap: 16px; flex-wrap: wrap;
+}
+.cat-main-title { margin: 0; font-size: 26px; font-weight: 800; color: var(--text); letter-spacing: -0.5px; line-height: 1.1; }
+.cat-subtitle { font-size: 13px; color: var(--text-muted); margin-top: 5px; }
+.cat-title-actions { display: flex; gap: 8px; flex-shrink: 0; }
+.cat-filter-bar {
+  display: flex; align-items: center; gap: 8px; padding: 10px 14px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 12px; margin-bottom: 14px; flex-wrap: wrap;
+}
+.cat-filter-label { font-size: 10px; font-weight: 800; letter-spacing: 1.2px; text-transform: uppercase; color: var(--text-muted); }
+.cat-filter-sep { width: 1px; height: 16px; background: var(--border); flex-shrink: 0; }
+.cat-filter-btn {
+  padding: 5px 12px; border-radius: 99px; border: 1px solid var(--border);
+  background: transparent; color: var(--text-muted); font-size: 11.5px; font-weight: 600; cursor: pointer;
+  transition: all .15s;
+}
+.cat-filter-btn:hover { border-color: var(--primary); color: var(--primary); }
+.cat-filter-btn.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+.cat-sort-wrap { display: flex; align-items: center; gap: 6px; margin-left: auto; }
+.cat-sort-label { font-size: 11px; font-weight: 600; color: var(--text-muted); white-space: nowrap; }
+#cat-sort-select {
+  padding: 5px 10px; border-radius: 99px; background: var(--surface);
+  border: 1px solid var(--border); color: var(--text); font-size: 11.5px;
+  font-weight: 600; font-family: inherit; outline: none; cursor: pointer;
+}
+
+/* ── Song table (desktop category view) ─────────────────────────────────── */
+.song-table-head {
+  display: grid;
+  grid-template-columns: 44px 1fr 160px 80px 72px 210px;
+  gap: 12px; padding: 0 14px 8px;
+  font-size: 10px; font-weight: 800; letter-spacing: 1.3px;
+  text-transform: uppercase; color: var(--text-muted);
+}
+.song-table-row {
+  display: grid;
+  grid-template-columns: 44px 1fr 160px 80px 72px 210px;
+  gap: 12px; align-items: center; padding: 10px 14px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 10px; margin-bottom: 4px; cursor: pointer;
+  transition: background .12s, border-color .12s;
+}
+.song-table-row:hover { background: var(--surface2); border-color: rgba(91,75,138,.2); }
+.song-table-rank { font-size: 12px; font-weight: 700; color: var(--text-muted); text-align: center; }
+.song-table-name { font-size: 13px; font-weight: 700; color: var(--text); letter-spacing: -0.1px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.song-table-artist { font-size: 12px; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.song-table-key {
+  display: inline-block; font-size: 10.5px; font-weight: 800;
+  color: var(--accent); background: rgba(212,175,55,.12);
+  border: 1px solid rgba(212,175,55,.28); border-radius: 99px; padding: 3px 9px;
+}
+.song-table-views { display: flex; align-items: center; gap: 4px; color: var(--text-muted); font-size: 11px; }
+.song-table-actions { display: flex; gap: 6px; justify-content: flex-end; align-items: center; }
+.song-table-actions .btn-hc-add {
+  padding: 5px 10px; border-radius: 99px; background: var(--primary-light);
+  border: none; color: var(--primary); font-size: 11px; font-weight: 700; cursor: pointer;
+  white-space: nowrap;
+}
+.song-table-actions .btn-hc-add.added { background: rgba(22,163,74,.08); color: var(--success); }
+.song-table-actions .btn-play {
+  width: 28px; height: 28px; border-radius: 99px; background: var(--primary);
+  border: none; color: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer;
+}
+.song-table-actions .btn-ops {
+  width: 28px; height: 28px; border-radius: 99px; background: transparent;
+  border: 1px solid var(--border); color: var(--text-muted); font-size: 14px;
+  font-weight: 800; cursor: pointer; display: flex; align-items: center; justify-content: center;
+}
+
+/* Mobile: cat-header hidden, cat-filter hidden */
+@media (max-width: 1024px) {
+  #cat-header { display: none !important; }
+  .song-table-head { display: none; }
+  .song-table-row {
+    display: flex; flex-wrap: wrap;
+    grid-template-columns: unset;
+    border-radius: 10px; padding: 10px 12px; margin-bottom: 4px;
+  }
+  .song-table-rank { order: 0; flex: 0; min-width: 28px; }
+  .song-table-name { order: 1; flex: 1; font-size: 13.5px; }
+  .song-table-artist { order: 2; flex: 100%; padding-left: 28px; font-size: 11.5px; }
+  .song-table-key { order: 3; flex: 0; }
+  .song-table-views { order: 4; }
+  .song-table-actions { order: 5; flex: 100%; justify-content: flex-start; padding-left: 28px; margin-top: 4px; }
+}
+
+/* ── Home view redesign ──────────────────────────────────────────────────── */
+.home-greeting { margin-bottom: 20px; }
+.home-greeting-name {
+  font-size: 24px; font-weight: 800; color: var(--text); letter-spacing: -0.5px;
+}
+.home-greeting-quote {
+  font-size: 13px; color: var(--text-muted); margin-top: 5px;
+  font-style: italic; display: flex; align-items: center; gap: 6px; line-height: 1.4;
+}
+
+#home-2col {
+  display: grid; grid-template-columns: 1.1fr 1fr; gap: 18px; margin-bottom: 22px;
+}
+@media (max-width: 900px) {
+  #home-2col { grid-template-columns: 1fr; }
+}
+
+/* Restyle liturgy card inside 2col */
+#home-2col #liturgia-widget {
+  background: var(--surface); border: 1.5px solid var(--border);
+  border-radius: 18px; padding: 18px 20px; margin: 0;
+}
+#home-2col #liturgia-widget .lit-header {
+  border-bottom: none; padding: 0 0 12px; margin-bottom: 12px; border-bottom: 1px solid var(--border);
+}
+/* Restyle calendar inside 2col */
+#home-2col #calendar-widget {
+  background: var(--surface); border: 1.5px solid var(--border);
+  border-radius: 18px; padding: 18px 20px;
+}
+#home-2col #calendar-widget .cal-header {
+  border-bottom: none; padding: 0 0 12px; margin-bottom: 0; border-bottom: 1px solid var(--border);
+}
+
+/* Continue de onde parou */
+#home-top-section { margin-bottom: 22px; }
+.home-section-header {
+  display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 12px;
+}
+.home-section-header h2 {
+  font-size: 15px; font-weight: 800; color: var(--text); letter-spacing: -0.3px; margin: 0;
+}
+.home-section-link { font-size: 12px; font-weight: 700; color: var(--primary); cursor: pointer; }
+
+#home-top-grid {
+  display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px;
+}
+@media (max-width: 1400px) { #home-top-grid { grid-template-columns: repeat(4, 1fr); } }
+@media (max-width: 900px) { #home-top-grid { grid-template-columns: repeat(3, 1fr); } }
+@media (max-width: 600px) { #home-top-grid { grid-template-columns: repeat(2, 1fr); } }
+
+/* Top card in continue section */
+.home-top-card-wrap {
+  background: var(--surface); border: 1.5px solid var(--border); border-radius: 12px;
+  padding: 11px 12px; cursor: pointer; position: relative;
+  transition: background .12s, border-color .12s, transform .12s;
+}
+.home-top-card-wrap:hover { background: var(--surface2); border-color: rgba(91,75,138,.2); transform: translateY(-2px); }
+.home-top-rank {
+  position: absolute; top: 10px; right: 10px;
+  font-size: 10px; font-weight: 700; color: var(--accent);
+  background: rgba(212,175,55,.12); border: 1px solid rgba(212,175,55,.28);
+  border-radius: 99px; padding: 1px 6px;
+}
+.home-top-card-wrap .home-card-name {
+  font-size: 12.5px; font-weight: 700; color: var(--text);
+  overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2;
+  -webkit-box-orient: vertical; min-height: 36px; line-height: 1.35;
+  margin-bottom: 6px; padding-right: 28px;
+}
+.home-top-card-wrap .hc-cat {
+  font-size: 10px; color: var(--text-muted);
+  overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
+}
+.home-top-card-wrap .hc-key {
+  font-size: 9.5px; font-weight: 700; color: var(--accent);
+  background: rgba(212,175,55,.1); border-radius: 99px; padding: 1px 6px;
+}
+
+/* Category explore chips */
+#home-cat-chips-section { margin-bottom: 8px; }
+#home-cat-chips { display: flex; gap: 8px; flex-wrap: wrap; }
+.home-cat-chip {
+  padding: 6px 14px; border-radius: 99px;
+  background: var(--surface); border: 1.5px solid var(--border);
+  font-size: 12px; font-weight: 700; color: var(--text); cursor: pointer;
+  transition: all .15s; display: flex; align-items: center; gap: 5px;
+  white-space: nowrap;
+}
+.home-cat-chip:hover { border-color: var(--primary); color: var(--primary); background: var(--primary-light); }
+.home-cat-chip.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+.home-cat-chip .chip-count {
+  font-size: 10px; font-weight: 600; opacity: 0.75;
+  background: rgba(255,255,255,.25); border-radius: 99px; padding: 0 5px;
+}
+.home-cat-chip:not(.active) .chip-count { background: var(--surface2); color: var(--text-muted); opacity: 1; }
 </style>
 </head>
-<body data-owner="{% if is_owner %}1{% else %}0{% endif %}" data-user-email="{{ user.email if user else '' }}">
+<body data-owner="{% if is_owner %}1{% else %}0{% endif %}" data-user-email="{{ user.email if user else '' }}" data-user-name="{{ user.name if user else '' }}">
 
 <!-- Splash screen -->
 <div id="splash">
@@ -2944,44 +3186,120 @@ body.android #presenter-cifra .chord-line {
 
     <!-- Main -->
     <div id="main">
-      <!-- Tela inicial: tabela de músicas mais acessadas -->
-      <div id="home-table-wrap" style="display:none">
+      <!-- Category header (breadcrumb + title + filters) — shown when category is active -->
+      <div id="cat-header">
+        <div class="cat-breadcrumb" id="cat-breadcrumb">
+          <span id="crumb-home">Início</span>
+          <span class="crumb-sep">›</span>
+          <span id="crumb-section"></span>
+          <span class="crumb-sep crumb-sep-cat" style="display:none">›</span>
+          <span class="crumb-active" id="crumb-cat"></span>
+        </div>
+        <div class="cat-title-row">
+          <div>
+            <h1 class="cat-main-title" id="cat-main-title"></h1>
+            <div class="cat-subtitle" id="cat-subtitle"></div>
+          </div>
+          <div class="cat-title-actions">
+            {% if is_owner %}
+            <button class="btn" id="btn-cat-new-song" style="display:none;align-items:center;gap:6px">
+              <svg width="12" height="12" viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M11 4v14M4 11h14"/></svg>
+              Nova música
+            </button>
+            {% endif %}
+          </div>
+        </div>
+        <div class="cat-filter-bar">
+          <span class="cat-filter-label">Filtrar</span>
+          <span class="cat-filter-sep"></span>
+          <button class="cat-filter-btn active" id="cat-filter-all">Todas</button>
+          <button class="cat-filter-btn" id="cat-filter-my-key">Meu tom</button>
+          <button class="cat-filter-btn" id="cat-filter-recent">Recentes</button>
+          <div class="cat-sort-wrap">
+            <span class="cat-sort-label">Ordenar:</span>
+            <select id="cat-sort-select">
+              <option value="views">Mais tocadas</option>
+              <option value="az">A – Z</option>
+              <option value="recent">Recém adicionadas</option>
+            </select>
+          </div>
+        </div>
+        <!-- Column headers for table (desktop only) -->
+        <div class="song-table-head">
+          <span style="text-align:center">#</span>
+          <span>Título</span>
+          <span>Artista</span>
+          <span>Tom</span>
+          <span>Views</span>
+          <span style="text-align:right">Ações</span>
+        </div>
+      </div>
 
-        <div class="home-quote">
-          <div class="home-quote-tag">Inspiração</div>
-          <p class="home-quote-text">"O canto exige, acima de tudo, uma profunda vida espiritual"</p>
-          <div class="home-quote-divider"></div>
-          <p class="home-quote-author">— Papa <span>Leão XIV</span></p>
+      <!-- Home view -->
+      <div id="home-table-wrap" style="display:none">
+        <!-- Greeting -->
+        <div class="home-greeting">
+          <div class="home-greeting-name" id="home-greeting-name">Olá!</div>
+          <div class="home-greeting-quote">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 21 12 17.77 5.82 21 7 14.14l-5-4.87 6.91-1.01z"/></svg>
+            <span id="home-greeting-quote-text">"Cantar é orar duas vezes." — Santo Agostinho</span>
+          </div>
         </div>
 
-        <!-- Liturgia do Dia -->
-        <div id="liturgia-widget">
-          <div class="lit-header">
-            <span class="lit-title">Liturgia do Dia</span>
-            <div class="lit-controls">
-              <div class="lit-shortcuts">
-                <button class="lit-shortcut-btn active" id="lit-btn-hoje">Hoje</button>
-                <button class="lit-shortcut-btn" id="lit-btn-sabado">Próx. Sábado</button>
-                <button class="lit-shortcut-btn" id="lit-btn-domingo">Próx. Domingo</button>
-              </div>
-              <div class="lit-nav">
-                <button class="lit-nav-btn" id="lit-prev" title="Dia anterior">&#8249;</button>
-                <span id="lit-date-label"></span>
-                <button class="lit-nav-btn" id="lit-next" title="Próximo dia">&#8250;</button>
+        <!-- 2-column: liturgy + events -->
+        <div id="home-2col">
+          <!-- Liturgia do Dia -->
+          <div id="liturgia-widget">
+            <div class="lit-header">
+              <span class="lit-title">Liturgia do Dia</span>
+              <div class="lit-controls">
+                <div class="lit-shortcuts">
+                  <button class="lit-shortcut-btn active" id="lit-btn-hoje">Hoje</button>
+                  <button class="lit-shortcut-btn" id="lit-btn-sabado">Próx. Sábado</button>
+                  <button class="lit-shortcut-btn" id="lit-btn-domingo">Próx. Domingo</button>
+                </div>
+                <div class="lit-nav">
+                  <button class="lit-nav-btn" id="lit-prev" title="Dia anterior">&#8249;</button>
+                  <span id="lit-date-label"></span>
+                  <button class="lit-nav-btn" id="lit-next" title="Próximo dia">&#8250;</button>
+                </div>
               </div>
             </div>
+            <div id="lit-content">
+              <div class="lit-loading">Carregando liturgia...</div>
+            </div>
           </div>
-          <div id="lit-content">
-            <div class="lit-loading">Carregando liturgia...</div>
+
+          <!-- Widget Google Calendar (lista compacta) -->
+          <div id="calendar-widget" style="display:none">
+            <div class="cal-header">
+              <span class="cal-title">Próximos Eventos</span>
+              <button class="cal-open-btn" id="btn-open-agenda">Ver agenda →</button>
+            </div>
+            <div id="cal-list" class="cal-list"></div>
+            <div id="cal-empty-state" style="display:none">
+              <button class="cal-empty-cta" id="btn-cal-empty">
+                <span class="cal-empty-icon">📅</span>
+                <div>
+                  <div>Nenhum ensaio ou compromisso agendado.</div>
+                  <strong>Clique para adicionar um evento.</strong>
+                  {% if cal_keywords %}
+                  <div class="cal-empty-hint">Eventos aparecem aqui se o título contiver: <em>{{ cal_keywords }}</em></div>
+                  {% endif %}
+                </div>
+              </button>
+            </div>
           </div>
         </div>
 
-        <!-- Cards de volumetria -->
-        <div id="home-stats-row"></div>
+        <!-- Stats row (hidden on desktop, kept for JS) -->
+        <div id="home-stats-row" style="display:none"></div>
 
+        <!-- Continue de onde parou -->
         <div id="home-top-section" style="display:none">
           <div class="home-section-header">
-            <h2 id="home-top-label">🔥 Mais tocadas</h2>
+            <h2 id="home-top-label">Continue de onde parou</h2>
+            <span class="home-section-link" id="home-top-link">Ver todas →</span>
           </div>
           <div id="home-top-grid"></div>
         </div>
@@ -3001,25 +3319,12 @@ body.android #presenter-cifra .chord-line {
         </div>
         {% endif %}
 
-        <!-- Widget Google Calendar (lista compacta) -->
-        <div id="calendar-widget" style="display:none">
-          <div class="cal-header">
-            <span class="cal-title">Próximos Eventos</span>
-            <button class="cal-open-btn" id="btn-open-agenda">Ver agenda →</button>
+        <!-- Explorar por categoria -->
+        <div id="home-cat-chips-section" style="display:none">
+          <div class="home-section-header" style="margin-top:4px">
+            <h2>Explorar por categoria</h2>
           </div>
-          <div id="cal-list" class="cal-list"></div>
-          <div id="cal-empty-state" style="display:none">
-            <button class="cal-empty-cta" id="btn-cal-empty">
-              <span class="cal-empty-icon">📅</span>
-              <div>
-                <div>Nenhum ensaio ou compromisso agendado.</div>
-                <strong>Clique para adicionar um evento.</strong>
-                {% if cal_keywords %}
-                <div class="cal-empty-hint">Eventos aparecem aqui se o título contiver: <em>{{ cal_keywords }}</em></div>
-                {% endif %}
-              </div>
-            </button>
-          </div>
+          <div id="home-cat-chips"></div>
         </div>
 
       </div>
@@ -3923,61 +4228,84 @@ function renderHomeTable(songs) {
   var wrap = document.getElementById("home-table-wrap");
   if (!songs.length) { wrap.style.display = "none"; return; }
 
-  // ── Cards de volumetria ──
-  var statsRow = document.getElementById("home-stats-row");
-  statsRow.innerHTML = "";
-  var totalCount = songs.length;
-  // Agrupa por seção
-  var sectionCounts = {};
-  songs.forEach(function(s) {
-    var sec = cleanLabel(s.section || "");
-    if (!sec) return;
-    sectionCounts[sec] = (sectionCounts[sec] || 0) + 1;
-  });
-  // Card total
-  var totalCard = document.createElement("div");
-  totalCard.className = "stat-card";
-  totalCard.innerHTML =
-    '<div class="stat-card-value">' + totalCount + '</div>' +
-    '<div class="stat-card-label">Músicas</div>' +
-    '<div class="stat-card-sub">no acervo</div>';
-  totalCard.addEventListener("click", function() {
-    document.getElementById("sidebar-home-item") && document.getElementById("sidebar-home-item").click();
-  });
-  statsRow.appendChild(totalCard);
-  // Card por seção
-  Object.keys(sectionCounts).sort().forEach(function(sec) {
-    var card = document.createElement("div");
-    card.className = "stat-card";
-    card.innerHTML =
-      '<div class="stat-card-value">' + sectionCounts[sec] + '</div>' +
-      '<div class="stat-card-label">' + escHtml(sec) + '</div>' +
-      '<div class="stat-card-sub">' + Math.round(sectionCounts[sec] / totalCount * 100) + '% do acervo</div>';
-    statsRow.appendChild(card);
-  });
+  // ── Greeting ──
+  var greetingEl = document.getElementById("home-greeting-name");
+  if (greetingEl) {
+    var h = new Date().getHours();
+    var period = h < 12 ? "Bom dia" : h < 18 ? "Boa tarde" : "Boa noite";
+    var firstName = (document.body.dataset.userName || "").split(" ")[0] || "";
+    greetingEl.textContent = period + (firstName ? ", " + firstName : "") + "!";
+  }
 
-  // ── Mais tocadas / Destaques ──
+  // ── Top songs ("Continue de onde parou") ──
   var sorted = songs.slice().sort(function(a, b) { return (b.views||0) - (a.views||0); });
   var withViews = sorted.filter(function(s) { return (s.views||0) > 0; });
-  var topSongs = withViews.length ? withViews.slice(0, 8)
-                                  : songs.slice().sort(function(a,b){ return a.name.localeCompare(b.name,"pt"); }).slice(0, 8);
+  var topSongs = withViews.length ? withViews.slice(0, 6)
+                                  : songs.slice().sort(function(a,b){ return a.name.localeCompare(b.name,"pt"); }).slice(0, 6);
   var hasViews = withViews.length > 0;
 
   var topSection = document.getElementById("home-top-section");
   var topGrid = document.getElementById("home-top-grid");
-  document.getElementById("home-top-label").textContent = hasViews ? "Mais tocadas" : "Destaques";
+  var topLabel = document.getElementById("home-top-label");
+  if (topLabel) topLabel.textContent = hasViews ? "Continue de onde parou" : "Destaques";
   topGrid.innerHTML = "";
+
   topSongs.forEach(function(song, i) {
-    var card = _makeHomeCard(song, "home-card home-top-card");
-    if (hasViews) {
-      var rank = document.createElement("span");
-      rank.className = "home-top-rank";
-      rank.textContent = "#" + (i + 1);
-      card.insertBefore(rank, card.firstChild);
-    }
+    var enriched = _songWithViews(song);
+    var catLabel = cleanLabel(song.category === "_raiz" ? song.section : (song.category || song.section));
+    var keyDisplay = (song.fileId && _myTones[song.fileId] && _myTones[song.fileId].my_key) || song.key || "";
+    var card = document.createElement("div");
+    card.className = "home-top-card-wrap";
+    card.dataset.songPath = song.path || "";
+    card.dataset.songFileId = song.fileId || "";
+    card.innerHTML =
+      '<span class="home-top-rank">#' + (i + 1) + '</span>' +
+      '<div class="home-card-name">' + escHtml(song.name) + '</div>' +
+      '<div style="display:flex;gap:4px;align-items:center;flex-wrap:wrap;margin-top:4px">' +
+        '<span class="hc-cat">' + escHtml(catLabel) + '</span>' +
+        (keyDisplay ? '<span class="hc-key">' + escHtml(keyDisplay) + '</span>' : '') +
+      '</div>';
+    card.addEventListener("click", function() { openModal(song); });
     topGrid.appendChild(card);
   });
   topSection.style.display = "block";
+
+  // ── Category chips ──
+  var chipsSection = document.getElementById("home-cat-chips-section");
+  var chipsWrap = document.getElementById("home-cat-chips");
+  if (chipsSection && chipsWrap) {
+    chipsWrap.innerHTML = "";
+    // Collect all categories from library
+    var cats = [];
+    Object.keys(library).forEach(function(sec) {
+      Object.keys(library[sec] || {}).forEach(function(cat) {
+        var count = (library[sec][cat] || []).length;
+        if (count > 0) cats.push({ section: sec, cat: cat, count: count });
+      });
+    });
+    // Sort by count desc, take top 10
+    cats.sort(function(a, b) { return b.count - a.count; });
+    cats.slice(0, 10).forEach(function(c) {
+      var chip = document.createElement("button");
+      chip.className = "home-cat-chip";
+      chip.innerHTML = escHtml(cleanLabel(c.cat || c.section)) + ' <span class="chip-count">' + c.count + '</span>';
+      chip.addEventListener("click", function() {
+        // Find and click the sidebar category
+        var catEls = document.querySelectorAll(".sidebar-cat");
+        for (var i = 0; i < catEls.length; i++) {
+          if (catEls[i].dataset.section === c.section && catEls[i].dataset.cat === c.cat) {
+            catEls[i].click(); return;
+          }
+        }
+      });
+      chipsWrap.appendChild(chip);
+    });
+    chipsSection.style.display = "block";
+  }
+
+  // ── Stats row (hidden on desktop, kept for compat) ──
+  var statsRow = document.getElementById("home-stats-row");
+  if (statsRow) statsRow.style.display = "none";
 
   wrap.style.display = "block";
 }
@@ -4034,6 +4362,8 @@ function showHomeTable() {
   document.getElementById("home-table-wrap").style.display = "block";
   document.getElementById("song-grid").style.display = "none";
   document.getElementById("empty-state").style.display = "none";
+  var ch = document.getElementById("cat-header");
+  if (ch) ch.classList.remove("show");
 }
 
 function hideHomeTable() {
@@ -4476,11 +4806,108 @@ function _songWithViews(song) {
   return song;
 }
 
+function _updateCatHeader(songs) {
+  var header = document.getElementById("cat-header");
+  if (!header) return;
+  if (!currentCategory) { header.classList.remove("show"); return; }
+  header.classList.add("show");
+
+  var secLabel = cleanLabel(currentCategory.section || "");
+  var catLabel = cleanLabel(currentCategory.cat || "");
+  var crumbSection = document.getElementById("crumb-section");
+  var crumbCat = document.getElementById("crumb-cat");
+  var crumbSepCat = header.querySelector(".crumb-sep-cat");
+  var titleEl = document.getElementById("cat-main-title");
+  var subtitleEl = document.getElementById("cat-subtitle");
+  var newSongBtn = document.getElementById("btn-cat-new-song");
+
+  if (crumbSection) crumbSection.textContent = secLabel;
+  if (crumbCat) crumbCat.textContent = catLabel;
+  if (crumbSepCat) crumbSepCat.style.display = catLabel ? "" : "none";
+  if (titleEl) titleEl.textContent = catLabel || secLabel;
+  if (subtitleEl) subtitleEl.innerHTML = "<b style='color:var(--primary)'>" + songs.length + "</b> músicas";
+  if (newSongBtn) newSongBtn.style.display = "inline-flex";
+}
+
+function _makeTableRow(song, rank) {
+  var enriched = _songWithViews(song);
+  var inRep = repertorio.some(function(r) { return (r.fileId || r.path) === (song.fileId || song.path); });
+  var keyDisplay = (song.fileId && _myTones[song.fileId] && _myTones[song.fileId].my_key) || song.key || "";
+  var views = enriched.views || 0;
+
+  var row = document.createElement("div");
+  row.className = "song-table-row";
+  row.dataset.songPath = song.path || "";
+  row.dataset.songFileId = song.fileId || "";
+
+  row.innerHTML =
+    '<span class="song-table-rank">' + String(rank).padStart(2, "0") + '</span>' +
+    '<div class="song-table-name">' + escHtml(song.name) + '</div>' +
+    '<div class="song-table-artist">' + escHtml(song.artist || "") + '</div>' +
+    '<div>' + (keyDisplay ? '<span class="song-table-key">' + escHtml(keyDisplay) + '</span>' : '') + '</div>' +
+    '<div class="song-table-views">' +
+      '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>' +
+      '<span>' + (views || "—") + '</span>' +
+    '</div>' +
+    '<div class="song-table-actions">' +
+      '<button class="btn-hc-add' + (inRep ? ' added' : '') + '">' + (inRep ? '✓ Adicionado' : '+ Repertório') + '</button>' +
+      '<button class="btn-play" title="Apresentar" style="width:28px;height:28px;border-radius:99px;background:var(--primary);border:none;color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0">' +
+        '<svg width="9" height="10" viewBox="0 0 10 12" fill="currentColor"><path d="M0 0 L10 6 L0 12 Z"/></svg>' +
+      '</button>' +
+      (_isOwner ? '<button class="btn-song-ops btn-ops" title="Opções" style="width:28px;height:28px;border-radius:99px;background:transparent;border:1px solid var(--border);color:var(--text-muted);font-size:14px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center">⋯</button>' : '') +
+    '</div>';
+
+  row.querySelector(".btn-hc-add").addEventListener("click", async function(e) {
+    e.stopPropagation();
+    var btn = this;
+    btn.disabled = true;
+    btn.textContent = "...";
+    await toggleRepertorio(song, btn);
+    btn.disabled = false;
+    var nowIn = repertorio.some(function(r) { return (r.fileId || r.path) === (song.fileId || song.path); });
+    btn.classList.toggle("added", nowIn);
+    btn.textContent = nowIn ? "✓ Adicionado" : "+ Repertório";
+  });
+
+  var opsBtn = row.querySelector(".btn-song-ops");
+  if (opsBtn) opsBtn.addEventListener("click", function(e) {
+    e.stopPropagation();
+    if (_openSongMenu && _openSongMenu._owner === opsBtn) { closeOpenSongMenu(); return; }
+    closeOpenSongMenu();
+    var dd = document.createElement("div");
+    dd.className = "song-ops-dropdown";
+    dd._owner = opsBtn;
+    dd.innerHTML =
+      '<button class="sop-rename">✏️ Renomear</button>' +
+      '<button class="sop-copy">📋 Copiar para...</button>' +
+      '<button class="sop-move">📂 Mover para...</button>' +
+      '<div class="divider"></div>' +
+      '<button class="sop-delete danger">🗑️ Excluir</button>';
+    document.body.appendChild(dd);
+    var rect = opsBtn.getBoundingClientRect();
+    dd.style.top = (rect.bottom + 4) + "px";
+    dd.style.right = (window.innerWidth - rect.right) + "px";
+    _openSongMenu = dd;
+    dd.querySelector(".sop-rename").addEventListener("click", function(ev) { ev.stopPropagation(); closeOpenSongMenu(); startRenameSong(row, song); });
+    dd.querySelector(".sop-copy").addEventListener("click", function(ev) { ev.stopPropagation(); closeOpenSongMenu(); openFolderPicker("copy", song); });
+    dd.querySelector(".sop-move").addEventListener("click", function(ev) { ev.stopPropagation(); closeOpenSongMenu(); openFolderPicker("move", song); });
+    dd.querySelector(".sop-delete").addEventListener("click", function(ev) { ev.stopPropagation(); closeOpenSongMenu(); confirmDeleteSong(row, song); });
+  });
+
+  row.addEventListener("click", function(e) {
+    if (e.target.closest(".song-table-actions")) return;
+    openModal(song);
+  });
+  return row;
+}
+
 function renderSongGrid(songs) {
   var grid = document.getElementById("song-grid");
   var empty = document.getElementById("empty-state");
   var toggleWrap = document.getElementById("view-toggle-wrap");
   grid.innerHTML = "";
+
+  _updateCatHeader(songs);
 
   if (!songs.length) {
     grid.style.display = "none";
@@ -4492,16 +4919,34 @@ function renderSongGrid(songs) {
     return;
   }
 
-  grid.style.display = "grid";
-  if (toggleWrap) toggleWrap.style.display = "flex";
-  empty.style.display = "none";
-  _applyViewMode(_viewMode);
+  var isDesktop = window.innerWidth > 1024;
 
-  songs.forEach(function(song) {
-    var enriched = _songWithViews(song);
-    var card = _makeHomeCard(enriched, "home-card");
-    grid.appendChild(card);
-  });
+  if (isDesktop) {
+    // Table view
+    grid.style.display = "block";
+    if (toggleWrap) toggleWrap.style.display = "none";
+    empty.style.display = "none";
+    var sorted = songs.slice().sort(function(a, b) {
+      var sortVal = document.getElementById("cat-sort-select") ? document.getElementById("cat-sort-select").value : "views";
+      if (sortVal === "az") return a.name.localeCompare(b.name, "pt");
+      if (sortVal === "recent") return 0;
+      return (_songWithViews(b).views || 0) - (_songWithViews(a).views || 0);
+    });
+    sorted.forEach(function(song, i) {
+      grid.appendChild(_makeTableRow(song, i + 1));
+    });
+  } else {
+    // Card grid view (mobile)
+    grid.style.display = "grid";
+    if (toggleWrap) toggleWrap.style.display = "flex";
+    empty.style.display = "none";
+    _applyViewMode(_viewMode);
+    songs.forEach(function(song) {
+      var enriched = _songWithViews(song);
+      var card = _makeHomeCard(enriched, "home-card");
+      grid.appendChild(card);
+    });
+  }
 }
 
 // ─── Modal ──────────────────────────────────────────────────────────────────
@@ -7345,6 +7790,54 @@ document.addEventListener("DOMContentLoaded", function() {
   if (btnGrid) btnGrid.addEventListener("click", function() { _applyViewMode("grid"); });
   if (btnList) btnList.addEventListener("click", function() { _applyViewMode("list"); });
   _applyViewMode(_viewMode);
+
+  // ── Category filter bar ──
+  function _getCatSongs() {
+    if (!currentCategory) return [];
+    return (library[currentCategory.section] || {})[currentCategory.cat] || [];
+  }
+  var filterAll = document.getElementById("cat-filter-all");
+  var filterMyKey = document.getElementById("cat-filter-my-key");
+  var filterRecent = document.getElementById("cat-filter-recent");
+  var sortSel = document.getElementById("cat-sort-select");
+
+  function _setActiveFilter(btn) {
+    [filterAll, filterMyKey, filterRecent].forEach(function(b) { if (b) b.classList.remove("active"); });
+    if (btn) btn.classList.add("active");
+  }
+
+  if (filterAll) filterAll.addEventListener("click", function() {
+    _setActiveFilter(filterAll);
+    renderSongGrid(_getCatSongs());
+  });
+  if (filterMyKey) filterMyKey.addEventListener("click", function() {
+    _setActiveFilter(filterMyKey);
+    var songs = _getCatSongs().filter(function(s) {
+      return !!(s.fileId && _myTones[s.fileId] && _myTones[s.fileId].my_key);
+    });
+    renderSongGrid(songs);
+  });
+  if (filterRecent) filterRecent.addEventListener("click", function() {
+    _setActiveFilter(filterRecent);
+    renderSongGrid(_getCatSongs());
+  });
+  if (sortSel) sortSel.addEventListener("change", function() {
+    renderSongGrid(_getCatSongs());
+  });
+
+  // ── Home top link: navigate to first category ──
+  var topLink = document.getElementById("home-top-link");
+  if (topLink) topLink.addEventListener("click", function() {
+    var first = document.querySelector(".sidebar-cat");
+    if (first) first.click();
+  });
+
+  // ── Crumb home link ──
+  var crumbHome = document.getElementById("crumb-home");
+  if (crumbHome) crumbHome.addEventListener("click", function() {
+    var homeItem = document.getElementById("sidebar-home-item");
+    if (homeItem) homeItem.click();
+  });
 });
 
 document.addEventListener("DOMContentLoaded", init);
