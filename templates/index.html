@@ -4219,7 +4219,7 @@ var _metaStore = (function() {
     get: function(id) { return data[id] || null; },
     set: function(id, meta) {
       if (!id) return;
-      data[id] = { artist: meta.artist || "", key: meta.key || "", capo: meta.capo || "", tags: meta.tags || [] };
+      data[id] = { artist: meta.artist || "", key: meta.key || "", capo: meta.capo || "", tags: meta.tags || [], youtube: meta.youtube || "" };
       try { localStorage.setItem(KEY, JSON.stringify(data)); } catch(e) {}
     },
     enrich: function(songs) {
@@ -4227,10 +4227,11 @@ var _metaStore = (function() {
         var cached = data[s.fileId || s.path || ""];
         if (!cached) return s;
         return Object.assign({}, s, {
-          artist: cached.artist || s.artist || "",
-          key:    cached.key    || s.key    || "",
-          capo:   cached.capo   || s.capo   || "",
-          tags:   cached.tags   || s.tags   || [],
+          artist:  cached.artist  || s.artist  || "",
+          key:     cached.key     || s.key     || "",
+          capo:    cached.capo    || s.capo    || "",
+          tags:    cached.tags    || s.tags    || [],
+          youtube: cached.youtube || s.youtube || "",
         });
       });
     },
@@ -5514,6 +5515,8 @@ function openModal(song) {
       if (data.youtube !== undefined) {
         targetModal.youtube = data.youtube;
         _showYtPlayer(data.youtube);
+        var _metaYtInput = document.getElementById("meta-youtube");
+        if (_metaYtInput && metaMode) _metaYtInput.value = data.youtube;
       }
       if (!targetModal.key && data.text) {
         var detected = detectBaseNote(data.text);
@@ -5521,7 +5524,7 @@ function openModal(song) {
       }
       _updateCapoBadge(targetModal.capo || "");
       _metaStore.set(targetModal.fileId || targetModal.path, {
-        artist: targetModal.artist, key: targetModal.key, capo: targetModal.capo, tags: targetModal.tags
+        artist: targetModal.artist, key: targetModal.key, capo: targetModal.capo, tags: targetModal.tags, youtube: targetModal.youtube
       });
       if (song.fileId && data.text) {
         _idbPut(song.fileId, { text: data.text, name: song.name, ts: Date.now() }).catch(function(){});
@@ -6267,7 +6270,7 @@ async function saveMetadata() {
 
     // Persiste no cache local para reloads futuros
     _metaStore.set(currentModal.fileId || currentModal.path, {
-      artist: payload.artist, key: payload.key, capo: payload.capo, tags: tagsList,
+      artist: payload.artist, key: payload.key, capo: payload.capo, tags: tagsList, youtube: payload.youtube
     });
     // Atualiza allSongs em memória
     var songKey = currentModal.fileId || currentModal.path || "";
@@ -6276,7 +6279,8 @@ async function saveMetadata() {
         if (payload.title)  s.name   = payload.title;
         if (payload.artist !== undefined) s.artist = payload.artist;
         if (payload.key    !== undefined) s.key    = payload.key;
-        s.tags = tagsList;
+        s.tags    = tagsList;
+        s.youtube = payload.youtube;
       }
     });
     // Atualiza os cards na tela em tempo real
@@ -7139,6 +7143,19 @@ function _markActiveSavedRep() {
 }
 
 function openSavedRep(id) {
+  // Clicou no rep já ativo → desseleciona
+  if (id === currentRepId) {
+    currentRepId = null;
+    currentSharedId = null;
+    repertorio = [];
+    document.getElementById("rep-title-input").value = "";
+    renderRepList();
+    updateRepBadge();
+    refreshGridBtns();
+    _markActiveSavedRep();
+    _markActiveSharedRep();
+    return;
+  }
   var rep = savedReps[id];
   if (!rep) return;
   currentRepId = id;
@@ -7425,6 +7442,28 @@ function toggleNotifPanel() {
   }
   renderNotifPanel();
   panel.classList.add("open");
+  _markAllNotifSeen();
+}
+
+function _markAllNotifSeen() {
+  var userEmail = (document.body.dataset.userEmail || "").toLowerCase();
+  var unseen = sharedWithMe.filter(function(s) {
+    return !(s.seen_by || []).map(function(e){ return e.toLowerCase(); }).includes(userEmail);
+  });
+  unseen.forEach(function(share) {
+    fetch("/api/share/" + encodeURIComponent(share.id) + "/seen", { method: "POST" })
+      .then(function() {
+        var s = sharedWithMe.find(function(x){ return x.id === share.id; });
+        if (s) {
+          if (!s.seen_by) s.seen_by = [];
+          if (!s.seen_by.map(function(e){return e.toLowerCase();}).includes(userEmail)) s.seen_by.push(userEmail);
+        }
+      }).catch(function(){});
+  });
+  var badge = document.getElementById("notif-badge");
+  if (badge) badge.style.display = "none";
+  var btn = document.getElementById("btn-notif");
+  if (btn) btn.classList.remove("has-notif");
 }
 
 function renderNotifPanel() {
@@ -7994,7 +8033,7 @@ async function saveTone() {
     currentModal.key = newKey;
     currentModal.capo = _mtCapoValue > 0 ? String(_mtCapoValue) : "";
     _metaStore.set(currentModal.fileId || currentModal.path, {
-      artist: currentModal.artist || "", key: newKey, capo: currentModal.capo, tags: currentModal.tags || []
+      artist: currentModal.artist || "", key: newKey, capo: currentModal.capo, tags: currentModal.tags || [], youtube: currentModal.youtube || ""
     });
     if (currentModal.fileId || currentModal.path) {
       var metaPayload = {
