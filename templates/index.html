@@ -93,7 +93,6 @@ button, a, .song-card, .home-card, .home-top-card, .sidebar-cat,
   display: flex;
   align-items: center;
   padding: 0 18px;
-  border-right: 1px solid var(--border);
   gap: 10px;
 }
 #header h1 { font-size: 1.05em; font-weight: 800; color: var(--primary); letter-spacing: 0.02em; white-space: nowrap; }
@@ -148,6 +147,8 @@ button, a, .song-card, .home-card, .home-top-card, .sidebar-cat,
 }
 #search-wrap {
   flex: 1;
+  max-width: 640px;
+  margin: 0 auto;
   position: relative;
   display: flex;
   align-items: center;
@@ -1949,7 +1950,6 @@ body.android #presenter-cifra .chord-line {
   align-items: center;
   justify-content: flex-end;
   padding: 0 16px;
-  border-left: 1px solid var(--border);
   gap: 8px;
 }
 #user-badge {
@@ -2910,14 +2910,14 @@ body.android #presenter-cifra .chord-line {
 /* ── Song table (desktop category view) ─────────────────────────────────── */
 .song-table-head {
   display: grid;
-  grid-template-columns: 44px 1fr 160px 80px 72px 210px;
+  grid-template-columns: 44px 2fr 1fr 80px 72px 210px;
   gap: 12px; padding: 0 14px 8px;
   font-size: 10px; font-weight: 800; letter-spacing: 1.3px;
   text-transform: uppercase; color: var(--text-muted);
 }
 .song-table-row {
   display: grid;
-  grid-template-columns: 44px 1fr 160px 80px 72px 210px;
+  grid-template-columns: 44px 2fr 1fr 80px 72px 210px;
   gap: 12px; align-items: center; padding: 10px 14px;
   background: var(--surface); border: 1px solid var(--border);
   border-radius: 10px; margin-bottom: 4px; cursor: pointer;
@@ -3003,7 +3003,7 @@ body.android #presenter-cifra .chord-line {
 #home-2col #calendar-widget {
   background: var(--surface); border: 1.5px solid var(--border);
   border-radius: 18px; padding: 18px 20px;
-  display: flex !important; flex-direction: column;
+  display: flex; flex-direction: column;
 }
 #home-2col #calendar-widget .cal-header {
   border-bottom: 1px solid var(--border); padding: 0 0 12px; margin-bottom: 12px; flex-shrink: 0;
@@ -3198,7 +3198,6 @@ body.android #presenter-cifra .chord-line {
     <div id="header-brand">
       <button id="btn-menu-toggle" title="Menu">&#9776;</button>
       <img src="/static/brand/logo-light.svg" alt="My Cifras" height="30">
-      <div id="header-brand-stats" style="font-size:11px;color:var(--text-muted);font-weight:500;white-space:nowrap;line-height:1.3"></div>
       <button id="btn-home" title="Página inicial" class="active">&#8962;</button>
     </div>
     <div id="header-main">
@@ -3214,6 +3213,9 @@ body.android #presenter-cifra .chord-line {
         </div>
       </div>
       <div id="search-content-spinner"></div>
+    </div>
+    <!-- Right section alinhado ao rep-panel -->
+    <div id="header-right">
       {% if is_owner %}
       <button class="btn btn-import-header" id="btn-import" title="Importar cifra">
         <svg width="12" height="12" viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M11 4v14M4 11h14"/></svg>
@@ -3221,9 +3223,6 @@ body.android #presenter-cifra .chord-line {
       </button>
       <input type="file" id="file-input" accept=".docx,.doc,.pdf,.txt" style="display:none">
       {% endif %}
-    </div>
-    <!-- Right section alinhado ao rep-panel -->
-    <div id="header-right">
       {% if user %}
       <div id="user-badge">
         {% if user.picture %}
@@ -4974,6 +4973,7 @@ function _makeTableRow(song, rank) {
     dd.className = "song-ops-dropdown";
     dd._owner = opsBtn;
     dd.innerHTML =
+      '<button class="sop-meta">⚙️ Metadados</button>' +
       '<button class="sop-rename">✏️ Renomear</button>' +
       '<button class="sop-copy">📋 Copiar para...</button>' +
       '<button class="sop-move">📂 Mover para...</button>' +
@@ -4984,6 +4984,11 @@ function _makeTableRow(song, rank) {
     dd.style.top = (rect.bottom + 4) + "px";
     dd.style.right = (window.innerWidth - rect.right) + "px";
     _openSongMenu = dd;
+    dd.querySelector(".sop-meta").addEventListener("click", function(ev) {
+      ev.stopPropagation(); closeOpenSongMenu();
+      openModal(song);
+      setTimeout(openMetaPanel, 300);
+    });
     dd.querySelector(".sop-rename").addEventListener("click", function(ev) { ev.stopPropagation(); closeOpenSongMenu(); startRenameSong(row, song); });
     dd.querySelector(".sop-copy").addEventListener("click", function(ev) { ev.stopPropagation(); closeOpenSongMenu(); openFolderPicker("copy", song); });
     dd.querySelector(".sop-move").addEventListener("click", function(ev) { ev.stopPropagation(); closeOpenSongMenu(); openFolderPicker("move", song); });
@@ -5308,7 +5313,7 @@ function loadCalendar() {
       if (!data.events || !data.events.length) {
         list.style.display = "none";
         emptyState.style.display = "block";
-        widget.style.display = "block";
+        widget.style.display = "";
         return;
       }
       list.style.display = "";
@@ -5654,9 +5659,12 @@ function _renderLiturgia(data) {
     h += '<div style="display:grid;grid-template-columns:repeat(' + Math.min(refBoxes.length, 3) + ',1fr);gap:6px;padding:10px 14px 8px">';
     refBoxes.forEach(function(s) {
       var rid = "lit-r-" + s.key;
-      h += '<div class="lit-ref-box" onclick="_litToggle(\'' + rid + '\')" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:6px 9px;cursor:pointer;transition:border-color .15s" onmouseover="this.style.borderColor=\'rgba(91,75,138,.35)\'" onmouseout="this.style.borderColor=\'var(--border)\'">';
-      h += '<div style="font-size:8.5px;font-weight:800;letter-spacing:.9px;text-transform:uppercase;color:var(--text-muted);margin-bottom:2px">' + escHtml(s.label) + '</div>';
-      h += '<div style="font-size:11px;font-weight:700;color:' + (isGold ? '#a07820' : 'var(--primary)') + '">' + escHtml(data[s.key].referencia) + '</div>';
+      h += '<div class="lit-ref-box" id="' + rid + '-box" onclick="_litToggleBox(\'' + rid + '\')" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:6px 9px;cursor:pointer;transition:border-color .15s,background .15s" onmouseover="this.style.borderColor=\'rgba(91,75,138,.35)\'" onmouseout="this.style.borderColor=this.classList.contains(\'open\')?\'rgba(91,75,138,.35)\':\'var(--border)\'">';
+      h += '<div style="display:flex;align-items:center;justify-content:space-between;gap:4px">';
+      h += '<div style="font-size:8.5px;font-weight:800;letter-spacing:.9px;text-transform:uppercase;color:var(--text-muted)">' + escHtml(s.label) + '</div>';
+      h += '<span class="lit-ref-chevron" id="' + rid + '-ch" style="font-size:7px;color:var(--text-muted);transition:transform .18s">▼</span>';
+      h += '</div>';
+      h += '<div style="font-size:11px;font-weight:700;color:' + (isGold ? '#a07820' : 'var(--primary)') + ';margin-top:2px">' + escHtml(data[s.key].referencia) + '</div>';
       h += '</div>';
     });
     h += '</div>';
@@ -5674,10 +5682,7 @@ function _renderLiturgia(data) {
     h += '</div>';
   });
 
-  // ── Link textos completos ──
-  h += '<div style="padding:8px 14px 12px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">';
-  h += '<button onclick="document.querySelectorAll(\'.lit-reading\').forEach(function(el){el.style.display=el.style.display===\'block\'?\'none\':\'block\'})" style="background:none;border:none;font-size:11px;font-weight:700;color:var(--primary);cursor:pointer;padding:0">&#9776; Ler textos completos →</button>';
-  h += '</div>';
+  h += '<div style="padding:8px 14px 10px;font-size:10.5px;color:var(--text-muted)">Clique em uma leitura para expandir o texto.</div>';
 
   h += '</div>';
   document.getElementById("lit-content").innerHTML = h;
@@ -5687,6 +5692,20 @@ function _litToggle(id) {
   var body = document.getElementById(id);
   if (!body) return;
   body.style.display = body.style.display === "block" ? "none" : "block";
+}
+function _litToggleBox(id) {
+  var body = document.getElementById(id);
+  var box  = document.getElementById(id + "-box");
+  var ch   = document.getElementById(id + "-ch");
+  if (!body) return;
+  var open = body.style.display !== "block";
+  body.style.display = open ? "block" : "none";
+  if (box) {
+    box.style.borderColor = open ? "rgba(91,75,138,.4)" : "var(--border)";
+    box.style.background  = open ? "var(--primary-light)" : "var(--surface2)";
+    if (open) box.classList.add("open"); else box.classList.remove("open");
+  }
+  if (ch) ch.style.transform = open ? "rotate(180deg)" : "";
 }
 
 // ─── Toolbar do editor ───────────────────────────────────────────────────────
@@ -7948,7 +7967,14 @@ document.addEventListener("DOMContentLoaded", function() {
   });
   if (filterRecent) filterRecent.addEventListener("click", function() {
     _setActiveFilter(filterRecent);
-    renderSongGrid(_getCatSongs());
+    var songs = _getCatSongs().slice().sort(function(a, b) {
+      var ta = a.modifiedTime || "";
+      var tb = b.modifiedTime || "";
+      if (tb > ta) return 1;
+      if (tb < ta) return -1;
+      return a.name.localeCompare(b.name, "pt");
+    });
+    renderSongGrid(songs);
   });
   if (sortSel) sortSel.addEventListener("change", function() {
     renderSongGrid(_getCatSongs());
