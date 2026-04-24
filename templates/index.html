@@ -2964,6 +2964,7 @@ body.android #presenter-cifra .chord-line {
 
 #home-2col {
   display: grid; grid-template-columns: 1.1fr 1fr; gap: 18px; margin-bottom: 22px;
+  align-items: stretch;
 }
 @media (max-width: 900px) {
   #home-2col { grid-template-columns: 1fr; }
@@ -2973,18 +2974,45 @@ body.android #presenter-cifra .chord-line {
 #home-2col #liturgia-widget {
   background: var(--surface); border: 1.5px solid var(--border);
   border-radius: 18px; padding: 18px 20px; margin: 0;
+  display: flex; flex-direction: column;
 }
 #home-2col #liturgia-widget .lit-header {
   border-bottom: none; padding: 0 0 12px; margin-bottom: 12px; border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
 }
+#home-2col #liturgia-widget #lit-content { flex: 1; overflow: hidden; }
+#home-2col #liturgia-widget .lit-card { height: 100%; display: flex; flex-direction: column; }
+
 /* Restyle calendar inside 2col */
 #home-2col #calendar-widget {
   background: var(--surface); border: 1.5px solid var(--border);
   border-radius: 18px; padding: 18px 20px;
+  display: flex !important; flex-direction: column;
 }
 #home-2col #calendar-widget .cal-header {
-  border-bottom: none; padding: 0 0 12px; margin-bottom: 0; border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--border); padding: 0 0 12px; margin-bottom: 12px; flex-shrink: 0;
 }
+#home-2col #calendar-widget .cal-list { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; }
+.cal-header-label {
+  font-size: 10.5px; font-weight: 800; letter-spacing: 1.2px;
+  text-transform: uppercase; color: var(--text-muted);
+}
+.cal-new-btn {
+  background: none; border: 1px solid var(--border); border-radius: 99px;
+  color: var(--text-muted); font-size: 11px; font-weight: 700;
+  padding: 3px 10px; cursor: pointer;
+  transition: border-color .15s, color .15s, background .15s;
+}
+.cal-new-btn:hover { border-color: var(--primary); color: var(--primary); background: var(--primary-light); }
+.cal-event-type-label {
+  font-size: 9px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase;
+  color: var(--text-muted); margin-bottom: 1px; display: flex; align-items: center; gap: 4px;
+}
+.cal-event-type-dot {
+  width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0;
+}
+.cal-event { border-radius: 10px; padding: 9px 12px; }
+.cal-event-title { font-size: .82rem; font-weight: 700; }
 
 /* Continue de onde parou */
 #home-top-section { margin-bottom: 22px; }
@@ -3006,48 +3034,53 @@ body.android #presenter-cifra .chord-line {
 /* Top card in continue section */
 .home-top-card-wrap {
   background: var(--surface); border: 1.5px solid var(--border); border-radius: 12px;
-  padding: 11px 12px; cursor: pointer; position: relative;
-  transition: background .12s, border-color .12s, transform .12s;
+  padding: 12px 12px 10px; cursor: pointer; position: relative;
+  display: flex; flex-direction: column; min-height: 128px;
+  transition: background .12s, border-color .12s, transform .15s, box-shadow .15s;
 }
-.home-top-card-wrap:hover { background: var(--surface2); border-color: rgba(91,75,138,.2); transform: translateY(-2px); }
+.home-top-card-wrap:hover { background: var(--surface2); border-color: rgba(91,75,138,.25); transform: translateY(-2px); box-shadow: 0 6px 20px rgba(91,75,138,.12); }
+.home-top-icon-wrap {
+  width: 36px; height: 36px; border-radius: 10px;
+  background: var(--primary); display: flex; align-items: center; justify-content: center;
+  margin-bottom: 10px; flex-shrink: 0;
+}
 .home-top-rank {
   position: absolute; top: 10px; right: 10px;
   font-size: 10px; font-weight: 700; color: var(--accent);
-  background: rgba(212,175,55,.12); border: 1px solid rgba(212,175,55,.28);
-  border-radius: 99px; padding: 1px 6px;
 }
 .home-top-card-wrap .home-card-name {
   font-size: 12.5px; font-weight: 700; color: var(--text);
   overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2;
-  -webkit-box-orient: vertical; min-height: 36px; line-height: 1.35;
-  margin-bottom: 6px; padding-right: 28px;
+  -webkit-box-orient: vertical; line-height: 1.35;
+  padding-right: 24px; flex: 1;
+}
+.home-top-foot {
+  display: flex; align-items: center; gap: 5px; margin-top: 8px; flex-wrap: wrap;
 }
 .home-top-card-wrap .hc-cat {
   font-size: 10px; color: var(--text-muted);
-  overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
+  overflow: hidden; white-space: nowrap; text-overflow: ellipsis; flex: 1; min-width: 0;
 }
 .home-top-card-wrap .hc-key {
   font-size: 9.5px; font-weight: 700; color: var(--accent);
-  background: rgba(212,175,55,.1); border-radius: 99px; padding: 1px 6px;
+  background: rgba(212,175,55,.12); border: 1px solid rgba(212,175,55,.3);
+  border-radius: 99px; padding: 2px 7px; flex-shrink: 0;
 }
 
 /* Category explore chips */
 #home-cat-chips-section { margin-bottom: 8px; }
-#home-cat-chips { display: flex; gap: 8px; flex-wrap: wrap; }
+#home-cat-chips { display: flex; gap: 7px; flex-wrap: wrap; }
 .home-cat-chip {
-  padding: 6px 14px; border-radius: 99px;
+  padding: 6px 13px; border-radius: 99px;
   background: var(--surface); border: 1.5px solid var(--border);
   font-size: 12px; font-weight: 700; color: var(--text); cursor: pointer;
-  transition: all .15s; display: flex; align-items: center; gap: 5px;
+  transition: all .15s; display: flex; align-items: center; gap: 4px;
   white-space: nowrap;
 }
 .home-cat-chip:hover { border-color: var(--primary); color: var(--primary); background: var(--primary-light); }
 .home-cat-chip.active { background: var(--primary); color: #fff; border-color: var(--primary); }
-.home-cat-chip .chip-count {
-  font-size: 10px; font-weight: 600; opacity: 0.75;
-  background: rgba(255,255,255,.25); border-radius: 99px; padding: 0 5px;
-}
-.home-cat-chip:not(.active) .chip-count { background: var(--surface2); color: var(--text-muted); opacity: 1; }
+.home-cat-chip .chip-count { font-weight: 600; }
+.home-cat-chip:not(.active) .chip-count { color: var(--text-muted); }
 </style>
 </head>
 <body data-owner="{% if is_owner %}1{% else %}0{% endif %}" data-user-email="{{ user.email if user else '' }}" data-user-name="{{ user.name if user else '' }}">
@@ -3272,9 +3305,12 @@ body.android #presenter-cifra .chord-line {
 
           <!-- Widget Google Calendar (lista compacta) -->
           <div id="calendar-widget" style="display:none">
-            <div class="cal-header">
-              <span class="cal-title">Próximos Eventos</span>
-              <button class="cal-open-btn" id="btn-open-agenda">Ver agenda →</button>
+            <div class="cal-header" style="display:flex;align-items:center;justify-content:space-between">
+              <span class="cal-header-label">Próximos Eventos</span>
+              <div style="display:flex;gap:6px;align-items:center">
+                <button class="cal-new-btn" id="btn-cal-new">+ Novo</button>
+                <button class="cal-open-btn" id="btn-open-agenda" style="border:none;padding:0;font-size:11px;font-weight:700;color:var(--primary);background:none;cursor:pointer">Ver tudo →</button>
+              </div>
             </div>
             <div id="cal-list" class="cal-list"></div>
             <div id="cal-empty-state" style="display:none">
@@ -4259,9 +4295,14 @@ function renderHomeTable(songs) {
     card.dataset.songPath = song.path || "";
     card.dataset.songFileId = song.fileId || "";
     card.innerHTML =
+      '<div class="home-top-icon-wrap">' +
+        '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">' +
+          '<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>' +
+        '</svg>' +
+      '</div>' +
       '<span class="home-top-rank">#' + (i + 1) + '</span>' +
       '<div class="home-card-name">' + escHtml(song.name) + '</div>' +
-      '<div style="display:flex;gap:4px;align-items:center;flex-wrap:wrap;margin-top:4px">' +
+      '<div class="home-top-foot">' +
         '<span class="hc-cat">' + escHtml(catLabel) + '</span>' +
         (keyDisplay ? '<span class="hc-key">' + escHtml(keyDisplay) + '</span>' : '') +
       '</div>';
@@ -5218,17 +5259,32 @@ function loadCalendar() {
       list.style.display = "";
       emptyState.style.display = "none";
 
+      var today = new Date(); today.setHours(0,0,0,0);
+
       data.events.forEach(function(ev) {
         var startDate = new Date(ev.start);
         var day   = startDate.getDate();
         var month = _MONTHS_SHORT[startDate.getMonth()];
 
         var timeStr = "";
+        var isToday = false;
         if (!ev.allDay) {
+          var evDay = new Date(startDate); evDay.setHours(0,0,0,0);
+          isToday = evDay.getTime() === today.getTime();
           timeStr = startDate.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+          if (isToday) timeStr += " · Hoje";
         } else {
           timeStr = "Dia inteiro";
         }
+
+        // Detect event type from title keywords
+        var titleLow = (ev.title || "").toLowerCase();
+        var evType = "";
+        var evDotColor = "var(--text-muted)";
+        if (titleLow.indexOf("missa") !== -1) { evType = "Missa"; evDotColor = "#c47e2a"; }
+        else if (titleLow.indexOf("ensaio") !== -1) { evType = "Ensaio"; evDotColor = "var(--primary)"; }
+        else if (titleLow.indexOf("retiro") !== -1) { evType = "Retiro"; evDotColor = "#3b7c3b"; }
+        else if (titleLow.indexOf("reunião") !== -1 || titleLow.indexOf("reuniao") !== -1) { evType = "Reunião"; evDotColor = "#4a7dbf"; }
 
         var a = document.createElement("a");
         a.className = "cal-event";
@@ -5241,6 +5297,7 @@ function loadCalendar() {
             '<span class="cal-date-month">' + month + '</span>' +
           '</div>' +
           '<div class="cal-event-info">' +
+            (evType ? '<div class="cal-event-type-label"><span class="cal-event-type-dot" style="background:' + evDotColor + '"></span>' + escHtml(evType) + '</div>' : '') +
             '<div class="cal-event-title">' + escHtml(ev.title) + '</div>' +
             '<div class="cal-event-meta">' +
               '<span class="cal-event-time">🕐 ' + escHtml(timeStr) + '</span>' +
@@ -5511,40 +5568,61 @@ async function loadLiturgia(d, shortcutId) {
 }
 
 function _renderLiturgia(data) {
+  var corHex  = data.corHex  || "#9b97b0";
+  var isGold  = data.cor && /pascal|natal|aleluia/i.test((data.cor || "") + " " + (data.tempo || "") + " " + (data.liturgia || ""));
+  var headerBg = isGold
+    ? "linear-gradient(135deg, rgba(212,175,55,.18) 0%, rgba(212,175,55,.06) 100%)"
+    : "rgba(0,0,0,.02)";
+
   var h = '<div class="lit-card">';
 
-  // Cabeçalho com cor litúrgica e nome da celebração
-  h += '<div class="lit-celebration">';
-  h += '<div class="lit-cor-dot" style="background:' + escHtml(data.corHex || "#9b97b0") + '"></div>';
-  h += '<div>';
-  h += '<div class="lit-cor-label">' + escHtml(data.cor || "") + '</div>';
-  h += '<div class="lit-celebration-name">' + escHtml(data.liturgia || "") + '</div>';
-  h += '</div></div>';
+  // ── Celebração ──
+  h += '<div class="lit-celebration" style="background:' + headerBg + ';border-radius:10px;padding:12px 14px;margin-bottom:0">';
+  h += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">';
+  h += '<div class="lit-cor-dot" style="background:' + escHtml(corHex) + ';width:9px;height:9px;border-radius:50%;flex-shrink:0' + (isGold ? ';box-shadow:0 0 0 3px rgba(212,175,55,.22)' : '') + '"></div>';
+  h += '<span style="font-size:10px;font-weight:800;letter-spacing:1.2px;text-transform:uppercase;color:' + (isGold ? '#a07820' : 'var(--text-muted)') + '">' + escHtml(data.cor || "") + '</span>';
+  if (data.tempo) h += '<span style="font-size:10px;color:var(--text-muted);opacity:.6">·</span><span style="font-size:10px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--text-muted);opacity:.7">' + escHtml(data.tempo) + '</span>';
+  h += '</div>';
+  h += '<div style="font-size:1rem;font-weight:700;color:var(--text);line-height:1.3;margin-bottom:3px">' + escHtml(data.liturgia || "") + '</div>';
+  if (data.data) h += '<div style="font-size:.78rem;color:var(--text-muted);margin-bottom:2px">' + escHtml(data.data) + '</div>';
+  h += '</div>';
 
-  // Leituras colapsáveis
+  // ── Referências compactas ──
   var sections = [
-    { key: "primeiraLeitura", label: "Primeira Leitura" },
-    { key: "salmo",           label: "Salmo Responsorial" },
-    { key: "segundaLeitura",  label: "Segunda Leitura" },
+    { key: "primeiraLeitura", label: "1ª Leitura" },
+    { key: "salmo",           label: "Salmo" },
+    { key: "segundaLeitura",  label: "2ª Leitura" },
     { key: "evangelho",       label: "Evangelho" },
   ];
+  var refBoxes = sections.filter(function(s) { return data[s.key] && data[s.key].referencia; });
+  if (refBoxes.length) {
+    h += '<div style="display:grid;grid-template-columns:repeat(' + Math.min(refBoxes.length, 3) + ',1fr);gap:6px;padding:10px 14px 8px">';
+    refBoxes.forEach(function(s) {
+      var rid = "lit-r-" + s.key;
+      h += '<div class="lit-ref-box" onclick="_litToggle(\'' + rid + '\')" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:6px 9px;cursor:pointer;transition:border-color .15s" onmouseover="this.style.borderColor=\'rgba(91,75,138,.35)\'" onmouseout="this.style.borderColor=\'var(--border)\'">';
+      h += '<div style="font-size:8.5px;font-weight:800;letter-spacing:.9px;text-transform:uppercase;color:var(--text-muted);margin-bottom:2px">' + escHtml(s.label) + '</div>';
+      h += '<div style="font-size:11px;font-weight:700;color:' + (isGold ? '#a07820' : 'var(--primary)') + '">' + escHtml(data[s.key].referencia) + '</div>';
+      h += '</div>';
+    });
+    h += '</div>';
+  }
+
+  // ── Leituras colapsáveis (ocultas por padrão) ──
   sections.forEach(function(s) {
     var rd = data[s.key];
-    if (!rd) return;
+    if (!rd || !rd.texto) return;
     var rid = "lit-r-" + s.key;
-    h += '<div class="lit-reading">';
-    h += '<div class="lit-reading-header" onclick="_litToggle(\'' + rid + '\')">';
-    h += '<span class="lit-reading-label">' + escHtml(s.label) + '</span>';
-    h += '<span class="lit-reading-ref">' + escHtml(rd.referencia || "") + '</span>';
-    h += '<span class="lit-reading-chevron" id="' + rid + '-ch">&#9660;</span>';
+    h += '<div class="lit-reading" id="' + rid + '" style="display:none;padding:0 14px 10px;border-top:1px solid var(--border)">';
+    h += '<div style="font-size:.72rem;font-weight:700;text-transform:uppercase;color:var(--text-muted);letter-spacing:.5px;padding:8px 0 4px">' + escHtml(s.label) + '</div>';
+    if (rd.refrao) h += '<div class="lit-refrao">' + escHtml(rd.refrao) + '</div>';
+    h += '<div class="lit-reading-text">' + escHtml(rd.texto) + '</div>';
     h += '</div>';
-    h += '<div class="lit-reading-body" id="' + rid + '">';
-    if (rd.refrao) {
-      h += '<div class="lit-refrao">' + escHtml(rd.refrao) + '</div>';
-    }
-    h += '<div class="lit-reading-text">' + escHtml(rd.texto || "") + '</div>';
-    h += '</div></div>';
   });
+
+  // ── Link textos completos ──
+  h += '<div style="padding:8px 14px 12px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">';
+  h += '<button onclick="document.querySelectorAll(\'.lit-reading\').forEach(function(el){el.style.display=el.style.display===\'block\'?\'none\':\'block\'})" style="background:none;border:none;font-size:11px;font-weight:700;color:var(--primary);cursor:pointer;padding:0">&#9776; Ler textos completos →</button>';
+  h += '</div>';
 
   h += '</div>';
   document.getElementById("lit-content").innerHTML = h;
@@ -5552,9 +5630,8 @@ function _renderLiturgia(data) {
 
 function _litToggle(id) {
   var body = document.getElementById(id);
-  var ch   = document.getElementById(id + "-ch");
-  var open = body.classList.toggle("open");
-  if (ch) ch.style.transform = open ? "rotate(180deg)" : "";
+  if (!body) return;
+  body.style.display = body.style.display === "block" ? "none" : "block";
 }
 
 // ─── Toolbar do editor ───────────────────────────────────────────────────────
@@ -7402,6 +7479,10 @@ function init() {
     openAgendaView();
     setTimeout(function() { openEventModal(); }, 300);
   });
+
+  // Botão "+ Novo" no header do widget compacto
+  var btnCalNew = document.getElementById("btn-cal-new");
+  if (btnCalNew) btnCalNew.addEventListener("click", function() { openEventModal(); });
 
   // ─── Agenda completa ──────────────────────────────────────────────────────
   document.getElementById("btn-open-agenda").addEventListener("click", openAgendaView);

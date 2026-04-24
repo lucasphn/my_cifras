@@ -2023,11 +2023,13 @@ def api_liturgia():
         }
 
     cor = raw.get("cor", "")
+    tempo = raw.get("tempo", raw.get("periodo", raw.get("season", "")))
     result = {
         "data":          raw.get("data", cache_key),
         "liturgia":      raw.get("liturgia", ""),
         "cor":           cor,
         "corHex":        _cor_hex(cor),
+        "tempo":         tempo,
         "primeiraLeitura": _reading("primeiraLeitura"),
         "salmo":           _reading("salmo"),
         "segundaLeitura":  _reading("segundaLeitura"),
