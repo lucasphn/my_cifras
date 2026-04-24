@@ -4536,6 +4536,7 @@ function renderSidebar() {
   homeItem.innerHTML = '<span class="sidebar-icon">&#8962;</span><span>Início</span>';
   homeItem.addEventListener("click", function() {
     _confirmLeaveEdit(function() {
+      _forceCloseModal();
       document.querySelectorAll(".sidebar-cat").forEach(function(el) { el.classList.remove("active"); });
       homeItem.classList.add("active");
       currentCategory = null;
@@ -4876,6 +4877,7 @@ document.getElementById("sfm-overlay").addEventListener("click", function(e) {
 
 function selectCategory(section, cat) {
   _confirmLeaveEdit(function() {
+    _forceCloseModal();
     currentCategory = { section: section, cat: cat };
     searchActive = false;
     document.getElementById("search-box").value = ""; if(typeof _updateSearchClear==="function") _updateSearchClear();
@@ -5258,6 +5260,20 @@ function closeModal() {
     if (_focusMode) modalToggleFocusMode(true);
     currentModal = null;
   });
+}
+// Fecha o modal imediatamente sem pedir confirmação (usar dentro de callbacks já confirmados)
+function _forceCloseModal() {
+  if (!currentModal) return;
+  exitEditMode();
+  if (metaMode) closeMetaPanel();
+  if (_twoColMode) {
+    _twoColMode = false;
+    document.getElementById("cifra-content").classList.remove("two-col");
+    document.getElementById("btn-two-col").classList.remove("active");
+  }
+  document.getElementById("modal-overlay").classList.remove("open");
+  if (_focusMode) modalToggleFocusMode(true);
+  currentModal = null;
 }
 
 // ─── Modo Edição ─────────────────────────────────────────────────────────────
@@ -7613,22 +7629,26 @@ function init() {
     if (el) el.classList.add("active");
   }
   document.getElementById("mbn-home").addEventListener("click", function() {
-    mbnSetActive("mbn-home");
-    // fecha drawers abertos
-    document.getElementById("sidebar").classList.remove("open");
-    document.getElementById("rep-panel").classList.remove("mobile-open");
-    sidebarOverlay.classList.remove("show");
-    // volta para home
-    currentCategory = null; searchActive = false;
-    document.getElementById("search-box").value = ""; if(typeof _updateSearchClear==="function") _updateSearchClear();
-    document.querySelectorAll(".sidebar-cat").forEach(function(el) { el.classList.remove("active"); });
-    var hi = document.getElementById("sidebar-home-item");
-    if (hi) hi.classList.add("active");
-    hideHomeTable();
-    renderHomeTable(allSongs);
-    showHomeTable();
+    _confirmLeaveEdit(function() {
+      _forceCloseModal();
+      mbnSetActive("mbn-home");
+      // fecha drawers abertos
+      document.getElementById("sidebar").classList.remove("open");
+      document.getElementById("rep-panel").classList.remove("mobile-open");
+      sidebarOverlay.classList.remove("show");
+      // volta para home
+      currentCategory = null; searchActive = false;
+      document.getElementById("search-box").value = ""; if(typeof _updateSearchClear==="function") _updateSearchClear();
+      document.querySelectorAll(".sidebar-cat").forEach(function(el) { el.classList.remove("active"); });
+      var hi = document.getElementById("sidebar-home-item");
+      if (hi) hi.classList.add("active");
+      hideHomeTable();
+      renderHomeTable(allSongs);
+      showHomeTable();
+    });
   });
   document.getElementById("mbn-search").addEventListener("click", function() {
+    _forceCloseModal();
     // Fecha drawers, foca no campo de busca e marca active
     document.getElementById("sidebar").classList.remove("open");
     document.getElementById("rep-panel").classList.remove("mobile-open");
