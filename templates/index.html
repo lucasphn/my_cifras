@@ -52,8 +52,6 @@
 /* ─── Reset & Base ───────────────────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html, body { height: 100%; background: var(--bg); color: var(--text); font-family: 'Inter', system-ui, -apple-system, sans-serif; font-size: 15px; overflow: hidden; color-scheme: light; }
-/* Cobre a safe-area inferior (home indicator iOS) com o fundo do app */
-body::after { content: ''; display: block; position: fixed; bottom: 0; left: 0; right: 0; height: env(safe-area-inset-bottom, 0px); background: var(--bg); z-index: 47; }
 a { color: var(--accent); text-decoration: none; }
 button { cursor: pointer; border: none; background: none; color: inherit; font: inherit; }
 input { font: inherit; }
