@@ -2678,8 +2678,7 @@ body.android #presenter-cifra .chord-line {
   input, textarea, select {
     font-size: 16px !important;
   }
-  /* Exceção: busca pode ser menor — texto longo e zoom não é problema aqui */
-  #search-box { font-size: 13px !important; }
+  /* Busca mantém 16px — abaixo disso o iOS Safari faz zoom automático ao focar */
 
   /* Body vira coluna */
   #body { flex-direction: column; overflow: visible; }
