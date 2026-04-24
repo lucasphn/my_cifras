@@ -2370,10 +2370,10 @@ body.android #presenter-cifra .chord-line {
 /* ─── Bottom nav bar (mobile only) ─────────────────────────────────────── */
 #mobile-bottom-nav {
   display: none;
-  position: fixed; left: 0; right: 0; bottom: 0;
-  z-index: 48;
-  background: var(--bg);
-  padding: 10px 14px calc(10px + env(safe-area-inset-bottom, 0px));
+  position: fixed; left: 14px; right: 14px;
+  bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+  z-index: 48; background: transparent;
+  height: auto;
 }
 #mobile-bottom-nav .mbn-inner {
   display: flex; width: 100%; align-items: center;
@@ -2412,7 +2412,7 @@ body.android #presenter-cifra .chord-line {
 
 @media (max-width: 1024px) {
   html, body { overflow: auto; }
-  #app { height: auto; min-height: 100vh; padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px)); }
+  #app { height: auto; min-height: 100vh; padding-bottom: 90px; }
 
   /* Bottom nav visible */
   #mobile-bottom-nav { display: block; }
@@ -2510,7 +2510,7 @@ body.android #presenter-cifra .chord-line {
     width: 100%; height: 75vh;
     border-left: none; border-top: none;
     border-radius: 22px 22px 0 0;
-    transform: translateY(110%);
+    transform: translateY(calc(110% + 100px));
     transition: transform .32s cubic-bezier(.4,0,.2,1);
     z-index: 51;
     box-shadow: 0 -8px 40px rgba(91,75,138,.18);
@@ -2844,7 +2844,7 @@ body.android #presenter-cifra .chord-line {
   #rep-panel.mobile-open { transform: translateX(0); }
   /* Bottom nav visível no tablet para acionar repertório */
   #mobile-bottom-nav { display: block; }
-  #app { padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px)); height: auto; min-height: 100vh; }
+  #app { padding-bottom: 90px; height: auto; min-height: 100vh; }
   /* Modal sem reserva de espaço do rep panel (que está fora do fluxo) */
   #modal-overlay { right: 0 !important; }
 }
