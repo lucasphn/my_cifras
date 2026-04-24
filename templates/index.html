@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>My Cifras</title>
 <link rel="icon" type="image/svg+xml" href="/static/brand/favicon.svg">
 <link rel="apple-touch-icon" sizes="180x180" href="/static/brand/apple-touch-icon.png">
@@ -52,6 +52,8 @@
 /* ─── Reset & Base ───────────────────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html, body { height: 100%; background: var(--bg); color: var(--text); font-family: 'Inter', system-ui, -apple-system, sans-serif; font-size: 15px; overflow: hidden; color-scheme: light; }
+/* Cobre a safe-area inferior (home indicator iOS) com o fundo do app */
+body::after { content: ''; display: block; position: fixed; bottom: 0; left: 0; right: 0; height: env(safe-area-inset-bottom, 0px); background: var(--bg); z-index: 47; }
 a { color: var(--accent); text-decoration: none; }
 button { cursor: pointer; border: none; background: none; color: inherit; font: inherit; }
 input { font: inherit; }
