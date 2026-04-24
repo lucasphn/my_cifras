@@ -2584,8 +2584,9 @@ body.android #presenter-cifra .chord-line {
 #mobile-bottom-nav {
   display: none;
   position: fixed; left: 10px; right: 10px;
-  /* Senta exatamente em cima da safe area, sem margem extra que causa o efeito "flutuante" */
-  bottom: env(safe-area-inset-bottom, 6px);
+  /* No browser (não-standalone) usa bottom fixo pequeno — safe-area-inset-bottom
+     no Safari com URL bar retorna ~83px, o que faria o pill flutuar alto demais */
+  bottom: 10px;
   z-index: 48; background: transparent;
   height: auto;
 }
@@ -2627,7 +2628,8 @@ body.android #presenter-cifra .chord-line {
 @media (max-width: 1024px) {
   html, body { overflow: auto; }
   /* dvh garante altura correta em Safari (100vh inclui a barra do browser) */
-  #app { height: auto; min-height: 100vh; min-height: 100dvh; padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px)); }
+  /* No browser iOS: nav fica em bottom:10px com ~60px de altura → 80px de padding é suficiente */
+  #app { height: auto; min-height: 100vh; min-height: 100dvh; padding-bottom: 80px; }
 
   /* Bottom nav visible */
   #mobile-bottom-nav { display: block; }
@@ -2808,20 +2810,31 @@ body.android #presenter-cifra .chord-line {
   #lit-date-label { flex: 1; }
 }
 
-/* ─── PWA standalone: nav cola no fundo como tab bar nativa ─────────────── */
+/* ─── PWA standalone: safe areas reais do iOS ───────────────────────────── */
 @media (display-mode: standalone) {
-  /* Ocupa largura total e senta no fundo; background estende até o home indicator */
+  /* ① Redefine --header-h incluindo a safe area do topo.
+        Tudo que usa var(--header-h) (sidebar, modal overlay, etc.) se ajusta. */
+  :root {
+    --header-h: calc(58px + env(safe-area-inset-top, 0px));
+  }
+
+  /* ② Header empurra o conteúdo abaixo da barra de status */
+  #header {
+    padding-top: env(safe-area-inset-top, 0px);
+    box-sizing: border-box;
+  }
+
+  /* ③ Nav cola no fundo como tab bar nativa */
   #mobile-bottom-nav {
     left: 0; right: 0;
     bottom: 0;
     padding-bottom: env(safe-area-inset-bottom, 0px);
-    background: rgba(255,255,255,0.92);
+    background: rgba(255,255,255,0.95);
     backdrop-filter: blur(20px) saturate(180%);
     -webkit-backdrop-filter: blur(20px) saturate(180%);
     border-top: 1px solid var(--border);
     border-radius: 0;
   }
-  /* Inner sem pill — visual de tab bar */
   #mobile-bottom-nav .mbn-inner {
     border-radius: 0;
     background: transparent;
@@ -2829,14 +2842,16 @@ body.android #presenter-cifra .chord-line {
     -webkit-backdrop-filter: none;
     box-shadow: none;
     border: none;
-    padding: 4px 0 0;
+    padding: 6px 0 0;
   }
-  /* Mais espaço abaixo dos ícones para o home indicator */
-  .mbn-btn { padding-bottom: 12px; }
-  /* Toast mais alto para não ficar atrás da tab bar */
+  .mbn-btn { padding-bottom: 10px; }
+
+  /* ④ App padding correto */
+  #app { padding-bottom: calc(60px + env(safe-area-inset-bottom, 0px)); }
   #toast { bottom: calc(70px + env(safe-area-inset-bottom, 0px)); }
-  /* App ganha a área que era do URL bar do browser */
-  #app { padding-bottom: calc(70px + env(safe-area-inset-bottom, 0px)); }
+
+  /* ⑤ Sidebar drawer começa abaixo do header aumentado */
+  #sidebar { padding-top: calc(var(--header-h) + 8px); }
 }
 
 /* ─── Splash screen ──────────────────────────────────────────────────────── */
