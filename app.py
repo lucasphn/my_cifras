@@ -203,7 +203,7 @@ def _strip_frontmatter(text):
 
 def _parse_frontmatter(text):
     """Retorna (body, meta_dict) extraindo YAML frontmatter simples."""
-    meta = {"artist": "", "key": "", "title": "", "tags": [], "capo": ""}
+    meta = {"artist": "", "key": "", "title": "", "tags": [], "capo": "", "youtube": ""}
     if text.startswith("---"):
         parts = text.split("---", 2)
         if len(parts) >= 3:
@@ -1133,7 +1133,8 @@ def api_cifra():
         if is_md and text.startswith("---"):
             body, meta = _parse_frontmatter(text)
             return jsonify({"text": body, "artist": meta.get("artist", ""), "key": meta.get("key", ""),
-                            "title": meta.get("title", ""), "tags": meta.get("tags", []), "capo": meta.get("capo", "")})
+                            "title": meta.get("title", ""), "tags": meta.get("tags", []), "capo": meta.get("capo", ""),
+                            "youtube": meta.get("youtube", "")})
         return jsonify({"text": text})
 
     if not path:
@@ -1148,8 +1149,9 @@ def api_cifra():
         raw = p.read_text(encoding="utf-8", errors="replace")
         body, meta = _parse_frontmatter(raw)
         return jsonify({"text": body, "artist": meta.get("artist",""), "key": meta.get("key",""),
-                        "title": meta.get("title",""), "tags": meta.get("tags",[]), "capo": meta.get("capo","")})
-    return jsonify({"text": extract_text(path), "artist": "", "key": "", "title": "", "tags": []})
+                        "title": meta.get("title",""), "tags": meta.get("tags",[]), "capo": meta.get("capo",""),
+                        "youtube": meta.get("youtube","")})
+    return jsonify({"text": extract_text(path), "artist": "", "key": "", "title": "", "tags": [], "youtube": ""})
 
 
 @app.route("/api/cifras/bundle")
@@ -1714,11 +1716,12 @@ def api_update_meta():
     file_id = (data.get("fileId") or "").strip()
     path    = (data.get("path") or "").strip()
     new_meta = {
-        "title":  (data.get("title")  or "").strip(),
-        "artist": (data.get("artist") or "").strip(),
-        "key":    (data.get("key")    or "").strip(),
-        "capo":   str(data.get("capo") or "").strip(),
-        "tags":   data.get("tags", []),
+        "title":   (data.get("title")   or "").strip(),
+        "artist":  (data.get("artist")  or "").strip(),
+        "key":     (data.get("key")     or "").strip(),
+        "capo":    str(data.get("capo") or "").strip(),
+        "tags":    data.get("tags", []),
+        "youtube": (data.get("youtube") or "").strip(),
     }
 
     def _patch_frontmatter(raw, new_meta):
@@ -1739,7 +1742,8 @@ def api_update_meta():
         tags_list = [t.strip() for t in tags_str.split(",") if t.strip()] if tags_str else []
         tags_yaml = "[" + ", ".join(tags_list) + "]"
 
-        capo_line = f"capo: {new_meta['capo']}\n" if new_meta.get('capo') else ""
+        capo_line    = f"capo: {new_meta['capo']}\n" if new_meta.get('capo') else ""
+        youtube_line = f"youtube: {new_meta['youtube']}\n" if new_meta.get('youtube') else ""
         fm = (
             "---\n"
             f"title: {new_meta['title']}\n"
@@ -1749,6 +1753,7 @@ def api_update_meta():
             f"section: {existing.get('section','')}\n"
             f"category: {existing.get('category','')}\n"
             f"tags: {tags_yaml}\n"
+            + youtube_line +
             "---\n\n"
         )
         return fm + body

@@ -1573,6 +1573,14 @@ button, a, .song-card, .home-card, .home-top-card, .sidebar-cat,
 #btn-tp-reset:hover { border-color: var(--border); color: var(--text); }
 
 #modal-body { overflow-y: auto; padding: 18px 20px; }
+/* ─── YouTube player bar ───────────────────────────────────────────────────── */
+#yt-player-bar {
+  display: none; margin-bottom: 14px;
+  border-radius: 10px; overflow: hidden;
+  border: 1.5px solid var(--border);
+  background: #000;
+}
+#yt-player-bar iframe { display: block; width: 100%; height: 72px; border: none; }
 #cifra-content {
   font-family: var(--font-mono);
   font-size: 0.91em;
@@ -3580,6 +3588,7 @@ body.android #presenter-cifra .chord-line {
         <button class="etb-btn" id="etb-select-all" title="Selecionar todo o texto (Ctrl+A)">&#9776; Selecionar tudo</button>
         <button class="etb-btn" id="etb-copy" title="Copiar texto">&#128203; Copiar</button>
       </div>
+      <div id="yt-player-bar"><iframe id="yt-frame" allow="autoplay; encrypted-media" allowfullscreen="0"></iframe></div>
       <pre id="cifra-content"></pre>
       <textarea id="cifra-edit" spellcheck="false" placeholder="Edite a cifra aqui..."></textarea>
       <div id="meta-panel">
@@ -3606,9 +3615,9 @@ body.android #presenter-cifra .chord-line {
           <span class="meta-hint">Casa do capotraste (0 = sem capo)</span>
         </div>
         <div class="meta-field">
-          <label>Tags</label>
-          <input type="text" id="meta-tags" placeholder="ex: natal, quaresma, entrada">
-          <span class="meta-hint">Separadas por vírgula</span>
+          <label>YouTube</label>
+          <input type="url" id="meta-youtube" placeholder="https://youtube.com/watch?v=...">
+          <span class="meta-hint">Link da música no YouTube (opcional)</span>
         </div>
       </div>
     </div>
@@ -5147,6 +5156,7 @@ function openModal(song) {
   document.getElementById("cifra-content").textContent = "";
   document.getElementById("modal-loading").style.display = "inline";
   document.getElementById("modal-overlay").classList.add("open");
+  _showYtPlayer(song.youtube || "");
 
   // Mostra botão editar/metadados apenas para arquivos com path ou fileId (e se owner)
   var canEdit = !!(song.path || song.fileId);
@@ -5195,8 +5205,12 @@ function openModal(song) {
       }
       if (data.key   !== undefined) targetModal.key   = data.key;
       if (data.title !== undefined && data.title) targetModal.name = data.title;
-      if (data.tags  !== undefined) targetModal.tags  = data.tags;
-      if (data.capo  !== undefined) targetModal.capo  = data.capo;
+      if (data.tags    !== undefined) targetModal.tags    = data.tags;
+      if (data.capo    !== undefined) targetModal.capo    = data.capo;
+      if (data.youtube !== undefined) {
+        targetModal.youtube = data.youtube;
+        _showYtPlayer(data.youtube);
+      }
       if (!targetModal.key && data.text) {
         var detected = detectBaseNote(data.text);
         if (detected) targetModal.key = detected;
@@ -5292,6 +5306,30 @@ function openModal(song) {
   }
 }
 
+function _extractYtId(url) {
+  if (!url) return null;
+  var m = url.match(/(?:v=|youtu\.be\/|embed\/)([A-Za-z0-9_-]{11})/);
+  return m ? m[1] : null;
+}
+function _showYtPlayer(ytUrl) {
+  var bar = document.getElementById("yt-player-bar");
+  var frame = document.getElementById("yt-frame");
+  if (!bar || !frame) return;
+  var vid = _extractYtId(ytUrl);
+  if (vid) {
+    frame.src = "https://www.youtube.com/embed/" + vid + "?rel=0&modestbranding=1&fs=0";
+    bar.style.display = "block";
+  } else {
+    bar.style.display = "none";
+    frame.src = "";
+  }
+}
+function _hideYtPlayer() {
+  var bar = document.getElementById("yt-player-bar");
+  var frame = document.getElementById("yt-frame");
+  if (bar) bar.style.display = "none";
+  if (frame) frame.src = ""; // para o áudio ao fechar
+}
 function closeModal() {
   _confirmLeaveEdit(function() {
     exitEditMode();
@@ -5304,6 +5342,7 @@ function closeModal() {
     }
     document.getElementById("modal-overlay").classList.remove("open");
     if (_focusMode) modalToggleFocusMode(true);
+    _hideYtPlayer();
     currentModal = null;
   });
 }
@@ -5319,6 +5358,7 @@ function _forceCloseModal() {
   }
   document.getElementById("modal-overlay").classList.remove("open");
   if (_focusMode) modalToggleFocusMode(true);
+  _hideYtPlayer();
   currentModal = null;
 }
 
@@ -5845,9 +5885,7 @@ function openMetaPanel() {
   document.getElementById("meta-artist").value = currentModal.artist || "";
   document.getElementById("meta-key").value    = currentModal.key    || "";
   document.getElementById("meta-capo").value   = currentModal.capo   || "";
-  var tags = currentModal.tags;
-  document.getElementById("meta-tags").value   =
-    Array.isArray(tags) ? tags.join(", ") : (tags || "");
+  document.getElementById("meta-youtube").value = currentModal.youtube || "";
 
   document.getElementById("modal-body").classList.add("meta-mode");
   document.getElementById("meta-panel").classList.add("open");
@@ -5885,15 +5923,15 @@ async function saveMetadata() {
   btn.disabled = true;
   btn.textContent = "Salvando\u2026";
 
-  var tagsRaw = document.getElementById("meta-tags").value.trim();
-  var tagsList = tagsRaw ? tagsRaw.split(",").map(function(t) { return t.trim(); }).filter(Boolean) : [];
+  var tagsList = currentModal.tags || [];
 
   var payload = {
-    title:  document.getElementById("meta-title").value.trim(),
-    artist: document.getElementById("meta-artist").value.trim(),
-    key:    document.getElementById("meta-key").value.trim(),
-    capo:   document.getElementById("meta-capo").value.trim(),
-    tags:   tagsList,
+    title:   document.getElementById("meta-title").value.trim(),
+    artist:  document.getElementById("meta-artist").value.trim(),
+    key:     document.getElementById("meta-key").value.trim(),
+    capo:    document.getElementById("meta-capo").value.trim(),
+    tags:    tagsList,
+    youtube: document.getElementById("meta-youtube").value.trim(),
   };
   if (currentModal.fileId) payload.fileId = currentModal.fileId;
   if (currentModal.path)   payload.path   = currentModal.path;
@@ -5915,8 +5953,10 @@ async function saveMetadata() {
       document.getElementById("modal-artist").textContent = payload.artist || "";
     }
     if (payload.key)    { currentModal.key    = payload.key; updateTransposeUI(); }
-    currentModal.capo = payload.capo;
-    currentModal.tags = tagsList;
+    currentModal.capo    = payload.capo;
+    currentModal.tags    = tagsList;
+    currentModal.youtube = payload.youtube;
+    _showYtPlayer(payload.youtube);
 
     // Atualiza capo badge
     _updateCapoBadge(payload.capo);
