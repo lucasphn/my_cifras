@@ -776,11 +776,59 @@ _cache_lock = threading.Lock()
 CACHE_TTL = 120  # segundos — re-escaneia se a última leitura foi há mais de 2 min
 
 # Cache global de metadados por fileId — fonte de verdade compartilhada entre todos os usuários.
-# Populado por update_meta e pelo bundle sync. Persiste enquanto o processo estiver rodando.
+# Persistido em _songs_meta.json no CIFRAS_FOLDER_ID do Drive.
 _songs_meta: dict = {}  # { fileId: {artist, key, capo, youtube} }
+_songs_meta_file_id: str | None = None
 _meta_lock = threading.Lock()
 
-def _set_song_meta(file_id: str, meta: dict):
+def _load_songs_meta_from_drive():
+    """Carrega _songs_meta do Drive na inicialização do processo."""
+    global _songs_meta, _songs_meta_file_id
+    if not _use_drive() or not CIFRAS_FOLDER_ID:
+        return
+    try:
+        import drive as drv
+        svc = get_service()
+        data, fid = drv.load_songs_meta(svc, CIFRAS_FOLDER_ID)
+        with _meta_lock:
+            _songs_meta = data
+            _songs_meta_file_id = fid
+    except Exception:
+        pass
+
+def _persist_songs_meta():
+    """Salva _songs_meta no Drive em background (não bloqueia a request)."""
+    def _save():
+        global _songs_meta_file_id
+        if not _use_drive() or not CIFRAS_FOLDER_ID:
+            return
+        try:
+            import drive as drv
+            svc = get_service()
+            with _meta_lock:
+                data = dict(_songs_meta)
+                fid  = _songs_meta_file_id
+            if not fid:
+                _, fid = drv.load_songs_meta(svc, CIFRAS_FOLDER_ID)
+                with _meta_lock:
+                    _songs_meta_file_id = fid
+            drv.save_songs_meta(svc, fid, data)
+        except Exception:
+            pass
+    threading.Thread(target=_save, daemon=True).start()
+
+_songs_meta_loaded = False
+
+def _ensure_songs_meta_loaded():
+    """Carrega _songs_meta do Drive na primeira chamada após restart do processo."""
+    global _songs_meta_loaded
+    with _meta_lock:
+        if _songs_meta_loaded:
+            return
+        _songs_meta_loaded = True  # marca antes para evitar chamadas duplas
+    _load_songs_meta_from_drive()
+
+def _set_song_meta(file_id: str, meta: dict, persist: bool = False):
     with _meta_lock:
         _songs_meta[file_id] = {
             "artist":  meta.get("artist", ""),
@@ -788,6 +836,8 @@ def _set_song_meta(file_id: str, meta: dict):
             "capo":    meta.get("capo", ""),
             "youtube": meta.get("youtube", ""),
         }
+    if persist:
+        _persist_songs_meta()
 
 def _get_song_meta(file_id: str) -> dict:
     with _meta_lock:
@@ -1222,6 +1272,7 @@ def api_library():
 @app.route("/api/songs")
 @login_required
 def api_songs():
+    _ensure_songs_meta_loaded()
     views = _load_views()
     songs = []
     for s in flatten_songs(_get_library()):
@@ -1425,7 +1476,9 @@ def api_cifras_bundle():
         for fid, data in pool.map(_fetch, songs):
             if data:
                 bundle[fid] = data
-                _set_song_meta(fid, data)  # alimenta cache global de metadados
+                _set_song_meta(fid, data)  # alimenta cache em memória
+
+    _persist_songs_meta()  # salva metadados atualizados no Drive em background
 
     with _bundle_lock:
         _bundle_cache["etag"] = etag
@@ -1991,7 +2044,7 @@ def api_update_meta():
             if _is_auth_error(e):
                 return _auth_error_response()
             return jsonify({"error": str(e)}), 500
-        _set_song_meta(file_id, new_meta)
+        _set_song_meta(file_id, new_meta, persist=True)
         invalidate_library_cache()
         return jsonify({"ok": True})
 

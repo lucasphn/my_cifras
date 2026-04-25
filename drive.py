@@ -191,6 +191,32 @@ def save_shares(service, file_id, data):
     service.files().update(fileId=file_id, media_body=media).execute()
 
 
+# ─── Metadados globais de músicas ───────────────────────────────────────────
+
+SONGS_META_FILENAME = "_songs_meta.json"
+
+def load_songs_meta(service, root_folder_id):
+    """Carrega dict de metadados globais do Drive. Retorna (data, file_id).
+    Estrutura: { "<fileId>": { "artist": "", "key": "", "capo": "", "youtube": "" } }
+    """
+    import json
+    file_id = _get_or_create_json_file(service, SONGS_META_FILENAME, root_folder_id)
+    try:
+        content = download_bytes(service, file_id)
+        return json.loads(content.decode("utf-8") or "{}"), file_id
+    except Exception:
+        return {}, file_id
+
+
+def save_songs_meta(service, file_id, data):
+    """Salva dict de metadados globais no Drive."""
+    import json
+    from googleapiclient.http import MediaIoBaseUpload
+    content = json.dumps(data, ensure_ascii=False, indent=2).encode("utf-8")
+    media = MediaIoBaseUpload(io.BytesIO(content), mimetype="application/json")
+    service.files().update(fileId=file_id, media_body=media).execute()
+
+
 # ─── Upload ──────────────────────────────────────────────────────────────────
 
 def update_md_content(service, file_id, content):
