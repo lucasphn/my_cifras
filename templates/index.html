@@ -2821,8 +2821,8 @@ body.android #presenter-cifra .chord-line {
 }
 
 /* ─── PWA standalone: safe areas reais do iOS ───────────────────────────── */
+/* Via media query para Android/Chrome PWA */
 @media (display-mode: standalone) {
-  /* Nav vira tab bar nativa full-width: sem pill, sem padding lateral */
   #mobile-bottom-nav {
     padding: 0 0 env(safe-area-inset-bottom, 0px);
     background: rgba(255,255,255,0.95);
@@ -2832,23 +2832,34 @@ body.android #presenter-cifra .chord-line {
     border-radius: 0;
   }
   #mobile-bottom-nav .mbn-inner {
-    border-radius: 0;
-    background: transparent;
-    backdrop-filter: none;
-    -webkit-backdrop-filter: none;
-    box-shadow: none;
-    border: none;
-    padding: 6px 0 0;
+    border-radius: 0; background: transparent;
+    backdrop-filter: none; -webkit-backdrop-filter: none;
+    box-shadow: none; border: none; padding: 6px 0 0;
   }
   .mbn-btn { padding-bottom: 10px; }
-
-  /* App padding para o conteúdo não ficar sob a nav */
   #app { padding-bottom: calc(60px + env(safe-area-inset-bottom, 0px)); }
   #toast { bottom: calc(70px + env(safe-area-inset-bottom, 0px)); }
-
-  /* Sidebar começa abaixo do header aumentado */
   #sidebar { padding-top: calc(var(--header-h) + 8px); }
 }
+
+/* Via classe JS para iOS Safari (window.navigator.standalone === true) */
+html.pwa-standalone #mobile-bottom-nav {
+  padding: 0 0 env(safe-area-inset-bottom, 0px);
+  background: rgba(255,255,255,0.95);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border-top: 1px solid var(--border);
+  border-radius: 0;
+}
+html.pwa-standalone #mobile-bottom-nav .mbn-inner {
+  border-radius: 0; background: transparent;
+  backdrop-filter: none; -webkit-backdrop-filter: none;
+  box-shadow: none; border: none; padding: 6px 0 0;
+}
+html.pwa-standalone .mbn-btn { padding-bottom: 10px; }
+html.pwa-standalone #app { padding-bottom: calc(60px + env(safe-area-inset-bottom, 0px)); }
+html.pwa-standalone #toast { bottom: calc(70px + env(safe-area-inset-bottom, 0px)); }
+html.pwa-standalone #sidebar { padding-top: calc(var(--header-h) + 8px); }
 
 /* ─── Splash screen ──────────────────────────────────────────────────────── */
 #splash {
@@ -4211,6 +4222,16 @@ body.android #presenter-cifra .chord-line {
 </div>
 
 <script>
+// ─── Detecção iOS PWA standalone (deve rodar antes de qualquer render) ───────
+// window.navigator.standalone é o sinal 100% confiável no iOS Safari.
+// Adiciona classe no <html> para que o CSS de safe area funcione sem depender
+// de @media (display-mode: standalone), que falha em alguns iOS.
+(function() {
+  var isStandalone = window.navigator.standalone === true ||
+    (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
+  if (isStandalone) document.documentElement.classList.add('pwa-standalone');
+})();
+
 // ─── Role do usuário (injetado pelo servidor) ────────────────────────────────
 var _isOwner = document.body.getAttribute('data-owner') === '1';
 
