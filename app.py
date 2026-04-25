@@ -775,6 +775,24 @@ _library_cache = {"data": None, "ts": 0}
 _cache_lock = threading.Lock()
 CACHE_TTL = 120  # segundos — re-escaneia se a última leitura foi há mais de 2 min
 
+# Cache global de metadados por fileId — fonte de verdade compartilhada entre todos os usuários.
+# Populado por update_meta e pelo bundle sync. Persiste enquanto o processo estiver rodando.
+_songs_meta: dict = {}  # { fileId: {artist, key, capo, youtube} }
+_meta_lock = threading.Lock()
+
+def _set_song_meta(file_id: str, meta: dict):
+    with _meta_lock:
+        _songs_meta[file_id] = {
+            "artist":  meta.get("artist", ""),
+            "key":     meta.get("key", ""),
+            "capo":    meta.get("capo", ""),
+            "youtube": meta.get("youtube", ""),
+        }
+
+def _get_song_meta(file_id: str) -> dict:
+    with _meta_lock:
+        return _songs_meta.get(file_id, {})
+
 def _get_library():
     """Retorna a biblioteca escaneada, usando cache quando possível."""
     now = time.monotonic()
@@ -1207,13 +1225,27 @@ def api_songs():
     views = _load_views()
     songs = []
     for s in flatten_songs(_get_library()):
-        # Lê frontmatter lazy: só para .md locais sem metadados ainda
+        fid = s.get("fileId", "")
+        # Arquivos locais .md: lê frontmatter direto do disco
         if not s.get("artist") and not s.get("key") and s.get("path","").endswith(".md"):
             meta = _md_meta(s["path"])
             s["artist"] = meta.get("artist", "")
             s["key"] = meta.get("key", "")
+            s["youtube"] = meta.get("youtube", "")
             if meta.get("title"):
                 s["name"] = meta["title"]
+        # Arquivos do Drive: injeta metadados do cache global (populado por update_meta e bundle)
+        if fid:
+            cached = _get_song_meta(fid)
+            if cached:
+                s.setdefault("artist",  cached.get("artist", ""))
+                s.setdefault("key",     cached.get("key", ""))
+                s.setdefault("capo",    cached.get("capo", ""))
+                s.setdefault("youtube", cached.get("youtube", ""))
+                if cached.get("artist"):  s["artist"]  = cached["artist"]
+                if cached.get("key"):     s["key"]     = cached["key"]
+                if cached.get("capo"):    s["capo"]    = cached["capo"]
+                if cached.get("youtube"): s["youtube"] = cached["youtube"]
         s["views"] = views.get(_song_key(s), 0)
         songs.append(s)
     return jsonify(songs)
@@ -1393,6 +1425,7 @@ def api_cifras_bundle():
         for fid, data in pool.map(_fetch, songs):
             if data:
                 bundle[fid] = data
+                _set_song_meta(fid, data)  # alimenta cache global de metadados
 
     with _bundle_lock:
         _bundle_cache["etag"] = etag
@@ -1958,6 +1991,7 @@ def api_update_meta():
             if _is_auth_error(e):
                 return _auth_error_response()
             return jsonify({"error": str(e)}), 500
+        _set_song_meta(file_id, new_meta)
         invalidate_library_cache()
         return jsonify({"ok": True})
 
