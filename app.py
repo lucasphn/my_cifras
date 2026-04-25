@@ -389,6 +389,29 @@ def api_reps_update(rep_id):
             reps[rep_id]["songs"] = data["songs"]
         reps[rep_id]["updated_at"] = datetime.utcnow().isoformat()
         _save_reps(reps)
+
+    # Live sharing: propaga alterações de songs para todos os shares ativos deste rep
+    if "songs" in data or "name" in data:
+        try:
+            from_email = current_user().get("email", "").lower()
+            new_songs = reps[rep_id].get("songs", [])
+            new_name  = reps[rep_id].get("name", "")
+            with _shares_lock:
+                shares = _load_shares_raw()
+                changed = False
+                for share in shares.values():
+                    if share.get("rep_id") == rep_id and \
+                       share.get("from_email", "").lower() == from_email:
+                        if "songs" in data:
+                            share["songs"] = new_songs
+                        if "name" in data:
+                            share["rep_name"] = new_name
+                        changed = True
+                if changed:
+                    _save_shares_raw(shares)
+        except Exception:
+            pass  # não bloqueia a resposta principal
+
     return jsonify(reps[rep_id])
 
 
@@ -411,29 +434,36 @@ def api_reps_delete(rep_id):
 SHARES_LOCAL = Path(__file__).parent / "_shares.json"
 _shares_lock = threading.Lock()
 _shares_drive_file_id: str | None = None  # cache do file_id no Drive
+_shares_cache_data: dict | None = None    # cache em memória
 
 
 def _load_shares_raw():
-    """Lê o registro central de shares. Tenta Drive (CIFRAS_FOLDER_ID), cai em arquivo local."""
-    global _shares_drive_file_id
+    """Lê o registro central de shares com cache em memória."""
+    global _shares_drive_file_id, _shares_cache_data
+    if _shares_cache_data is not None:
+        return _shares_cache_data
     if _use_drive() and CIFRAS_FOLDER_ID:
         try:
             import drive as drv
             svc = get_service()
             data, fid = drv.load_shares(svc, CIFRAS_FOLDER_ID)
             _shares_drive_file_id = fid
+            _shares_cache_data = data
             return data
         except Exception:
             pass
     try:
-        return json.loads(SHARES_LOCAL.read_text(encoding="utf-8"))
+        data = json.loads(SHARES_LOCAL.read_text(encoding="utf-8"))
+        _shares_cache_data = data
+        return data
     except Exception:
         return {}
 
 
 def _save_shares_raw(data):
-    """Persiste o registro de shares. Tenta Drive, cai em arquivo local."""
-    global _shares_drive_file_id
+    """Persiste o registro de shares e atualiza cache em memória."""
+    global _shares_drive_file_id, _shares_cache_data
+    _shares_cache_data = data  # atualiza cache imediatamente
     if _use_drive() and CIFRAS_FOLDER_ID:
         try:
             import drive as drv

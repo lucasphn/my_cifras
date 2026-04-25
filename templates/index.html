@@ -4317,6 +4317,17 @@ function _idbCount() {
   });
 }
 
+function _idbDelete(fileId) {
+  return _idbOpen().then(function(db) {
+    return new Promise(function(resolve) {
+      var tx  = db.transaction(_IDB_STORE, 'readwrite');
+      tx.objectStore(_IDB_STORE).delete(fileId);
+      tx.oncomplete = resolve;
+      tx.onerror    = resolve; // ignora erro silenciosamente
+    });
+  });
+}
+
 function _idbBulkPut(entries) {
   return _idbOpen().then(function(db) {
     return new Promise(function(resolve, reject) {
@@ -6372,6 +6383,7 @@ async function saveMetadata() {
       artist: payload.artist || "",
       key:    payload.key    || "",
     });
+    if (currentModal && currentModal.fileId) _idbDelete(currentModal.fileId).catch(function(){});
     showToast("Metadados salvos!");
     closeMetaPanel();
   } catch(e) {
@@ -6440,6 +6452,9 @@ async function saveEdit() {
     if (data.error) { showToast("Erro: " + data.error); }
     else {
       rawCifraText = newText;
+      // Invalida IDB para que próxima abertura busque conteúdo novo do servidor
+      var fid = currentModal && currentModal.fileId;
+      if (fid) _idbDelete(fid).catch(function(){});
       exitEditMode();
       showToast("Cifra salva!");
     }
