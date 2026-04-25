@@ -15,7 +15,7 @@
 <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Roboto+Mono:wght@400;700&display=swap" rel="stylesheet">
 <style>
 /* ─── Variáveis ─────────────────────────────────────────────────────────── */
 :root {
@@ -42,7 +42,7 @@
   --header-h: 58px;
   --radius: 10px;
   --radius-lg: 14px;
-  --font-mono: 'Fira Mono', 'Consolas', 'Courier New', monospace;
+  --font-mono: 'Roboto Mono', 'Consolas', 'Courier New', monospace;
   /* compat aliases */
   --accent-blue: #5b4b8a;
   /* section markers */
@@ -1584,13 +1584,13 @@ button, a, .song-card, .home-card, .home-top-card, .sidebar-cat,
 #cifra-content {
   font-family: var(--font-mono);
   font-size: 0.91em;
-  line-height: 1.75;
+  line-height: 1.35;
   white-space: pre-wrap;
   word-break: break-word;
   color: var(--text);
-  font-weight: 600;
+  font-weight: 400;
 }
-.chord-line { color: var(--chord-color); font-weight: 800; }
+.chord-line { color: var(--chord-color); font-weight: 700; }
 /* ─── Section markers — monocromático tipográfico ────────────────────────── */
 .section-marker {
   display: inline-flex;
@@ -1628,13 +1628,13 @@ button, a, .song-card, .home-card, .home-top-card, .sidebar-cat,
 
 /* Android: texto escuro e pesado para legibilidade no modo claro forçado pelo browser */
 body.android #cifra-content {
-  font-weight: 700;
+  font-weight: 400;
   color: #1a1529;
   text-rendering: optimizeLegibility;
 }
 body.android #cifra-content .chord-line {
   color: #5b4b8a;
-  font-weight: 900;
+  font-weight: 700;
 }
 body.android #presenter-cifra {
   font-weight: 700;
@@ -1804,14 +1804,14 @@ body.android #presenter-cifra .chord-line {
   border: 1px solid #d0c8ea; background: #fff; color: #7a6fa8; cursor: pointer; transition: all .1s; }
 .psc-toggle.active { background: #5b4b8a; border-color: #5b4b8a; color: #fff; }
 #presenter-cifra {
-  font-family: var(--font-mono); line-height: 1.75;
-  white-space: pre-wrap; word-break: break-word; color: #1a1d2e;
+  font-family: var(--font-mono); line-height: 1.35;
+  white-space: pre-wrap; word-break: break-word; color: #1a1d2e; font-weight: 400;
   font-weight: 600;
 }
 #presenter-cifra.two-col {
   columns: 2; column-gap: 2.5em;
 }
-#presenter-cifra .chord-line { color: #5b4b8a; font-weight: 800; }
+#presenter-cifra .chord-line { color: #5b4b8a; font-weight: 700; }
 #presenter-cifra .section-marker { font-size: 11px; }
 #presenter-loading {
   display: flex; align-items: center; justify-content: center;
@@ -4227,13 +4227,13 @@ var _metaStore = (function() {
       return songs.map(function(s) {
         var cached = data[s.fileId || s.path || ""];
         if (!cached) return s;
-        return Object.assign({}, s, {
-          artist:  cached.artist  || s.artist  || "",
-          key:     cached.key     || s.key     || "",
-          capo:    cached.capo    || s.capo    || "",
-          tags:    cached.tags    || s.tags    || [],
-          youtube: cached.youtube || s.youtube || "",
-        });
+        // Mutate in place so library[sec][cat] references also get updated
+        s.artist  = cached.artist  || s.artist  || "";
+        s.key     = cached.key     || s.key     || "";
+        s.capo    = cached.capo    || s.capo    || "";
+        s.tags    = cached.tags    || s.tags    || [];
+        s.youtube = cached.youtube || s.youtube || "";
+        return s;
       });
     },
   };
@@ -5056,6 +5056,7 @@ async function reloadLibrary() {
     Object.values(library).forEach(function(cats) {
       Object.values(cats).forEach(function(songs) { allSongs = allSongs.concat(songs); });
     });
+    allSongs = _metaStore.enrich(allSongs);
     renderSidebar();
     _checkFixKeys(allSongs);
     _updateHeaderStats();
@@ -5117,24 +5118,50 @@ function startRenameSong(card, song) {
 
 function confirmDeleteSong(card, song) {
   var nameDiv = card.querySelector(".song-name") || card.querySelector(".home-card-name") || card.querySelector(".song-table-name");
-  var origText = nameDiv.textContent;
-  nameDiv.innerHTML = '<span style="font-size:.78rem;color:#f87171">Excluir <strong>' + escHtml(origText) + '</strong>?</span>';
+  var origText = nameDiv ? nameDiv.textContent : song.name;
   var confirmBtn = document.createElement("button");
   confirmBtn.textContent = "Sim, excluir";
-  confirmBtn.style.cssText = "background:#ef4444;color:#fff;border:none;border-radius:6px;padding:4px 10px;font-size:.78rem;cursor:pointer;margin-right:4px";
+  confirmBtn.style.cssText = "background:#ef4444;color:#fff;border:none;border-radius:6px;padding:5px 12px;font-size:.8rem;font-weight:600;cursor:pointer;flex-shrink:0";
   var cancelBtn = document.createElement("button");
   cancelBtn.textContent = "Cancelar";
-  cancelBtn.style.cssText = "background:none;color:var(--text-muted);border:1px solid var(--border);border-radius:6px;padding:4px 8px;font-size:.78rem;cursor:pointer";
-  card.appendChild(confirmBtn);
-  card.appendChild(cancelBtn);
-  cancelBtn.addEventListener("click", function(e) {
-    e.stopPropagation();
-    if (currentCategory && currentCategory.section) {
-      renderSongGrid((library[currentCategory.section]||{})[currentCategory.cat]||[]);
-    } else {
-      renderHomeTable(allSongs);
-    }
-  });
+  cancelBtn.style.cssText = "background:none;color:var(--text-muted);border:1px solid var(--border);border-radius:6px;padding:5px 10px;font-size:.8rem;cursor:pointer;flex-shrink:0";
+
+  var isTableRow = !!card.querySelector(".song-table-actions");
+  if (isTableRow) {
+    // Para linhas de tabela: substitui o conteúdo da célula de ações
+    var actionsDiv = card.querySelector(".song-table-actions");
+    var savedActions = actionsDiv.innerHTML;
+    actionsDiv.innerHTML = '<span style="font-size:.78rem;color:#f87171;margin-right:8px;white-space:nowrap">Excluir <strong>' + escHtml(origText) + '</strong>?</span>';
+    actionsDiv.appendChild(confirmBtn);
+    actionsDiv.appendChild(cancelBtn);
+    cancelBtn.addEventListener("click", function(e) {
+      e.stopPropagation();
+      actionsDiv.innerHTML = savedActions;
+      // Re-bind add btn
+      var addBtn = actionsDiv.querySelector(".btn-hc-add");
+      if (addBtn) addBtn.addEventListener("click", async function(ev) {
+        ev.stopPropagation();
+        addBtn.disabled = true; addBtn.textContent = "...";
+        await toggleRepertorio(song, addBtn);
+        addBtn.disabled = false;
+        var nowIn = repertorio.some(function(r) { return (r.fileId||r.path)===(song.fileId||song.path); });
+        addBtn.classList.toggle("added", nowIn);
+        addBtn.textContent = nowIn ? "✓ Adicionado" : "+ Repertório";
+      });
+    });
+  } else {
+    nameDiv.innerHTML = '<span style="font-size:.78rem;color:#f87171">Excluir <strong>' + escHtml(origText) + '</strong>?</span>';
+    card.appendChild(confirmBtn);
+    card.appendChild(cancelBtn);
+    cancelBtn.addEventListener("click", function(e) {
+      e.stopPropagation();
+      if (currentCategory && currentCategory.section) {
+        renderSongGrid((library[currentCategory.section]||{})[currentCategory.cat]||[]);
+      } else {
+        renderHomeTable(allSongs);
+      }
+    });
+  }
   confirmBtn.addEventListener("click", async function(e) {
     e.stopPropagation();
     confirmBtn.disabled = true;
@@ -5516,8 +5543,19 @@ function openModal(song) {
       if (data.youtube !== undefined) {
         targetModal.youtube = data.youtube;
         _showYtPlayer(data.youtube);
-        var _metaYtInput = document.getElementById("meta-youtube");
-        if (_metaYtInput && metaMode) _metaYtInput.value = data.youtube;
+      }
+      // Se o painel de metadados já está aberto, atualiza todos os campos com o que veio do servidor
+      if (metaMode) {
+        var _mTitle  = document.getElementById("meta-title");
+        var _mArtist = document.getElementById("meta-artist");
+        var _mKey    = document.getElementById("meta-key");
+        var _mCapo   = document.getElementById("meta-capo");
+        var _mYt     = document.getElementById("meta-youtube");
+        if (_mTitle  && data.title)            _mTitle.value  = data.title;
+        if (_mArtist && data.artist !== undefined) _mArtist.value = data.artist;
+        if (_mKey    && data.key   !== undefined) _mKey.value   = data.key;
+        if (_mCapo   && data.capo  !== undefined) _mCapo.value  = data.capo;
+        if (_mYt     && data.youtube !== undefined) _mYt.value  = data.youtube;
       }
       if (!targetModal.key && data.text) {
         var detected = detectBaseNote(data.text);
