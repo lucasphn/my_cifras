@@ -1467,7 +1467,7 @@ def _build_export_html(songs, title, auto_print=False):
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{_esc(title)}</title>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Roboto+Mono:wght@400;700;800&display=swap');
 
   *, *::before, *::after {{ box-sizing: border-box; margin: 0; padding: 0; }}
 
@@ -1581,14 +1581,15 @@ def _build_export_html(songs, title, auto_print=False):
 
   /* ── Cifra ── */
   pre {{
-    font-family: 'JetBrains Mono', 'Courier New', monospace;
+    font-family: 'Roboto Mono', 'Consolas', 'Courier New', monospace;
     font-size: .8em;
-    line-height: 1.75;
+    line-height: 1.35;
     white-space: pre-wrap;
     word-break: break-word;
     color: #2e2645;
+    font-weight: 400;
   }}
-  .chord-line {{ color: #5b4b8a; font-weight: 700; }}
+  .chord-line {{ color: #5b4b8a; font-weight: 800; }}
 
   /* ── Footer ── */
   .doc-footer {{
