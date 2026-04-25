@@ -51,7 +51,8 @@
 
 /* ─── Reset & Base ───────────────────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-html, body { height: 100%; background: var(--bg); color: var(--text); font-family: 'Inter', system-ui, -apple-system, sans-serif; font-size: 15px; overflow: hidden; color-scheme: light; }
+html { height: -webkit-fill-available; background: var(--bg); color: var(--text); font-family: 'Inter', system-ui, -apple-system, sans-serif; font-size: 15px; overflow: hidden; color-scheme: light; }
+body { min-height: 100vh; min-height: -webkit-fill-available; overflow: hidden; }
 a { color: var(--accent); text-decoration: none; }
 button { cursor: pointer; border: none; background: none; color: inherit; font: inherit; }
 input { font: inherit; }
@@ -75,7 +76,7 @@ button, a, .song-card, .home-card, .home-top-card, .sidebar-cat,
 ::-webkit-scrollbar-thumb:hover { background: #b0b8e0; }
 
 /* ─── Layout ─────────────────────────────────────────────────────────────── */
-#app { display: flex; flex-direction: column; height: 100vh; }
+#app { display: flex; flex-direction: column; height: 100vh; height: -webkit-fill-available; }
 
 /* Header */
 #header {
@@ -2595,7 +2596,7 @@ body.android #presenter-cifra .chord-line {
   position: fixed; left: 0; right: 0; bottom: 0;
   z-index: 48; background: transparent;
   height: auto;
-  padding: 0 10px 10px;
+  padding: 0 10px env(safe-area-inset-bottom, 10px);
 }
 #mobile-bottom-nav .mbn-inner {
   display: flex; width: 100%; align-items: center;
@@ -2821,9 +2822,9 @@ body.android #presenter-cifra .chord-line {
 
 /* ─── PWA standalone: safe areas reais do iOS ───────────────────────────── */
 @media (display-mode: standalone) {
-  /* Nav cola no fundo como tab bar nativa */
+  /* Nav vira tab bar nativa full-width: sem pill, sem padding lateral */
   #mobile-bottom-nav {
-    padding: 0 0 env(safe-area-inset-bottom, 0px) 0;
+    padding: 0 0 env(safe-area-inset-bottom, 0px);
     background: rgba(255,255,255,0.95);
     backdrop-filter: blur(20px) saturate(180%);
     -webkit-backdrop-filter: blur(20px) saturate(180%);
@@ -2841,11 +2842,11 @@ body.android #presenter-cifra .chord-line {
   }
   .mbn-btn { padding-bottom: 10px; }
 
-  /* ④ App padding correto */
+  /* App padding para o conteúdo não ficar sob a nav */
   #app { padding-bottom: calc(60px + env(safe-area-inset-bottom, 0px)); }
   #toast { bottom: calc(70px + env(safe-area-inset-bottom, 0px)); }
 
-  /* ⑤ Sidebar drawer começa abaixo do header aumentado */
+  /* Sidebar começa abaixo do header aumentado */
   #sidebar { padding-top: calc(var(--header-h) + 8px); }
 }
 
@@ -8937,29 +8938,6 @@ document.addEventListener("DOMContentLoaded", function() {
 });
 
 document.addEventListener("DOMContentLoaded", init);
-
-// iOS standalone fallback: aplica safe area bottom no nav quando display-mode:standalone não detecta
-(function() {
-  var isIosStandalone = (window.navigator.standalone === true) ||
-    window.matchMedia('(display-mode: standalone)').matches;
-  if (isIosStandalone) {
-    var nav = document.getElementById("mobile-bottom-nav");
-    if (nav) {
-      nav.style.padding = "0 0 env(safe-area-inset-bottom, 0px) 0";
-      nav.style.background = "rgba(255,255,255,0.95)";
-      nav.style.borderRadius = "0";
-      nav.style.borderTop = "1px solid var(--border)";
-    }
-    var inner = document.querySelector("#mobile-bottom-nav .mbn-inner");
-    if (inner) {
-      inner.style.borderRadius = "0";
-      inner.style.background = "transparent";
-      inner.style.boxShadow = "none";
-      inner.style.border = "none";
-      inner.style.padding = "6px 0 0";
-    }
-  }
-})();
 </script>
 </body>
 </html>
