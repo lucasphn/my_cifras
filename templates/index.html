@@ -39,7 +39,7 @@
   --shadow-lg: 0 12px 40px rgba(60,40,100,.16), 0 2px 8px rgba(60,40,100,.08);
   --sidebar-w: 260px;
   --rep-w: 300px;
-  --header-h: 58px;
+  --header-h: calc(58px + env(safe-area-inset-top, 0px));
   --radius: 10px;
   --radius-lg: 14px;
   --font-mono: 'Roboto Mono', 'Consolas', 'Courier New', monospace;
@@ -86,6 +86,8 @@ button, a, .song-card, .home-card, .home-top-card, .sidebar-cat,
   align-items: stretch;
   flex-shrink: 0;
   z-index: 10;
+  padding-top: env(safe-area-inset-top, 0px);
+  box-sizing: border-box;
 }
 #header-brand {
   width: var(--sidebar-w);
@@ -2819,19 +2821,7 @@ body.android #presenter-cifra .chord-line {
 
 /* ─── PWA standalone: safe areas reais do iOS ───────────────────────────── */
 @media (display-mode: standalone) {
-  /* ① Redefine --header-h incluindo a safe area do topo.
-        Tudo que usa var(--header-h) (sidebar, modal overlay, etc.) se ajusta. */
-  :root {
-    --header-h: calc(58px + env(safe-area-inset-top, 0px));
-  }
-
-  /* ② Header empurra o conteúdo abaixo da barra de status */
-  #header {
-    padding-top: env(safe-area-inset-top, 0px);
-    box-sizing: border-box;
-  }
-
-  /* ③ Nav cola no fundo como tab bar nativa */
+  /* Nav cola no fundo como tab bar nativa */
   #mobile-bottom-nav {
     padding: 0 0 env(safe-area-inset-bottom, 0px) 0;
     background: rgba(255,255,255,0.95);
@@ -8927,6 +8917,29 @@ document.addEventListener("DOMContentLoaded", function() {
 });
 
 document.addEventListener("DOMContentLoaded", init);
+
+// iOS standalone fallback: aplica safe area bottom no nav quando display-mode:standalone não detecta
+(function() {
+  var isIosStandalone = (window.navigator.standalone === true) ||
+    window.matchMedia('(display-mode: standalone)').matches;
+  if (isIosStandalone) {
+    var nav = document.getElementById("mobile-bottom-nav");
+    if (nav) {
+      nav.style.padding = "0 0 env(safe-area-inset-bottom, 0px) 0";
+      nav.style.background = "rgba(255,255,255,0.95)";
+      nav.style.borderRadius = "0";
+      nav.style.borderTop = "1px solid var(--border)";
+    }
+    var inner = document.querySelector("#mobile-bottom-nav .mbn-inner");
+    if (inner) {
+      inner.style.borderRadius = "0";
+      inner.style.background = "transparent";
+      inner.style.boxShadow = "none";
+      inner.style.border = "none";
+      inner.style.padding = "6px 0 0";
+    }
+  }
+})();
 </script>
 </body>
 </html>
