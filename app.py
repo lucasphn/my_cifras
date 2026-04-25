@@ -17,6 +17,8 @@ load_dotenv()
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("FLASK_SECRET_KEY", "dev-insecure-key-troque-no-env")
+app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+app.config["SESSION_COOKIE_HTTPONLY"] = True
 
 # Confia nos headers X-Forwarded-Proto/Host do ngrok/proxy reverso
 from werkzeug.middleware.proxy_fix import ProxyFix

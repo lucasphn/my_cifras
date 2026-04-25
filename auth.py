@@ -19,7 +19,7 @@ Configuração necessária no .env:
 import os
 import functools
 
-from flask import Blueprint, session, redirect, request, url_for, render_template, jsonify
+from flask import Blueprint, session, redirect, request, url_for, render_template, render_template_string, jsonify
 from google.oauth2.credentials import Credentials
 from google.auth.transport.requests import Request
 from google_auth_oauthlib.flow import Flow
@@ -193,7 +193,15 @@ def callback():
         "name": info.get("name", ""),
         "picture": info.get("picture", ""),
     }
-    return redirect(url_for("index"))
+    # Client-side redirect evita que Safari/iOS bloqueie o cookie de sessão
+    # definido em resposta a um redirect cross-site vindo do Google (ITP).
+    return render_template_string(
+        '<!doctype html><html><head>'
+        '<meta http-equiv="refresh" content="0;url=/">'
+        '<title>Entrando...</title></head>'
+        '<body><script>window.location.replace("/");</script>'
+        'Redirecionando...</body></html>'
+    )
 
 
 @bp.route("/logout")
