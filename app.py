@@ -1866,7 +1866,7 @@ def api_export_docx():
                 _tight(lp, before=0, after=3)
                 continue
             run = lp.add_run(line)
-            run.font.name = "Courier New"; run.font.size = Pt(9)
+            run.font.name = "Consolas"; run.font.size = Pt(9)
             if _is_chord_line(line):
                 run.font.bold = True; run.font.color.rgb = PURPLE
             else:
