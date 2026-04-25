@@ -2804,6 +2804,7 @@ body.android #presenter-cifra .chord-line {
   #modal-footer #modal-loading { grid-column: span 1; }
 
   #transpose-toolbar { gap: 6px; padding: 8px 12px; overflow-x: auto; flex-wrap: nowrap; }
+  #my-tones-bar { flex-wrap: nowrap; overflow-x: auto; gap: 8px; }
   .tp-notes { display: none; }
 
   /* Após fechar teclado, reseta scroll */
@@ -4419,6 +4420,25 @@ async function _bundleSync() {
       }
     });
 
+    // Injeta ícones YouTube nos cards já renderizados que não os têm
+    entries.forEach(function(entry) {
+      if (!entry.youtube || !entry.fileId) return;
+      var cards = document.querySelectorAll('[data-song-file-id="' + entry.fileId + '"] .home-card-actions');
+      cards.forEach(function(actions) {
+        if (actions.querySelector('.hc-yt-link')) return;
+        var link = document.createElement('a');
+        link.className = 'hc-yt-link';
+        link.href = entry.youtube;
+        link.target = '_blank';
+        link.rel = 'noopener noreferrer';
+        link.title = 'Ouvir no YouTube';
+        link.addEventListener('click', function(e) { e.stopPropagation(); });
+        link.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="#ff0000"><path d="M23.5 6.2a3 3 0 0 0-2.1-2.1C19.5 3.6 12 3.6 12 3.6s-7.5 0-9.4.5a3 3 0 0 0-2.1 2.1C0 8.1 0 12 0 12s0 3.9.5 5.8a3 3 0 0 0 2.1 2.1c1.9.5 9.4.5 9.4.5s7.5 0 9.4-.5a3 3 0 0 0 2.1-2.1C24 15.9 24 12 24 12s0-3.9-.5-5.8zM9.7 15.5V8.5l6.3 3.5-6.3 3.5z"/></svg>';
+        var btn = actions.querySelector('.btn-hc-add');
+        if (btn) actions.insertBefore(link, btn); else actions.appendChild(link);
+      });
+    });
+
     if (data.etag) localStorage.setItem(_LS_BUNDLE_ETAG, data.etag);
     localStorage.setItem(_LS_BUNDLE_SYNC_TS, String(Date.now()));
   } catch (e) {
@@ -5621,8 +5641,10 @@ function openModal(song) {
       if (data.tags    !== undefined) targetModal.tags    = data.tags;
       if (data.capo    !== undefined) targetModal.capo    = data.capo;
       if (data.youtube !== undefined) {
-        targetModal.youtube = data.youtube;
-        _showYtPlayer(data.youtube);
+        // Prefere URL do arquivo; fallback para o que veio do allSongs/bundle
+        var _ytUrl = data.youtube || song.youtube || "";
+        targetModal.youtube = _ytUrl;
+        _showYtPlayer(_ytUrl);
       }
       // Se o painel de metadados já está aberto, atualiza todos os campos com o que veio do servidor
       if (metaMode) {
