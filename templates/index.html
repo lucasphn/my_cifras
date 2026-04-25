@@ -124,11 +124,10 @@ button, a, .song-card, .home-card, .home-top-card, .sidebar-cat,
 #sidebar-home-item.active { color: var(--primary); background: var(--primary-light); }
 #sidebar-home-item .sidebar-icon { font-size: 1.1em; }
 
-#btn-home { display: none; }
-#btn-home-hidden {
-  font-size: 1.1em;
+#btn-home {
+  font-size: 1.45em;
   color: var(--text-muted);
-  padding: 5px 7px;
+  padding: 5px 8px;
   border-radius: 8px;
   border: 1px solid transparent;
   flex-shrink: 0;
@@ -2591,12 +2590,10 @@ body.android #presenter-cifra .chord-line {
 /* ─── Bottom nav bar (mobile only) ─────────────────────────────────────── */
 #mobile-bottom-nav {
   display: none;
-  position: fixed; left: 10px; right: 10px;
-  /* No browser (não-standalone) usa bottom fixo pequeno — safe-area-inset-bottom
-     no Safari com URL bar retorna ~83px, o que faria o pill flutuar alto demais */
-  bottom: 10px;
+  position: fixed; left: 0; right: 0; bottom: 0;
   z-index: 48; background: transparent;
   height: auto;
+  padding: 0 10px 10px;
 }
 #mobile-bottom-nav .mbn-inner {
   display: flex; width: 100%; align-items: center;
@@ -2836,9 +2833,7 @@ body.android #presenter-cifra .chord-line {
 
   /* ③ Nav cola no fundo como tab bar nativa */
   #mobile-bottom-nav {
-    left: 0; right: 0;
-    bottom: 0;
-    padding-bottom: env(safe-area-inset-bottom, 0px);
+    padding: 0 0 env(safe-area-inset-bottom, 0px) 0;
     background: rgba(255,255,255,0.95);
     backdrop-filter: blur(20px) saturate(180%);
     -webkit-backdrop-filter: blur(20px) saturate(180%);
@@ -3234,6 +3229,11 @@ body.android #presenter-cifra .chord-line {
 .song-table-yt-link { display: flex; align-items: center; justify-content: center; opacity: 0.7; transition: opacity .15s; }
 .song-table-yt-link:hover { opacity: 1; }
 .song-table-views { display: flex; align-items: center; gap: 4px; color: var(--text-muted); font-size: 11px; }
+/* Category column — hidden by default, shown only in search mode */
+.song-table-cat { display: none; font-size: 11px; font-weight: 700; color: var(--accent); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#main.search-mode .song-table-head,
+#main.search-mode .song-table-row { grid-template-columns: 44px 2fr 1fr 1fr 80px 32px 72px 210px; }
+#main.search-mode .song-table-cat { display: block; }
 .song-table-actions { display: flex; gap: 6px; justify-content: flex-end; align-items: center; }
 .song-table-actions .btn-hc-add {
   padding: 5px 10px; border-radius: 99px; background: var(--primary-light);
@@ -3628,6 +3628,7 @@ body.android #presenter-cifra .chord-line {
           <span style="text-align:center">#</span>
           <span>Título</span>
           <span>Artista</span>
+          <span class="song-table-cat">Categoria</span>
           <span>Tom</span>
           <span></span>
           <span>Views</span>
@@ -3878,6 +3879,9 @@ body.android #presenter-cifra .chord-line {
       <span class="mt-toggle-text" id="mt-toggle-text">Meu Tom</span>
       <button class="mt-save-btn" id="btn-save-my-tone" style="display:none">&#9733; Salvar como Meu Tom</button>
       <span style="flex:1"></span>
+      <a id="mt-yt-link" href="#" target="_blank" rel="noopener noreferrer" title="Ouvir no YouTube" style="display:none;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;color:#ff0000;opacity:.8;transition:opacity .15s;flex-shrink:0" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=.8">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M23.5 6.2a3 3 0 0 0-2.1-2.1C19.5 3.6 12 3.6 12 3.6s-7.5 0-9.4.5a3 3 0 0 0-2.1 2.1C0 8.1 0 12 0 12s0 3.9.5 5.8a3 3 0 0 0 2.1 2.1c1.9.5 9.4.5 9.4.5s7.5 0 9.4-.5a3 3 0 0 0 2.1-2.1C24 15.9 24 12 24 12s0-3.9-.5-5.8zM9.7 15.5V8.5l6.3 3.5-6.3 3.5z"/></svg>
+      </a>
       <span id="mt-capo-wrap" style="display:none;align-items:center;gap:5px;">
         <span class="mt-label">Meu Capo:</span>
         <div class="mt-capo-stepper">
@@ -4522,7 +4526,7 @@ function detectBaseNote(text) {
 }
 
 // ─── Utilitários ───────────────────────────────────────────────────────────
-function cleanLabel(str) { return str.replace(/^\d+\s+/, '').replace(/^[-\s]+|[-\s]+$/g, ''); }
+function cleanLabel(str) { return str.replace(/^\d+[\s.]+/, '').replace(/^[-.\s]+|[-.\s]+$/g, ''); }
 
 // Ícones por seção e categoria (chave = label limpo, lowercase)
 var SECTION_ICONS = {
@@ -5377,6 +5381,7 @@ function _makeTableRow(song, rank) {
     '<span class="song-table-rank">' + String(rank).padStart(2, "0") + '</span>' +
     '<div class="song-table-name">' + escHtml(song.name) + '</div>' +
     '<div class="song-table-artist">' + escHtml(artistDisplay) + '</div>' +
+    '<div class="song-table-cat">' + escHtml(cleanLabel(song.category === "_raiz" ? (song.section || "") : (song.category || song.section || ""))) + '</div>' +
     '<div>' + (keyDisplay ? '<span class="song-table-key">' + escHtml(keyDisplay) + '</span>' : '') + '</div>' +
     '<div class="song-table-yt">' +
       (song.youtube ? '<a class="song-table-yt-link" href="' + escHtml(song.youtube) + '" target="_blank" rel="noopener noreferrer" title="Ouvir no YouTube" onclick="event.stopPropagation()">' +
@@ -5452,6 +5457,8 @@ function renderSongGrid(songs) {
   grid.innerHTML = "";
 
   _updateCatHeader(songs);
+  var mainEl = document.getElementById("main");
+  if (mainEl) mainEl.classList.toggle("search-mode", !!searchActive);
 
   if (!songs.length) {
     grid.style.display = "none";
@@ -5678,15 +5685,16 @@ function _extractYtId(url) {
   return m ? m[1] : null;
 }
 function _showYtPlayer(ytUrl) {
-  var bar = document.getElementById("yt-player-bar");
+  var bar  = document.getElementById("yt-player-bar");
   var link = document.getElementById("yt-listen-btn");
-  if (!bar || !link) return;
-  if (ytUrl) {
-    link.href = ytUrl;
-    bar.style.display = "block";
-  } else {
-    bar.style.display = "none";
-    link.href = "#";
+  var mtLink = document.getElementById("mt-yt-link");
+  if (bar && link) {
+    if (ytUrl) { link.href = ytUrl; bar.style.display = "block"; }
+    else { bar.style.display = "none"; link.href = "#"; }
+  }
+  if (mtLink) {
+    if (ytUrl) { mtLink.href = ytUrl; mtLink.style.display = "inline-flex"; }
+    else { mtLink.style.display = "none"; mtLink.href = "#"; }
   }
 }
 function _hideYtPlayer() {
