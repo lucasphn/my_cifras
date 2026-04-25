@@ -12,6 +12,8 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="My Cifras">
+<!-- Detecção iOS standalone — deve rodar ANTES do CSS ser aplicado -->
+<script>if(navigator.standalone===true||('matchMedia'in window&&window.matchMedia('(display-mode:standalone)').matches))document.documentElement.classList.add('pwa-standalone');</script>
 <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -2861,6 +2863,14 @@ html.pwa-standalone #app { padding-bottom: calc(60px + env(safe-area-inset-botto
 html.pwa-standalone #toast { bottom: calc(70px + env(safe-area-inset-bottom, 0px)); }
 html.pwa-standalone #sidebar { padding-top: calc(var(--header-h) + 8px); }
 
+/* Modal fullscreen no iOS standalone: header precisa respeitar o notch */
+html.pwa-standalone #modal-header {
+  padding-top: max(14px, env(safe-area-inset-top));
+}
+html.pwa-standalone #modal-footer {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
 /* ─── Splash screen ──────────────────────────────────────────────────────── */
 #splash {
   position: fixed; inset: 0; background: #fff;
@@ -4222,16 +4232,6 @@ html.pwa-standalone #sidebar { padding-top: calc(var(--header-h) + 8px); }
 </div>
 
 <script>
-// ─── Detecção iOS PWA standalone (deve rodar antes de qualquer render) ───────
-// window.navigator.standalone é o sinal 100% confiável no iOS Safari.
-// Adiciona classe no <html> para que o CSS de safe area funcione sem depender
-// de @media (display-mode: standalone), que falha em alguns iOS.
-(function() {
-  var isStandalone = window.navigator.standalone === true ||
-    (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
-  if (isStandalone) document.documentElement.classList.add('pwa-standalone');
-})();
-
 // ─── Role do usuário (injetado pelo servidor) ────────────────────────────────
 var _isOwner = document.body.getAttribute('data-owner') === '1';
 

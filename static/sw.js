@@ -1,4 +1,4 @@
-const SHELL_CACHE = 'mycifras-shell-v3';
+const SHELL_CACHE = 'mycifras-shell-v4';
 const SHELL_URLS = [
   '/',
   '/static/brand/logo-light.svg',
