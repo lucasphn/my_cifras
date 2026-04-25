@@ -1378,11 +1378,12 @@ def api_cifras_bundle():
                     body = extract_text_from_bytes(raw_bytes, ext)
                     meta = {}
             return fid, {
-                "text":   body,
-                "name":   song["name"],
-                "artist": meta.get("artist", ""),
-                "key":    meta.get("key", ""),
-                "capo":   meta.get("capo", ""),
+                "text":    body,
+                "name":    song["name"],
+                "artist":  meta.get("artist", ""),
+                "key":     meta.get("key", ""),
+                "capo":    meta.get("capo", ""),
+                "youtube": meta.get("youtube", ""),
             }
         except Exception:
             return fid, None

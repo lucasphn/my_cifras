@@ -4352,6 +4352,26 @@ async function _bundleSync() {
       return Object.assign({ fileId: fid, ts: ts }, data.songs[fid]);
     });
     if (entries.length) await _idbBulkPut(entries);
+
+    // Popula _metaStore e atualiza allSongs em memória com os metadados do bundle
+    entries.forEach(function(entry) {
+      if (!entry.fileId) return;
+      _metaStore.set(entry.fileId, {
+        artist:  entry.artist  || "",
+        key:     entry.key     || "",
+        capo:    entry.capo    || "",
+        tags:    entry.tags    || [],
+        youtube: entry.youtube || "",
+      });
+      var song = allSongs.find(function(s) { return s.fileId === entry.fileId; });
+      if (song) {
+        if (entry.artist)  song.artist  = entry.artist;
+        if (entry.key)     song.key     = entry.key;
+        if (entry.capo)    song.capo    = entry.capo;
+        if (entry.youtube) song.youtube = entry.youtube;
+      }
+    });
+
     if (data.etag) localStorage.setItem(_LS_BUNDLE_ETAG, data.etag);
     localStorage.setItem(_LS_BUNDLE_SYNC_TS, String(Date.now()));
   } catch (e) {
