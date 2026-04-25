@@ -2875,6 +2875,10 @@ html.pwa-standalone #header {
 html.pwa-standalone #modal-header {
   padding-top: max(16px, env(safe-area-inset-top));
 }
+html.pwa-standalone #presenter-topbar {
+  padding-top: env(safe-area-inset-top, 0px);
+  height: calc(54px + env(safe-area-inset-top, 0px));
+}
 html.pwa-standalone #modal-footer {
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
