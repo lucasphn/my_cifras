@@ -2086,10 +2086,11 @@ body.android #presenter-cifra .chord-line {
 
 /* Tag "Compartilhado" no item salvo */
 .sri-shared-tag {
+  display: inline-block;
   font-size: 0.65em; font-weight: 700; padding: 2px 6px;
   background: rgba(91,75,138,.12); color: var(--primary);
-  border-radius: 99px; flex-shrink: 0; letter-spacing: .3px;
-  white-space: nowrap;
+  border-radius: 99px; letter-spacing: .3px;
+  white-space: nowrap; margin-top: 3px;
 }
 
 /* ─── Share dialog ──────────────────────────────────────────────────────── */
@@ -3774,8 +3775,8 @@ body.android #presenter-cifra .chord-line {
           </div>
         </div>
         <div id="rep-export-row">
-          <button class="btn btn-accent" id="btn-rep-docx">&#128196; .doc</button>
-          <button class="btn btn-accent" id="btn-rep-pdf">&#128247; PDF</button>
+          <button class="btn btn-accent" id="btn-rep-docx">Word</button>
+          <button class="btn btn-accent" id="btn-rep-pdf">PDF</button>
         </div>
       </div>
       <!-- Saved repertórios list -->
@@ -5070,7 +5071,7 @@ async function reloadLibrary() {
 // ─── Song operations ────────────────────────────────────────────────────────
 
 function startRenameSong(card, song) {
-  var nameDiv = card.querySelector(".song-name") || card.querySelector(".home-card-name");
+  var nameDiv = card.querySelector(".song-name") || card.querySelector(".home-card-name") || card.querySelector(".song-table-name");
   var inp = document.createElement("input");
   inp.type = "text"; inp.value = song.name; inp.maxLength = 120;
   inp.style.cssText = "width:100%;background:var(--surface2);border:1px solid var(--primary);border-radius:6px;padding:4px 8px;font-size:.85rem;color:var(--text);outline:none;margin-bottom:4px";
@@ -5115,7 +5116,7 @@ function startRenameSong(card, song) {
 }
 
 function confirmDeleteSong(card, song) {
-  var nameDiv = card.querySelector(".song-name") || card.querySelector(".home-card-name");
+  var nameDiv = card.querySelector(".song-name") || card.querySelector(".home-card-name") || card.querySelector(".song-table-name");
   var origText = nameDiv.textContent;
   nameDiv.innerHTML = '<span style="font-size:.78rem;color:#f87171">Excluir <strong>' + escHtml(origText) + '</strong>?</span>';
   var confirmBtn = document.createElement("button");
@@ -7078,8 +7079,8 @@ function renderSavedReps() {
         '<div class="sri-info">' +
           '<span class="sri-name">' + escHtml(rep.name) + '</span>' +
           '<span class="sri-count">' + count + ' m&#250;sica' + (count !== 1 ? 's' : '') + '</span>' +
+          (isShared ? '<span class="sri-shared-tag">Compartilhado</span>' : '') +
         '</div>' +
-        (isShared ? '<span class="sri-shared-tag">Compartilhado</span>' : '') +
         '<button class="sri-play" title="Apresentar">&#9654;</button>' +
         '<div class="sri-menu-wrap">' +
           '<button class="sri-menu-btn" title="Opções">&#8943;</button>' +
