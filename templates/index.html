@@ -3902,12 +3902,6 @@ body.android #presenter-cifra .chord-line {
         <button class="etb-btn" id="etb-select-all" title="Selecionar todo o texto (Ctrl+A)">&#9776; Selecionar tudo</button>
         <button class="etb-btn" id="etb-copy" title="Copiar texto">&#128203; Copiar</button>
       </div>
-      <div id="yt-player-bar">
-        <a id="yt-listen-btn" href="#" target="_blank" rel="noopener noreferrer">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M23.5 6.2a3 3 0 0 0-2.1-2.1C19.5 3.6 12 3.6 12 3.6s-7.5 0-9.4.5a3 3 0 0 0-2.1 2.1C0 8.1 0 12 0 12s0 3.9.5 5.8a3 3 0 0 0 2.1 2.1c1.9.5 9.4.5 9.4.5s7.5 0 9.4-.5a3 3 0 0 0 2.1-2.1C24 15.9 24 12 24 12s0-3.9-.5-5.8zM9.7 15.5V8.5l6.3 3.5-6.3 3.5z"/></svg>
-          Ouvir no YouTube
-        </a>
-      </div>
       <pre id="cifra-content"></pre>
       <textarea id="cifra-edit" spellcheck="false" placeholder="Edite a cifra aqui..."></textarea>
       <div id="meta-panel">
@@ -5684,21 +5678,15 @@ function _extractYtId(url) {
   return m ? m[1] : null;
 }
 function _showYtPlayer(ytUrl) {
-  var bar  = document.getElementById("yt-player-bar");
-  var link = document.getElementById("yt-listen-btn");
   var mtLink = document.getElementById("mt-yt-link");
-  if (bar && link) {
-    if (ytUrl) { link.href = ytUrl; bar.style.display = "block"; }
-    else { bar.style.display = "none"; link.href = "#"; }
-  }
   if (mtLink) {
     if (ytUrl) { mtLink.href = ytUrl; mtLink.style.display = "inline-flex"; }
     else { mtLink.style.display = "none"; mtLink.href = "#"; }
   }
 }
 function _hideYtPlayer() {
-  var bar = document.getElementById("yt-player-bar");
-  if (bar) bar.style.display = "none";
+  var mtLink = document.getElementById("mt-yt-link");
+  if (mtLink) { mtLink.style.display = "none"; mtLink.href = "#"; }
 }
 function closeModal() {
   _confirmLeaveEdit(function() {
