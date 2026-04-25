@@ -53,8 +53,8 @@
 
 /* ─── Reset & Base ───────────────────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-html { height: -webkit-fill-available; background: var(--bg); color: var(--text); font-family: 'Inter', system-ui, -apple-system, sans-serif; font-size: 15px; overflow: hidden; color-scheme: light; }
-body { min-height: 100vh; min-height: -webkit-fill-available; overflow: hidden; }
+html { height: 100%; background: var(--bg); color: var(--text); font-family: 'Inter', system-ui, -apple-system, sans-serif; font-size: 15px; overflow: hidden; color-scheme: light; }
+body { height: 100%; overflow: hidden; }
 a { color: var(--accent); text-decoration: none; }
 button { cursor: pointer; border: none; background: none; color: inherit; font: inherit; }
 input { font: inherit; }
@@ -63,12 +63,12 @@ input { font: inherit; }
 button, a, input, select, textarea,
 .song-card, .home-card, .home-top-card, .home-top-card-wrap,
 .sidebar-cat, .btn, .btn-sm, .btn-accent, .modal-vctrl,
-.btn-hc-add, .btn-song-ops, .saved-rep-item, .rep-item,
+.btn-hc-add, .btn-song-ops, .saved-rep-item, .shared-rep-item, .rep-item,
 .sidebar-section-title, [onclick] {
   touch-action: manipulation;
 }
 button, a, .song-card, .home-card, .home-top-card, .sidebar-cat,
-.btn, .btn-sm, .btn-accent, .modal-vctrl, [onclick] {
+.btn, .btn-sm, .btn-accent, .modal-vctrl, .shared-rep-item, [onclick] {
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
 }
@@ -78,7 +78,7 @@ button, a, .song-card, .home-card, .home-top-card, .sidebar-cat,
 ::-webkit-scrollbar-thumb:hover { background: #b0b8e0; }
 
 /* ─── Layout ─────────────────────────────────────────────────────────────── */
-#app { display: flex; flex-direction: column; height: 100vh; height: -webkit-fill-available; }
+#app { display: flex; flex-direction: column; height: 100%; }
 
 /* Header */
 #header {
@@ -1474,6 +1474,9 @@ button, a, .song-card, .home-card, .home-top-card, .sidebar-cat,
 #modal.focus-mode #modal-body {
   border-radius: var(--radius-lg);
 }
+html.pwa-standalone #modal.focus-mode #modal-body {
+  padding-top: env(safe-area-inset-top, 0px);
+}
 #focus-exit-btn {
   display: none;
   position: fixed;
@@ -2636,6 +2639,8 @@ body.android #presenter-cifra .chord-line {
 
 
 @media (max-width: 1024px) {
+  html { height: -webkit-fill-available; }
+  body { min-height: 100vh; min-height: -webkit-fill-available; overflow: auto; }
   html, body { overflow: auto; }
   /* dvh garante altura correta em Safari (100vh inclui a barra do browser) */
   /* No browser iOS: nav fica em bottom:10px com ~60px de altura → 80px de padding é suficiente */
@@ -2864,8 +2869,11 @@ html.pwa-standalone #toast { bottom: calc(70px + env(safe-area-inset-bottom, 0px
 html.pwa-standalone #sidebar { padding-top: calc(var(--header-h) + 8px); }
 
 /* Modal fullscreen no iOS standalone: header precisa respeitar o notch */
+html.pwa-standalone #header {
+  padding-top: calc(env(safe-area-inset-top, 0px) + 4px);
+}
 html.pwa-standalone #modal-header {
-  padding-top: max(14px, env(safe-area-inset-top));
+  padding-top: max(16px, env(safe-area-inset-top));
 }
 html.pwa-standalone #modal-footer {
   padding-bottom: env(safe-area-inset-bottom, 0px);
@@ -3240,6 +3248,8 @@ html.pwa-standalone #modal-footer {
 .song-table-yt { display: flex; align-items: center; justify-content: center; }
 .song-table-yt-link { display: flex; align-items: center; justify-content: center; opacity: 0.7; transition: opacity .15s; }
 .song-table-yt-link:hover { opacity: 1; }
+.hc-yt-link { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; opacity: 0.75; flex-shrink: 0; transition: opacity .15s; }
+.hc-yt-link:hover { opacity: 1; }
 .song-table-views { display: flex; align-items: center; gap: 4px; color: var(--text-muted); font-size: 11px; }
 /* Category column — hidden by default, shown only in search mode */
 .song-table-cat { display: none; font-size: 11px; font-weight: 700; color: var(--accent); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -4650,6 +4660,9 @@ function _makeHomeCard(song, cls) {
       '</div>' +
     '</div>' +
     '<div class="home-card-actions">' +
+      (song.youtube ? '<a class="hc-yt-link" href="' + escHtml(song.youtube) + '" target="_blank" rel="noopener noreferrer" title="Ouvir no YouTube" onclick="event.stopPropagation()">' +
+        '<svg width="14" height="14" viewBox="0 0 24 24" fill="#ff0000"><path d="M23.5 6.2a3 3 0 0 0-2.1-2.1C19.5 3.6 12 3.6 12 3.6s-7.5 0-9.4.5a3 3 0 0 0-2.1 2.1C0 8.1 0 12 0 12s0 3.9.5 5.8a3 3 0 0 0 2.1 2.1c1.9.5 9.4.5 9.4.5s7.5 0 9.4-.5a3 3 0 0 0 2.1-2.1C24 15.9 24 12 24 12s0-3.9-.5-5.8zM9.7 15.5V8.5l6.3 3.5-6.3 3.5z"/></svg>' +
+        '</a>' : '') +
       '<button class="btn-hc-add' + (inRep ? ' added' : '') + '">' + (inRep ? '✓ Adicionado' : '+ Repertório') + '</button>' +
     '</div>';
 
@@ -5519,20 +5532,20 @@ function renderSongGrid(songs) {
       if (sortVal === "recent") return 0;
       return (_songWithViews(b).views || 0) - (_songWithViews(a).views || 0);
     });
-    sorted.forEach(function(song, i) {
-      grid.appendChild(_makeTableRow(song, i + 1));
-    });
+    var frag = document.createDocumentFragment();
+    sorted.forEach(function(song, i) { frag.appendChild(_makeTableRow(song, i + 1)); });
+    grid.appendChild(frag);
   } else {
     // Card grid view (mobile)
     grid.style.display = "grid";
     if (toggleWrap) toggleWrap.style.display = "flex";
     empty.style.display = "none";
     _applyViewMode(_viewMode);
+    var frag = document.createDocumentFragment();
     songs.forEach(function(song) {
-      var enriched = _songWithViews(song);
-      var card = _makeHomeCard(enriched, "home-card");
-      grid.appendChild(card);
+      frag.appendChild(_makeHomeCard(_songWithViews(song), "home-card"));
     });
+    grid.appendChild(frag);
   }
 }
 
@@ -6892,6 +6905,8 @@ function renderRepList() {
   }
   empty.style.display = "none";
 
+  var frag = document.createDocumentFragment();
+
   repertorio.forEach(function(song, i) {
     var item = document.createElement("div");
     item.className = "rep-item";
@@ -6917,7 +6932,7 @@ function renderRepList() {
       repertorio.splice(i, 1);
       renderRepList();
       updateRepBadge();
-      refreshGridBtns();
+      requestAnimationFrame(refreshGridBtns);
     });
 
     // Drag & drop para reordenar
@@ -6939,11 +6954,14 @@ function renderRepList() {
         var moved = repertorio.splice(from, 1)[0];
         repertorio.splice(to, 0, moved);
         renderRepList();
+        requestAnimationFrame(refreshGridBtns);
       }
     });
 
-    list.appendChild(item);
+    frag.appendChild(item);
   });
+
+  list.appendChild(frag);
 }
 
 function clearDragOver() {
@@ -6961,11 +6979,13 @@ function updateRepBadge() {
 
 function refreshGridBtns() {
   var repSet = new Set(repertorio.map(function(r) { return r.fileId || r.path || ""; }).filter(Boolean));
-  document.querySelectorAll(".home-card").forEach(function(card) {
+  document.querySelectorAll(".btn-hc-add").forEach(function(btn) {
+    var card = btn.parentElement && btn.parentElement.closest("[data-song-file-id],[data-song-path]");
+    if (!card) return;
     var key = card.dataset.songFileId || card.dataset.songPath || "";
-    var btn = card.querySelector(".btn-hc-add");
-    if (!btn) return;
-    var inRep = key && repSet.has(key);
+    var inRep = !!(key && repSet.has(key));
+    var wasAdded = btn.classList.contains("added");
+    if (inRep === wasAdded) return; // skip — no change needed
     btn.className = "btn-hc-add" + (inRep ? " added" : "");
     btn.textContent = inRep ? "\u2713 Adicionado" : "+ Repert\u00f3rio";
   });
@@ -7249,7 +7269,7 @@ function openSavedRep(id) {
     document.getElementById("rep-title-input").value = "";
     renderRepList();
     updateRepBadge();
-    refreshGridBtns();
+    requestAnimationFrame(refreshGridBtns);
     _markActiveSavedRep();
     _markActiveSharedRep();
     return;
@@ -7262,10 +7282,11 @@ function openSavedRep(id) {
   document.getElementById("rep-title-input").value = rep.name;
   renderRepList();
   updateRepBadge();
-  refreshGridBtns();
   _markActiveSavedRep();
   _markActiveSharedRep();
   showToast(rep.name + " aberto.");
+  // Defer grid scan so the panel paints immediately
+  requestAnimationFrame(refreshGridBtns);
 }
 
 // ─── Compartilhamento ──────────────────────────────────────────────────────
@@ -7375,9 +7396,10 @@ function openSharedRep(shareId) {
   document.getElementById("rep-title-input").value = share.rep_name;
   renderRepList();
   updateRepBadge();
-  refreshGridBtns();
   _markActiveSavedRep();
   _markActiveSharedRep();
+  // Defer grid scan so the panel paints immediately
+  requestAnimationFrame(refreshGridBtns);
   showToast(share.rep_name + " aberto.");
   // Marcar como visto no servidor (background)
   fetch("/api/share/" + encodeURIComponent(shareId) + "/seen", { method: "POST" }).then(function() {
@@ -7716,31 +7738,40 @@ async function openPresenter(repId) {
   document.getElementById("btn-pres-fullscreen").classList.remove("active");
   overlay.classList.add("show");
 
-  presenterSongs = [];
   var songs = rep.songs;
-  for (var i = 0; i < songs.length; i++) {
-    var s = songs[i];
+  // Busca todas as cifras em paralelo (IDB first → rede)
+  presenterSongs = await Promise.all(songs.map(async function(s) {
     var text = s.text || "";
     if (!text) {
       try {
-        var url = s.fileId
-          ? "/api/cifra?fileId=" + encodeURIComponent(s.fileId) + "&mimeType=" + encodeURIComponent(s.mimeType || "")
-          : "/api/cifra?path=" + encodeURIComponent(s.path);
-        var r = await fetch(url);
-        var d = await r.json();
-        text = d.text || "";
+        // Cache-first: IDB imediatamente, rede só se necessário
+        if (s.fileId) {
+          var cached = await _idbGet(s.fileId).catch(function(){ return null; });
+          if (cached && cached.text) {
+            text = cached.text;
+          } else {
+            var url = "/api/cifra?fileId=" + encodeURIComponent(s.fileId) + "&mimeType=" + encodeURIComponent(s.mimeType || "");
+            var d = await fetch(url).then(function(r) { return r.json(); });
+            text = d.text || "";
+            if (text) _idbPut(s.fileId, { text: text, name: s.name, ts: Date.now() }).catch(function(){});
+          }
+        } else {
+          var url = "/api/cifra?path=" + encodeURIComponent(s.path);
+          var d = await fetch(url).then(function(r) { return r.json(); });
+          text = d.text || "";
+        }
       } catch(e) { text = "[Erro ao carregar]"; }
     }
-    presenterSongs.push({
+    return {
       name: s.name,
       note: s.note || "",
       capo: parseInt(s.capo) || 0,
-      rawText: text,       // texto original sem transposição
+      rawText: text,
       zoom: 1.0,
       semitone: 0,
       twoCol: false
-    });
-  }
+    };
+  }));
 
   document.getElementById("presenter-loading").style.display = "none";
   presenterIdx = 0;

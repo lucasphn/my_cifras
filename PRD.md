@@ -1,8 +1,8 @@
 # PRD — My Cifras
-**Versão:** 3.2
+**Versão:** 3.3
 **Produto:** Aplicação web para o músico individual gerenciar cifras, transpor tons, criar e compartilhar repertórios, e acompanhar sua agenda litúrgica
 **Autor:** Lucas Almeida
-**Status:** Em produção (v3.2)
+**Status:** Em produção (v3.3)
 
 ---
 
@@ -244,11 +244,15 @@ _mycifras_data/ (no Drive de cada usuário)
 
 ## 12. Roadmap
 
-### Fase 1 — Produto individual (atual v3.2)
+### Fase 1 — Produto individual (atual v3.3)
 - Owner + viewers com roles distintos
 - Dados pessoais isolados por usuário no Drive
 - Sync offline completo via bundle endpoint
 - Compartilhamento de repertórios entre usuários
+- Metadados globais (`_songs_meta.json`) compartilhados entre dispositivos
+- Live sharing: alterações no repertório propagadas automaticamente para shares ativos
+- Performance: renderização em batch (DocumentFragment), presenter paralelo (Promise.all + IDB-first)
+- PWA iOS: safe area correta incluindo focus mode; ícone YouTube nos cards mobile
 
 ### Fase 2 — Workspace compartilhado
 - Músico convida outros membros para colaborar no mesmo acervo

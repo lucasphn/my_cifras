@@ -317,11 +317,10 @@ def _load_reps():
         svc = get_service()
         folder_id = _get_user_data_folder_id(svc)
         email = current_user().get("email", "_local")
-        cached = _reps_cache.get(email)
-        if cached and cached.get("data") is not None:
-            return cached["data"]
+        # Always read fresh from Drive — cache only the file_id for fast writes
         data, file_id = drv.load_repertorios(svc, folder_id)
-        _reps_cache[email] = {"data": data, "file_id": file_id}
+        cached = _reps_cache.get(email, {})
+        _reps_cache[email] = {"data": None, "file_id": file_id or cached.get("file_id")}
         return data
     return _load_reps_local()
 
@@ -687,17 +686,16 @@ VALID_SLOTS = {"my_key", "original_key", "alt_key", "my_capo"}
 
 def _load_prefs():
     email = current_user().get("email", "_local")
-    cached = _prefs_cache.get(email)
-    if cached and cached.get("data") is not None:
-        return cached["data"]
     if _use_drive():
         try:
             import drive as _drive
             svc = get_service()
             folder_id = _get_user_data_folder_id(svc)
+            # Always read fresh from Drive — cache only file_id for fast writes
             data, file_id = _drive.load_preferences(svc, folder_id)
             with _prefs_lock:
-                _prefs_cache[email] = {"data": data, "file_id": file_id}
+                cached = _prefs_cache.get(email, {})
+                _prefs_cache[email] = {"data": None, "file_id": file_id or cached.get("file_id")}
             return data
         except Exception:
             pass

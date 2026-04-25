@@ -185,13 +185,24 @@ No frontend:
 
 ### Caches em memória
 ```python
-_prefs_cache: dict   # { email: { "data": {...}, "file_id": "..." } }
+_prefs_cache: dict   # { email: { "data": None, "file_id": "..." } }  ← só file_id; data sempre lida do Drive
 _views_cache: dict   # { email: { "data": {...}, "file_id": "..." } }
-_reps_cache:  dict   # { email: { "data": {...}, "file_id": "..." } }
+_reps_cache:  dict   # { email: { "data": None, "file_id": "..." } }   ← só file_id; data sempre lida do Drive
 _library_cache       # { "data": ..., "ts": float }  — TTL 120s
 _bundle_cache        # { "etag": str, "ts": float }  — só ETag
 _shares_drive_file_id: str | None  # cache global do file_id do _shares.json
+_shares_cache_data: dict | None    # cache em memória para shares (performance do live sharing)
+_songs_meta: dict    # metadados globais de músicas (artist, key, capo, youtube) — persiste em _songs_meta.json
 ```
+
+**Importante:** `_load_prefs()` e `_load_reps()` **não** cacheiam `data` — sempre releem o Drive a cada GET. Apenas `file_id` é cacheado para acelerar writes. Isso garante que alterações feitas em outra instância (ex: produção vs. localhost) sejam sempre visíveis.
+
+### Metadados globais (`_songs_meta.json`)
+- Arquivo em `CIFRAS_FOLDER_ID` (acervo do owner)
+- Contém `artist`, `key`, `capo`, `youtube` por `fileId`
+- Carregado lazy na primeira requisição via `_ensure_songs_meta_loaded()`
+- Persistido em background thread via `_persist_songs_meta()`
+- Bundle endpoint inclui esses metadados para seed do `_metaStore` no cliente
 
 ### Invalidação
 ```python
@@ -336,7 +347,11 @@ gunicorn app:app --bind 0.0.0.0:8000 --workers 1 --worker-class gthread --thread
 - Funções de `drive.py` recebem `service` como primeiro parâmetro
 
 ### JavaScript
-- `refreshGridBtns()` — atualiza apenas estado dos botões nos cards (não recria o grid)
+- `refreshGridBtns()` — atualiza apenas botões `.btn-hc-add` com estado diferente (skip se `inRep === wasAdded`)
+- `renderSongGrid()` — usa `DocumentFragment` para batch insert (1 reflow em vez de N)
+- `renderRepList()` — usa `DocumentFragment` para batch insert
+- `openPresenter()` — carrega todas as cifras em **paralelo** com `Promise.all` + IDB-first (não sequencial)
+- `openSavedRep()` / `openSharedRep()` — defere `refreshGridBtns` com `requestAnimationFrame`
 - `escHtml()` obrigatório ao inserir dados via innerHTML
 - `_forceCloseModal()` para fechar modal sem acionar confirm de edição (ex: ao navegar)
 - `_closeAllDropdowns()` antes de abrir qualquer dropdown novo
@@ -348,3 +363,15 @@ gunicorn app:app --bind 0.0.0.0:8000 --workers 1 --worker-class gthread --thread
 - iOS safe area: `env(safe-area-inset-bottom, 0px)` sem margem extra acima dela
 - `font-size` mínimo de **16px** em todos os inputs mobile (evita zoom automático do iOS Safari)
 - Evitar `:hover` com `transform` no mobile (double-tap em iOS)
+- `touch-action: manipulation` deve incluir **todos** os elementos interativos, inclusive `.shared-rep-item` (elimina delay 300ms iOS)
+
+### iOS PWA (standalone)
+- Detecção: `navigator.standalone === true` → adiciona `html.pwa-standalone` via script inline no `<head>` (antes do CSS)
+- `@media (display-mode: standalone)` é pouco confiável no iOS Safari — preferir `html.pwa-standalone`
+- Focus mode: `html.pwa-standalone #modal.focus-mode #modal-body { padding-top: env(safe-area-inset-top) }` — necessário pois `#modal-header` é ocultado
+- `-webkit-fill-available` apenas dentro de `@media (max-width: 1024px)` — **não** global (quebra layout desktop)
+
+### YouTube nos cards mobile
+- `_makeHomeCard()` renderiza `.hc-yt-link` quando `song.youtube` está populado
+- `song.youtube` é populado via bundle sync (`_bundleSync`) que roda 4s após carregamento
+- No modal, `_showYtPlayer(url)` controla `#mt-yt-link` na barra de tons
