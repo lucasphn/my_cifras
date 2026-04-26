@@ -3081,9 +3081,10 @@ html.pwa-standalone #modal-footer {
   position: fixed; top: var(--header-h); left: 0; right: 0;
   background: #374151; color: #f9fafb;
   text-align: center; padding: 5px 12px; font-size: 0.78em; font-weight: 500;
-  z-index: 8001; display: none;
+  z-index: 8001; display: none; opacity: 1; transition: opacity 0.6s ease;
 }
 #offline-banner.visible { display: block; }
+#offline-banner.fading  { opacity: 0; }
 
 /* ─── Tablet: botões de controle do modal maiores ────────────────────────── */
 @media (min-width: 600px) and (max-width: 1024px) {
@@ -4361,11 +4362,21 @@ function _showSyncPill(done, total) {}
 function _hideSyncPill() {}
 function _hideOfflineBanner() {
   var el = document.getElementById('offline-banner');
-  if (el) el.classList.remove('visible');
+  if (!el) return;
+  el.classList.add('fading');
+  setTimeout(function() { el.classList.remove('visible', 'fading'); }, 600);
 }
+var _offlineBannerTimer = null;
 function _showOfflineBanner() {
   var el = document.getElementById('offline-banner');
-  if (el) el.classList.add('visible');
+  if (!el) return;
+  el.classList.remove('fading');
+  el.classList.add('visible');
+  clearTimeout(_offlineBannerTimer);
+  _offlineBannerTimer = setTimeout(function() {
+    el.classList.add('fading');
+    setTimeout(function() { el.classList.remove('visible', 'fading'); }, 600);
+  }, 5000);
 }
 
 // ─── Bundle sync (offline cache via ETag) ────────────────────────────────────
@@ -5140,10 +5151,27 @@ async function folderDelete(section, cat) {
   } catch(e) { alert("Erro: " + e); }
 }
 
+function _libraryFromCache() {
+  try {
+    var cached = localStorage.getItem('mycifras_library_cache');
+    if (!cached) return false;
+    library = JSON.parse(cached);
+    allSongs = [];
+    Object.values(library).forEach(function(cats) {
+      Object.values(cats).forEach(function(songs) { allSongs = allSongs.concat(songs); });
+    });
+    allSongs = _metaStore.enrich(allSongs);
+    renderSidebar();
+    _updateHeaderStats();
+    return true;
+  } catch(e) { return false; }
+}
+
 async function reloadLibrary() {
   try {
     var r = await fetch("/api/library");
     library = await r.json();
+    localStorage.setItem('mycifras_library_cache', JSON.stringify(library));
     allSongs = [];
     Object.values(library).forEach(function(cats) {
       Object.values(cats).forEach(function(songs) { allSongs = allSongs.concat(songs); });
@@ -5158,7 +5186,10 @@ async function reloadLibrary() {
       if (songs) renderSongGrid(songs);
       else { currentCategory = null; renderSongGrid([]); }
     }
-  } catch(e) { console.error("reloadLibrary:", e); }
+  } catch(e) {
+    console.error("reloadLibrary:", e);
+    _libraryFromCache();
+  }
 }
 
 // ─── Song operations ────────────────────────────────────────────────────────
@@ -8266,6 +8297,7 @@ function init() {
       }
       setSplashProgress(88, "Renderizando...");
       library = data;
+      localStorage.setItem('mycifras_library_cache', JSON.stringify(data));
       allSongs = [];
       Object.keys(library).forEach(function(sec) {
         Object.keys(library[sec]).forEach(function(cat) {
@@ -8306,9 +8338,19 @@ function init() {
     .catch(function(err) {
       clearInterval(fakeTimer);
       console.error("Erro ao carregar biblioteca:", err);
-      hideSplash();
-      document.getElementById("empty-msg").textContent = "Nao foi possivel carregar a biblioteca.";
-      document.getElementById("empty-state").style.display = "flex";
+      if (_libraryFromCache()) {
+        renderHomeTable(allSongs);
+        showHomeTable();
+        hideSplash();
+        _showOfflineBanner();
+      } else {
+        hideSplash();
+        document.getElementById("empty-msg").textContent =
+          navigator.onLine
+            ? "Não foi possível carregar a biblioteca."
+            : "Sem conexão — abra o app online ao menos uma vez para ativar o modo offline.";
+        document.getElementById("empty-state").style.display = "flex";
+      }
     });
 
   // Reagir a mudanças de conectividade
