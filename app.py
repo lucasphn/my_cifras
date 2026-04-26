@@ -7,6 +7,7 @@ import re
 import tempfile
 import threading
 import time
+import unicodedata
 from datetime import date
 from pathlib import Path
 
@@ -14,6 +15,16 @@ from dotenv import load_dotenv
 from flask import Flask, request, jsonify, render_template, Response, session
 
 load_dotenv()
+
+
+def _normalize_search(s: str) -> str:
+    """Normaliza string para busca: remove acentos, pontuação e caixa."""
+    s = unicodedata.normalize("NFD", s)
+    s = "".join(c for c in s if unicodedata.category(c) != "Mn")
+    s = s.lower()
+    s = re.sub(r"[^a-z0-9 ]", " ", s)
+    return re.sub(r"\s+", " ", s).strip()
+
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("FLASK_SECRET_KEY", "dev-insecure-key-troque-no-env")
@@ -2211,7 +2222,7 @@ def api_search_content():
         root = Path(CIFRAS_ROOT)
         if not root.exists():
             return jsonify([])
-        ql = q.lower()
+        ql = _normalize_search(q)
         views = _load_views()
         for section_dir in sorted(root.iterdir()):
             if not section_dir.is_dir():
@@ -2227,13 +2238,13 @@ def api_search_content():
                 except Exception:
                     continue
                 body, meta = _parse_frontmatter(raw)
-                searchable = (body + " " + meta.get("artist", "") + " " + meta.get("title", "")).lower()
+                searchable = _normalize_search(body + " " + meta.get("artist", "") + " " + meta.get("title", ""))
                 if ql not in searchable:
                     continue
                 # Gera excerpt: linha que contém o termo
                 excerpt = ""
                 for line in body.splitlines():
-                    if ql in line.lower():
+                    if ql in _normalize_search(line):
                         excerpt = line.strip()[:120]
                         break
                 path_str = str(item)

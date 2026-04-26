@@ -8066,6 +8066,16 @@ function _highlightExcerpt(excerpt, q) {
   } catch(e) { return safe; }
 }
 
+function _normalize(s) {
+  return (s || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9 ]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 function doSearch(q) {
   if (!q) {
     searchActive = false;
@@ -8090,10 +8100,10 @@ function doSearch(q) {
   searchActive = true;
   hideHomeTable();
   document.getElementById("sidebar-home-item") && document.getElementById("sidebar-home-item").classList.remove("active");
-  var ql = q.toLowerCase();
+  var qn = _normalize(q);
   var results = allSongs.filter(function(s) {
-    return s.name.toLowerCase().includes(ql) ||
-           (s.artist || "").toLowerCase().includes(ql);
+    return _normalize(s.name).includes(qn) ||
+           _normalize(s.artist || "").includes(qn);
   });
   renderSongGrid(results);
   setTimeout(function() {
