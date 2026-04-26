@@ -5694,7 +5694,9 @@ function openModal(song) {
         var detected = detectBaseNote(data.text);
         if (detected) targetModal.key = detected;
       }
-      _updateCapoBadge(targetModal.capo || "");
+      // Usa capo pessoal ativo se existir; senão usa o capo do arquivo.
+      // Evita que a resposta de rede sobrescreva o badge já definido por _applyMyToneOnOpen.
+      _updateCapoBadge(_mtCapoValue > 0 ? _mtCapoValue : (targetModal.capo || ""));
       _metaStore.set(targetModal.fileId || targetModal.path, {
         artist: targetModal.artist, key: targetModal.key, capo: targetModal.capo, tags: targetModal.tags, youtube: targetModal.youtube
       });
