@@ -2100,12 +2100,11 @@ body.android #presenter-cifra .chord-line {
   user-select: none; -webkit-user-select: none; cursor: pointer;
 }
 .sri-dropdown {
-  display: none; position: absolute; right: 0; top: calc(100% + 4px);
+  position: fixed;
   background: var(--surface); border: 1.5px solid var(--border);
   border-radius: var(--radius); box-shadow: var(--shadow-md);
-  z-index: 200; min-width: 148px; overflow: hidden;
+  z-index: 9999; min-width: 148px; overflow: hidden;
 }
-.sri-dropdown.open { display: block; }
 .sri-dd-btn {
   display: flex; align-items: center; gap: 8px;
   width: 100%; padding: 9px 14px;
@@ -4295,7 +4294,10 @@ var _metaStore = (function() {
     get: function(id) { return data[id] || null; },
     set: function(id, meta) {
       if (!id) return;
-      data[id] = { artist: meta.artist || "", key: meta.key || "", capo: meta.capo || "", tags: meta.tags || [], youtube: meta.youtube || "" };
+      var existing = data[id] || {};
+      // Nunca sobrescreve tags existentes com array vazio (evita flickering de badges)
+      var tags = (meta.tags && meta.tags.length > 0) ? meta.tags : (existing.tags || []);
+      data[id] = { artist: meta.artist || "", key: meta.key || "", capo: meta.capo || "", tags: tags, youtube: meta.youtube || "" };
       try { localStorage.setItem(KEY, JSON.stringify(data)); } catch(e) {}
     },
     enrich: function(songs) {
@@ -5483,21 +5485,9 @@ function _updateCatHeader(songs) {
   if (newSongBtn) {
     newSongBtn.style.display = "inline-flex";
     newSongBtn.onclick = function() {
-      openImportModal();
-      // Pre-select section and category after sections load
-      var waitSel = setInterval(function() {
-        var secSel = document.getElementById("import-section");
-        if (!secSel || !secSel.options.length || secSel.options[0].value === "") return;
-        clearInterval(waitSel);
-        if (currentCategory) {
-          secSel.value = currentCategory.section;
-          secSel.dispatchEvent(new Event("change"));
-          setTimeout(function() {
-            var catSel = document.getElementById("import-category");
-            if (catSel) catSel.value = currentCategory.cat || "_raiz";
-          }, 80);
-        }
-      }, 50);
+      var sec = currentCategory ? currentCategory.section : "";
+      var cat = currentCategory ? (currentCategory.cat || "_raiz") : "";
+      openImportModal(sec, cat);
     };
   }
 }
@@ -5568,7 +5558,15 @@ function _makeTableRow(song, rank) {
       '<button class="sop-delete danger">🗑️ Excluir</button>';
     document.body.appendChild(dd);
     var rect = opsBtn.getBoundingClientRect();
-    dd.style.top = (rect.bottom + 4) + "px";
+    var ddH = dd.offsetHeight;
+    var spaceBelow = window.innerHeight - rect.bottom;
+    if (spaceBelow < ddH + 8) {
+      dd.style.top = "auto";
+      dd.style.bottom = (window.innerHeight - rect.top + 4) + "px";
+    } else {
+      dd.style.top = (rect.bottom + 4) + "px";
+      dd.style.bottom = "auto";
+    }
     dd.style.right = (window.innerWidth - rect.right) + "px";
     _openSongMenu = dd;
     dd.querySelector(".sop-meta").addEventListener("click", function(ev) {
@@ -7274,11 +7272,12 @@ async function loadSavedReps() {
 }
 
 var _REP_LIMIT = 5;
-var _openDropdownId = null;  // ID do rep com dropdown aberto
-var _swipeOpenItem  = null;  // item .saved-rep-item atualmente revelado pelo swipe
+var _openDropdownId = null;
+var _openRepMenu    = null;  // dropdown de repertório appendado ao body
+var _swipeOpenItem  = null;
 
 function _closeAllDropdowns() {
-  document.querySelectorAll(".sri-dropdown.open").forEach(function(d) { d.classList.remove("open"); });
+  if (_openRepMenu) { _openRepMenu.remove(); _openRepMenu = null; }
   _openDropdownId = null;
 }
 
@@ -7349,11 +7348,6 @@ function renderSavedReps() {
         '<button class="sri-play" title="Apresentar">&#9654;</button>' +
         '<div class="sri-menu-wrap">' +
           '<button class="sri-menu-btn" title="Opções">&#8943;</button>' +
-          '<div class="sri-dropdown">' +
-            '<button class="sri-dd-btn sri-dd-share"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg> Compartilhar</button>' +
-            (isShared ? '<button class="sri-dd-btn sri-dd-manage-shares"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> Gerenciar</button>' : '') +
-            '<button class="sri-dd-btn sri-dd-del danger"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg> Excluir</button>' +
-          '</div>' +
         '</div>';
 
       item.addEventListener("click", function(e) {
@@ -7370,32 +7364,48 @@ function renderSavedReps() {
       });
       item.querySelector(".sri-menu-btn").addEventListener("click", function(e) {
         e.stopPropagation();
-        var dropdown = item.querySelector(".sri-dropdown");
-        var isOpen = dropdown.classList.contains("open");
+        var btn = this;
+        // Fecha se já estava aberto para este item
+        if (_openDropdownId === id) { _closeAllDropdowns(); return; }
         _closeAllDropdowns();
-        if (!isOpen) {
-          dropdown.classList.add("open");
-          _openDropdownId = id;
+
+        // Cria dropdown no body para escapar de overflow:hidden e transforms do painel
+        var dd = document.createElement("div");
+        dd.className = "sri-dropdown";
+        dd.innerHTML =
+          '<button class="sri-dd-btn sri-dd-share"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg> Compartilhar</button>' +
+          (isShared ? '<button class="sri-dd-btn sri-dd-manage-shares"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> Gerenciar</button>' : '') +
+          '<button class="sri-dd-btn sri-dd-del danger"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg> Excluir</button>';
+
+        document.body.appendChild(dd);
+        _openRepMenu    = dd;
+        _openDropdownId = id;
+
+        // Posiciona: abre pra cima se não houver espaço abaixo
+        var rect = btn.getBoundingClientRect();
+        var ddH  = dd.offsetHeight;
+        var spaceBelow = window.innerHeight - rect.bottom;
+        dd.style.position = "fixed";
+        dd.style.right = (window.innerWidth - rect.right) + "px";
+        if (spaceBelow < ddH + 8) {
+          dd.style.top    = "auto";
+          dd.style.bottom = (window.innerHeight - rect.top + 4) + "px";
+        } else {
+          dd.style.top    = (rect.bottom + 4) + "px";
+          dd.style.bottom = "auto";
         }
-      });
-      item.querySelector(".sri-dd-share").addEventListener("click", function(e) {
-        e.stopPropagation();
-        _closeAllDropdowns();
-        openShareDialog(id);
-      });
-      var manageBtn = item.querySelector(".sri-dd-manage-shares");
-      if (manageBtn) {
-        manageBtn.addEventListener("click", function(e) {
-          e.stopPropagation();
-          _closeAllDropdowns();
-          openManageSharesDialog(id);
+
+        dd.querySelector(".sri-dd-share").addEventListener("click", function(ev) {
+          ev.stopPropagation(); _closeAllDropdowns(); openShareDialog(id);
         });
-      }
-      item.querySelector(".sri-dd-del").addEventListener("click", function(e) {
-        e.stopPropagation();
-        _closeAllDropdowns();
-        _pendingDelete = id;
-        renderSavedReps();
+        var manageBtn = dd.querySelector(".sri-dd-manage-shares");
+        if (manageBtn) manageBtn.addEventListener("click", function(ev) {
+          ev.stopPropagation(); _closeAllDropdowns(); openManageSharesDialog(id);
+        });
+        dd.querySelector(".sri-dd-del").addEventListener("click", function(ev) {
+          ev.stopPropagation(); _closeAllDropdowns();
+          _pendingDelete = id; renderSavedReps();
+        });
       });
 
       // ─── Swipe-to-delete (touch) ─────────────────────────────────────────
@@ -8754,7 +8764,7 @@ function init() {
 
   // ─── Fechar dropdowns e notif panel ao clicar fora ────────────────────────
   document.addEventListener("click", function(e) {
-    if (!e.target.closest(".sri-menu-wrap")) _closeAllDropdowns();
+    if (!e.target.closest(".sri-menu-wrap") && !e.target.closest(".sri-dropdown")) _closeAllDropdowns();
     if (!e.target.closest("#notif-panel") && !e.target.closest("#btn-notif")) {
       var panel = document.getElementById("notif-panel");
       if (panel) panel.classList.remove("open");
@@ -8918,10 +8928,14 @@ function init() {
 }
 
 // ─── Modal de Importação ────────────────────────────────────────────────────
-var importSections = {};   // { section: [categories] }
-var importCifraText = "";  // texto buscado/colado
+var importSections = {};
+var importCifraText = "";
+var _importPresetSection = "";
+var _importPresetCat     = "";
 
-function openImportModal() {
+function openImportModal(presetSection, presetCat) {
+  _importPresetSection = presetSection || "";
+  _importPresetCat     = presetCat     || "";
   document.getElementById("import-overlay").classList.add("open");
   document.getElementById("import-error").textContent = "";
   document.getElementById("import-meta-wrap").style.display = "none";
@@ -8960,9 +8974,13 @@ function populateImportSection() {
     opt.value = s; opt.textContent = s;
     sel.appendChild(opt);
   });
+  if (_importPresetSection) {
+    sel.value = _importPresetSection;
+    onImportSectionChange(_importPresetCat);
+  }
 }
 
-function onImportSectionChange() {
+function onImportSectionChange(presetCat) {
   var section = document.getElementById("import-section").value;
   var catSel = document.getElementById("import-category");
   catSel.innerHTML = '<option value="_raiz">Geral</option>';
@@ -8972,6 +8990,7 @@ function onImportSectionChange() {
     opt.value = c; opt.textContent = c;
     catSel.appendChild(opt);
   });
+  if (presetCat) catSel.value = presetCat;
 }
 
 function showImportResult(data) {

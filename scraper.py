@@ -77,19 +77,16 @@ def _parse_cifraclub(soup):
         if m:
             capo = m.group(1)
 
-    # YouTube: iframe embed ou link na página
+    # YouTube: busca apenas em links explicitamente rotulados como "ouvir" ou "assistir"
+    # para evitar capturar iframes de anúncios ou vídeos genéricos da página.
     youtube = ""
-    for iframe in soup.find_all("iframe"):
-        src = iframe.get("src", "")
-        if "youtube.com/embed/" in src:
-            vid = re.search(r"embed/([A-Za-z0-9_-]{11})", src)
-            if vid:
-                youtube = "https://www.youtube.com/watch?v=" + vid.group(1)
+    for a in soup.find_all("a", href=re.compile(r"youtube\.com/watch\?v=", re.I)):
+        label = (a.get("title") or a.get_text()).lower()
+        if any(w in label for w in ("ouvir", "assistir", "watch", "play", "música", "musica", "vídeo", "video")):
+            m = re.search(r"v=([A-Za-z0-9_-]{11})", a["href"])
+            if m:
+                youtube = "https://www.youtube.com/watch?v=" + m.group(1)
                 break
-    if not youtube:
-        m = re.search(r'youtube\.com/watch\?v=([A-Za-z0-9_-]{11})', str(soup))
-        if m:
-            youtube = "https://www.youtube.com/watch?v=" + m.group(1)
 
     # Cifra: <pre> ou containers específicos
     text = ""
