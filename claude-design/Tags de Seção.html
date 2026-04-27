@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Tags de Seção — Explorações</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  html, body { margin: 0; padding: 0; height: 100%; overscroll-behavior: none; }
+  body { font-family: 'Inter', system-ui, sans-serif; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script type="text/babel" src="design-canvas.jsx"></script>
+<script type="text/babel" src="song-data.jsx"></script>
+<script type="text/babel" src="variations.jsx"></script>
+<script type="text/babel" src="refined.jsx"></script>
+
+<script type="text/babel">
+function App() {
+  const ARTBOARD_W = 540;
+  const ARTBOARD_H = 680;
+
+  const variations = [
+    { id: 'v0', label: '00 · Atual (referência)',    Comp: V0_Original,          note: 'Cores variadas tipo pílula. Ruidoso, hierarquia plana.' },
+    { id: 'v1', label: '01 · Minimalista',           Comp: V1_Minimal,           note: 'Small-caps + linha. Menos ruído, leitura fluida. ★ recomendada.' },
+    { id: 'v2', label: '02 · Margem lateral',        Comp: V2_Gutter,            note: 'Barra vertical destaca o refrão; hierarquia sutil.' },
+    { id: 'v3', label: '03 · Colchetes (chord-pro)', Comp: V3_Bracket,           note: 'Típografia monospace, honra a tradição de cifras.' },
+    { id: 'v4', label: '04 · Pílula ghost',          Comp: V4_GhostPill,         note: 'Uma cor só; refrão preenchido. Consistente e elegante.' },
+    { id: 'v5', label: '05 · Índice numerado',       Comp: V5_Numbered,          note: 'Ícones circulares; bom para escaneamento rápido.' },
+    { id: 'v6', label: '06 · Marginalia',            Comp: V6_Marginalia,        note: 'Label na coluna lateral; densidade máxima.' },
+    { id: 'v7', label: '07 · Só refrão destaca',     Comp: V7_HierarchicalChorus,note: 'Hierarquia forte: o refrão é o que importa.' },
+    { id: 'v8', label: '08 · Dark mode',             Comp: V8_Dark,              note: 'V1 em dark. Valida que a abordagem funciona nos dois modos.' },
+  ];
+
+  return (
+    <DesignCanvas>
+      <DCSection id="refined" title="Refinamento · Monocromático #b1abc3" subtitle="Baseado na sua escolha (V2) — agora sem cor de destaque, usando Fira Mono e tokens reais da marca">
+        <DCArtboard id="r1" label="R1 · Barra lateral mono" width={540} height={680}>
+          <R1_GutterMono />
+        </DCArtboard>
+        <DCArtboard id="r2xs" label="R2 · Fonte 8px (mínima)" width={540} height={680}>
+          <R2_GutterMonoWeight_XS />
+        </DCArtboard>
+        <DCArtboard id="r2s" label="R2 · Fonte 9px (recomendada)" width={540} height={680}>
+          <R2_GutterMonoWeight_S />
+        </DCArtboard>
+        <DCArtboard id="r2m" label="R2 · Fonte 10px" width={540} height={680}>
+          <R2_GutterMonoWeight_M />
+        </DCArtboard>
+        <DCArtboard id="r3" label="R3 · Barra + linha de extensão" width={540} height={680}>
+          <R3_GutterMonoRule />
+        </DCArtboard>
+        <DCArtboard id="r4" label="R4 · Barra percorre todo o bloco" width={540} height={680}>
+          <R4_FullGutter />
+        </DCArtboard>
+      </DCSection>
+
+      <DCSection id="context" title="Contexto" subtitle="O problema que estamos resolvendo">
+        <DCArtboard id="brief" label="Leia-me primeiro" width={540} height={680}>
+          <div style={{ padding: '40px 44px', height: '100%', boxSizing: 'border-box', overflow: 'auto', fontFamily: 'Inter, system-ui, sans-serif', color: '#1f1b2e' }}>
+            <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1.4, textTransform: 'uppercase', color: '#6D51C6', marginBottom: 14 }}>Proposta</div>
+            <h1 style={{ fontSize: 28, fontWeight: 700, lineHeight: 1.15, letterSpacing: -0.6, margin: '0 0 16px' }}>Tags de seção mais calmas, mais legíveis.</h1>
+            <p style={{ fontSize: 14.5, lineHeight: 1.55, color: '#4a4264', margin: '0 0 20px' }}>
+              Hoje cada tag ([1ª PARTE], [PRÉ-REFRÃO], [REFRÃO]) tem uma cor diferente tipo pílula. Isso cria três problemas:
+            </p>
+            <ul style={{ fontSize: 14, lineHeight: 1.6, color: '#4a4264', paddingLeft: 18, margin: '0 0 24px' }}>
+              <li><b>Ruído visual</b> — as pílulas coloridas competem com o que importa: acordes e letra.</li>
+              <li><b>Paleta desarmônica</b> — amarelo, lilás e roxo saturado se chocam na mesma tela.</li>
+              <li><b>Hierarquia plana</b> — todos os blocos gritam com o mesmo volume; o refrão não se diferencia.</li>
+            </ul>
+            <div style={{ height: 1, background: '#ece6f6', margin: '20px 0' }} />
+            <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1.4, textTransform: 'uppercase', color: '#6D51C6', marginBottom: 10 }}>Princípios</div>
+            <ol style={{ fontSize: 14, lineHeight: 1.6, color: '#4a4264', paddingLeft: 18, margin: 0 }}>
+              <li>A tag estrutura a leitura — não a interrompe.</li>
+              <li>Uma paleta só (roxo da marca + neutros). Amarelo reservado pra estados ativos.</li>
+              <li>O refrão pode ser o único elemento com peso. O resto, discreto.</li>
+              <li>Mais compacto — mais música por tela.</li>
+            </ol>
+            <div style={{ marginTop: 28, padding: 14, background: '#faf8fd', border: '1px solid #ece6f6', borderRadius: 6, fontSize: 13, color: '#6b6384', lineHeight: 1.5 }}>
+              <b style={{ color: '#1f1b2e' }}>Como usar →</b> arraste pra navegar · role/pinça pra zoom · clique em qualquer card pra focar em tela cheia · ←/→ pra passar entre variações.
+            </div>
+          </div>
+        </DCArtboard>
+      </DCSection>
+
+      <DCSection id="variations" title="Variações" subtitle="Mesma música, 9 tratamentos diferentes">
+        {variations.map(v => (
+          <DCArtboard key={v.id} id={v.id} label={v.label} width={ARTBOARD_W} height={ARTBOARD_H}>
+            <v.Comp />
+          </DCArtboard>
+        ))}
+      </DCSection>
+
+      <DCSection id="next" title="Próximos passos" subtitle="Depois que você escolher uma direção">
+        <DCArtboard id="next1" label="O que vem depois" width={540} height={420}>
+          <div style={{ padding: '36px 40px', height: '100%', boxSizing: 'border-box', fontFamily: 'Inter, system-ui, sans-serif', color: '#1f1b2e' }}>
+            <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1.4, textTransform: 'uppercase', color: '#6D51C6', marginBottom: 14 }}>Se você aprovar uma direção</div>
+            <ul style={{ fontSize: 14, lineHeight: 1.75, color: '#4a4264', paddingLeft: 18, margin: 0 }}>
+              <li>Refino os detalhes da variação escolhida (cores, pesos, espaçamentos).</li>
+              <li>Aplico em mais tipos de seção (Solo, Interlúdio, Final) pra testar escala.</li>
+              <li>Crio a versão dark mode correspondente.</li>
+              <li>Reviso a cabeça do card (título, controles de tom, destinos) pra casar com as tags.</li>
+              <li>Posso propor ajustes no bloco de acordes/letra — espaçamento, peso, alinhamento.</li>
+            </ul>
+          </div>
+        </DCArtboard>
+      </DCSection>
+    </DesignCanvas>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>

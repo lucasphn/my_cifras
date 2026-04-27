@@ -1040,7 +1040,7 @@ def api_folder_delete(section, category):
 @owner_required
 def api_song_delete():
     data = request.get_json(force=True)
-    file_id = (data.get("fileId") or "").strip()
+    file_id = (data.get("shortcutFileId") or data.get("fileId") or "").strip()
     path = (data.get("path") or "").strip()
     if file_id:
         import drive as drv
@@ -1063,7 +1063,8 @@ def api_song_delete():
 @owner_required
 def api_song_rename():
     data = request.get_json(force=True)
-    file_id = (data.get("fileId") or "").strip()
+    # Para atalhos, renomeia o atalho em si (não o original)
+    file_id = (data.get("shortcutFileId") or data.get("fileId") or "").strip()
     path = (data.get("path") or "").strip()
     new_name = (data.get("newName") or "").strip()
     if not new_name:
@@ -1107,7 +1108,7 @@ def api_song_copy():
         svc = get_service()
         target_id = drv.resolve_folder(svc, target_section, target_category or None, CIFRAS_FOLDER_ID)
         fname = drv.get_file_name(svc, file_id)
-        drv.copy_file(svc, file_id, fname, target_id)
+        drv.create_shortcut(svc, fname, file_id, target_id)
     elif path:
         if not is_safe_path(path):
             return jsonify({"error": "Caminho não permitido"}), 403
@@ -1133,7 +1134,8 @@ def api_song_copy():
 def api_song_move():
     import shutil
     data = request.get_json(force=True)
-    file_id = (data.get("fileId") or "").strip()
+    # Para atalhos, move o atalho em si (não o arquivo original)
+    file_id = (data.get("shortcutFileId") or data.get("fileId") or "").strip()
     path = (data.get("path") or "").strip()
     source_section = (data.get("sourceSection") or "").strip()
     source_category = (data.get("sourceCategory") or "").strip()
@@ -1863,12 +1865,14 @@ def api_import_preview():
 @owner_required
 def api_import_save():
     data = request.get_json(force=True)
-    title = data.get("title", "").strip()
-    artist = data.get("artist", "").strip()
-    key = data.get("key", "").strip()
-    section = data.get("section", "").strip()
+    title    = data.get("title", "").strip()
+    artist   = data.get("artist", "").strip()
+    key      = data.get("key", "").strip()
+    capo     = str(data.get("capo", "")).strip()
+    youtube  = data.get("youtube", "").strip()
+    section  = data.get("section", "").strip()
     category = data.get("category", "").strip()
-    text = data.get("text", "").strip()
+    text     = data.get("text", "").strip()
 
     if not title:
         return jsonify({"error": "Título é obrigatório"}), 400
@@ -1881,18 +1885,23 @@ def api_import_save():
         f"title: {title}\n"
         f"artist: {artist}\n"
         f"key: {key}\n"
+        f"capo: {capo}\n"
+        f"youtube: {youtube}\n"
         f"section: {section}\n"
         f"category: {cat_display}\n"
-        "tags: []\n"
         "---\n\n"
         + text
     )
+
+    meta = {"artist": artist, "key": key, "capo": capo, "youtube": youtube}
 
     if _use_drive():
         import drive
         svc = get_service()
         folder_id = drive.resolve_folder(svc, section, category or "_raiz", CIFRAS_FOLDER_ID)
         file_id = drive.upload_md(svc, title, content, folder_id)
+        _ensure_songs_meta_loaded()
+        _set_song_meta(file_id, meta, persist=True)
         invalidate_library_cache()
         return jsonify({"ok": True, "fileId": file_id})
     else:

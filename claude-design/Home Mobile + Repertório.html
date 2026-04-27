@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Home Mobile + Repertório — My Cifras</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  html, body { margin: 0; padding: 0; height: 100%; overscroll-behavior: none; }
+  body { font-family: 'Inter', system-ui, sans-serif; }
+  button { font-family: inherit; cursor: pointer; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script type="text/babel" src="design-canvas.jsx"></script>
+<script type="text/babel" src="mobile-home.jsx"></script>
+<script type="text/babel" src="mobile-home-v2.jsx"></script>
+<script type="text/babel" src="mobile-repertorio.jsx"></script>
+<script type="text/babel" src="mobile-draft.jsx"></script>
+<script type="text/babel" src="desktop.jsx"></script>
+<script type="text/babel" src="ios-frame.jsx"></script>
+<script type="text/babel" src="android-frame.jsx"></script>
+<script type="text/babel" src="mobile-os.jsx"></script>
+
+<script type="text/babel">
+function App() {
+  const W = 390, H = 720;
+
+  return (
+    <DesignCanvas>
+      <DCSection id="intro" title="Contexto" subtitle="Repensando home mobile + painel de Repertório">
+        <DCArtboard id="brief" label="Leia-me primeiro" width={560} height={700}>
+          <div style={{ padding: '40px 44px', height: '100%', boxSizing: 'border-box', overflow: 'auto', fontFamily: 'Inter, system-ui, sans-serif', color: '#1f2937' }}>
+            <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: 1.4, textTransform: 'uppercase', color: '#5b4b8a', marginBottom: 14 }}>Proposta</div>
+            <h1 style={{ fontSize: 26, fontWeight: 800, lineHeight: 1.15, letterSpacing: -0.6, margin: '0 0 14px' }}>Navegação mais moderna + Repertório mais útil.</h1>
+
+            <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: 1.4, textTransform: 'uppercase', color: '#5b4b8a', marginBottom: 10, marginTop: 18 }}>Diagnóstico</div>
+            <ul style={{ fontSize: 13.5, lineHeight: 1.55, color: '#4a4264', paddingLeft: 18, margin: 0 }}>
+              <li><b>Nav atual:</b> ícones pequenos, ativo só fica em negrito. Visualmente apagado.</li>
+              <li><b>Repertório atual:</b> espaço vazio inerte, input + Salvar confuso, exportações desconectadas, lista genérica.</li>
+            </ul>
+
+            <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: 1.4, textTransform: 'uppercase', color: '#5b4b8a', marginBottom: 10, marginTop: 18 }}>Princípios aplicados</div>
+            <ol style={{ fontSize: 13.5, lineHeight: 1.55, color: '#4a4264', paddingLeft: 18, margin: 0 }}>
+              <li>Respeitar 100% dos tokens do <code>DESIGN.md</code> (roxo <code>#5b4b8a</code>, dourado <code>#d4af37</code>, bg <code>#f7f6fb</code>).</li>
+              <li>Mostrar o estado ativo com presença real — cor + pill + peso.</li>
+              <li>Exportar PDF/.doc e Apresentar são ações principais — subir hierarquicamente.</li>
+              <li>Tornar "Repertório ativo" visível: o presenter é o fluxo mais importante.</li>
+              <li>Drag handles e mais compactação — caber mais música por tela.</li>
+            </ol>
+
+            <div style={{ marginTop: 22, padding: 13, background: '#faf8fd', border: '1px solid #e6e1f0', borderRadius: 10, fontSize: 12.5, color: '#6b7280', lineHeight: 1.5 }}>
+              <b style={{ color: '#1f2937' }}>Como navegar →</b> arraste pra panorâmica · scroll/pinça pra zoom · clique em qualquer mockup pra focar.
+            </div>
+          </div>
+        </DCArtboard>
+      </DCSection>
+
+      <DCSection id="mobile-os" title="Mobile · iOS + Android" subtitle="H1 (busca protagonista) + D1 (rascunho no topo) embrulhados em cada OS">
+        <DCArtboard id="ios-home" label="iOS · H1 Home" width={440} height={930}>
+          <IOSHomeH1 />
+        </DCArtboard>
+        <DCArtboard id="ios-rep" label="iOS · D1 Repertório" width={440} height={930}>
+          <IOSRepD1 />
+        </DCArtboard>
+        <DCArtboard id="ios-cifra" label="iOS · Cifra aberta" width={440} height={930}>
+          <IOSCifra />
+        </DCArtboard>
+        <DCArtboard id="and-home" label="Android · H1 Home" width={450} height={930}>
+          <AndroidHomeH1 />
+        </DCArtboard>
+        <DCArtboard id="and-rep" label="Android · D1 Repertório" width={450} height={930}>
+          <AndroidRepD1 />
+        </DCArtboard>
+        <DCArtboard id="and-cifra" label="Android · Cifra (2 col)" width={450} height={930}>
+          <AndroidCifra />
+        </DCArtboard>
+      </DCSection>
+
+      <DCSection id="desktop" title="Desktop · Home, Categoria, Cifra" subtitle="Viewport 1920×1080 · reaproveita todos os tokens e componentes">
+        <DCArtboard id="dt-home" label="Desktop · Home" width={1920} height={1080}>
+          <DesktopHomeScreen />
+        </DCArtboard>
+        <DCArtboard id="dt-cat" label="Desktop · Categoria aberta" width={1920} height={1080}>
+          <DesktopCategoryScreen />
+        </DCArtboard>
+        <DCArtboard id="dt-cifra" label="Desktop · Cifra aberta" width={1920} height={1080}>
+          <DesktopCifraScreen />
+        </DCArtboard>
+      </DCSection>
+
+      <DCSection id="homev2" title="Home refinada · 4 direções" subtitle="Busca protagonista · liturgia compacta · eventos com CTA · categorias repensadas">
+        <DCArtboard id="h1" label="H1 · Busca protagonista" width={W} height={H}>
+          <HomeScreenV2 Variant={H1_SearchFirst} Nav={NavPillIndicator} />
+        </DCArtboard>
+        <DCArtboard id="h2" label="H2 · Primeira dobra densa" width={W} height={H}>
+          <HomeScreenV2 Variant={H2_DenseAboveFold} Nav={NavPillIndicator} />
+        </DCArtboard>
+        <DCArtboard id="h3" label="H3 · Categorias como chips na home" width={W} height={H}>
+          <HomeScreenV2 Variant={H3_CategoryChipsHome} Nav={NavPillIndicator} />
+        </DCArtboard>
+        <DCArtboard id="h4" label="H4 · Editorial / Widgets" width={W} height={H}>
+          <HomeScreenV2 Variant={H4_EditorialWidgets} Nav={NavPillIndicator} />
+        </DCArtboard>
+        <DCArtboard id="drawer" label="Drawer refinado (abre do sanduíche)" width={W} height={H}>
+          <HomeScreenV2 Variant={H1_SearchFirst} Nav={NavPillIndicator} drawerOpen />
+        </DCArtboard>
+      </DCSection>
+
+      <DCSection id="nav" title="Navegação inferior · 4 estilos" subtitle="Mesma home, 4 tab bars diferentes">
+        <DCArtboard id="n1" label="N1 · Pill flutuante (liquid glass)" width={W} height={H}>
+          <HomeScreen Nav={NavFloatingPill} />
+        </DCArtboard>
+        <DCArtboard id="n2" label="N2 · Pill indicator (recomendada)" width={W} height={H}>
+          <HomeScreen Nav={NavPillIndicator} />
+        </DCArtboard>
+        <DCArtboard id="n3" label="N3 · Barra fina (Material 3)" width={W} height={H}>
+          <HomeScreen Nav={NavTopIndicator} />
+        </DCArtboard>
+        <DCArtboard id="n4" label="N4 · Só ícones + dot" width={W} height={H}>
+          <HomeScreen Nav={NavIconsOnly} />
+        </DCArtboard>
+      </DCSection>
+
+      <DCSection id="draft" title="Repertório com fluxo “Em montagem”" subtitle="Rascunho persistente → adicionar → nomear → salvar. Fluxo atual preservado.">
+        <DCArtboard id="d1" label="D1 · Rascunho no topo ★" width={W} height={H}>
+          <RepScreen Variant={RepD1_DraftTop} Nav={NavPillIndicator} />
+        </DCArtboard>
+        <DCArtboard id="d2" label="D2 · Ativo em hero + rascunho compacto" width={W} height={H}>
+          <RepScreen Variant={RepD2_ActiveAndDraft} Nav={NavPillIndicator} />
+        </DCArtboard>
+        <DCArtboard id="d3" label="D3 · Rascunho como bottom-sheet" width={W} height={H}>
+          <RepScreen Variant={RepD3_DraftSheet} Nav={NavPillIndicator} />
+        </DCArtboard>
+        <DCArtboard id="d4" label="D4 · Com prompt contextual" width={W} height={H}>
+          <RepScreen Variant={RepD4_SavePrompt} Nav={NavPillIndicator} />
+        </DCArtboard>
+      </DCSection>
+
+      <DCSection id="rep" title="Repertório · 4 reimaginações" subtitle="Com nav N2 (pill indicator) aplicada">
+        <DCArtboard id="r1" label="R1 · Lista de cards + criação inline" width={W} height={H}>
+          <RepScreen Variant={RepV1_Cards} Nav={NavPillIndicator} />
+        </DCArtboard>
+        <DCArtboard id="r2" label="R2 · Repertório ativo em destaque ★" width={W} height={H}>
+          <RepScreen Variant={RepV2_ActiveFocus} Nav={NavPillIndicator} />
+        </DCArtboard>
+        <DCArtboard id="r3" label="R3 · CTA grande + lista" width={W} height={H}>
+          <RepScreen Variant={RepV3_InlineCreate} Nav={NavPillIndicator} />
+        </DCArtboard>
+        <DCArtboard id="r4" label="R4 · Detalhe (dentro do repertório)" width={W} height={H}>
+          <RepScreen Variant={RepV4_DetailView} Nav={NavPillIndicator} />
+        </DCArtboard>
+      </DCSection>
+
+      <DCSection id="next" title="Próximos passos">
+        <DCArtboard id="next1" label="Depois que você escolher" width={560} height={320}>
+          <div style={{ padding: '32px 40px', height: '100%', boxSizing: 'border-box', fontFamily: 'Inter, system-ui, sans-serif', color: '#1f2937' }}>
+            <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: 1.4, textTransform: 'uppercase', color: '#5b4b8a', marginBottom: 12 }}>Se aprovar uma direção</div>
+            <ul style={{ fontSize: 13.5, lineHeight: 1.7, color: '#4a4264', paddingLeft: 18, margin: 0 }}>
+              <li>Refino detalhes (micro-interações, estados, transições).</li>
+              <li>Desenho o fluxo completo: criar → adicionar → reordenar → apresentar → exportar.</li>
+              <li>Componente unificado de bottom-sheet pra "Trocar repertório ativo".</li>
+              <li>Gero o prompt pro Claude Code implementar.</li>
+            </ul>
+          </div>
+        </DCArtboard>
+      </DCSection>
+    </DesignCanvas>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>

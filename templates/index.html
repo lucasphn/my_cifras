@@ -3244,6 +3244,15 @@ html.pwa-standalone #modal-footer {
   font-weight: 600; font-family: inherit; outline: none; cursor: pointer;
 }
 
+/* ── Artist group header ─────────────────────────────────────────────────── */
+.song-group-header {
+  font-size: 10px; font-weight: 800; text-transform: uppercase;
+  letter-spacing: 1.4px; color: var(--primary);
+  padding: 14px 14px 5px; margin-top: 4px;
+  border-bottom: 1px solid var(--border);
+}
+.song-group-header:first-child { margin-top: 0; }
+
 /* ── Song table (desktop category view) ─────────────────────────────────── */
 .song-table-head {
   display: grid;
@@ -3658,12 +3667,12 @@ html.pwa-standalone #modal-footer {
           <span class="cat-filter-label">Filtrar</span>
           <span class="cat-filter-sep"></span>
           <button class="cat-filter-btn active" id="cat-filter-all">Todas</button>
-          <button class="cat-filter-btn" id="cat-filter-recent">Recentes</button>
+          <button class="cat-filter-btn" id="cat-filter-artist">Artista</button>
           <div class="cat-sort-wrap">
             <span class="cat-sort-label">Ordenar:</span>
             <select id="cat-sort-select">
-              <option value="views">Mais tocadas</option>
               <option value="az">A – Z</option>
+              <option value="views">Mais tocadas</option>
               <option value="recent">Recém adicionadas</option>
             </select>
           </div>
@@ -4094,13 +4103,21 @@ html.pwa-standalone #modal-footer {
             <label>Título</label>
             <input type="text" id="import-title" placeholder="Nome da música" maxlength="120">
           </div>
-          <div class="import-field">
-            <label>Artista</label>
+          <div class="import-field" style="grid-column:1/-1">
+            <label>Artista / Banda</label>
             <input type="text" id="import-artist" placeholder="Artista / Ministério" maxlength="80">
           </div>
           <div class="import-field">
             <label>Tom</label>
             <input type="text" id="import-key" placeholder="Ex: G, Am, C#" maxlength="4">
+          </div>
+          <div class="import-field">
+            <label>Capotraste</label>
+            <input type="number" id="import-capo" placeholder="0" min="0" max="12" style="width:80px">
+          </div>
+          <div class="import-field" style="grid-column:1/-1">
+            <label>YouTube</label>
+            <input type="url" id="import-youtube" placeholder="https://youtube.com/watch?v=...">
           </div>
           <div class="import-field">
             <label>Seção</label>
@@ -5241,7 +5258,7 @@ function startRenameSong(card, song) {
     inp.style.color = "var(--text-muted)";
     inp.value = "Salvando...";
     var body = {newName: val};
-    if (song.fileId) body.fileId = song.fileId; else body.path = song.path;
+    if (song.fileId) { body.fileId = song.fileId; if (song.shortcutFileId) body.shortcutFileId = song.shortcutFileId; } else body.path = song.path;
     try {
       var r = await fetch("/api/songs/rename", {method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify(body)});
       var j = await r.json();
@@ -5310,7 +5327,7 @@ function confirmDeleteSong(card, song) {
     confirmBtn.innerHTML = '<span class="loading-spinner" style="width:11px;height:11px;border-width:2px;vertical-align:middle;margin-right:4px;"></span>Excluindo...';
     try {
       var body = {};
-      if (song.fileId) body.fileId = song.fileId; else body.path = song.path;
+      if (song.fileId) { body.fileId = song.fileId; if (song.shortcutFileId) body.shortcutFileId = song.shortcutFileId; } else body.path = song.path;
       var r = await fetch("/api/songs/delete", {method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify(body)});
       var j = await r.json();
       if (!r.ok) { showToast(j.error || "Erro ao excluir"); return; }
@@ -5386,7 +5403,7 @@ document.getElementById("sfm-ok").addEventListener("click", async function() {
   var targetCat = cat === "_raiz" ? "" : cat;
   var song = _sfmSong;
   var body = {targetSection: sec, targetCategory: targetCat};
-  if (song.fileId) body.fileId = song.fileId; else body.path = song.path;
+  if (song.fileId) { body.fileId = song.fileId; if (song.shortcutFileId) body.shortcutFileId = song.shortcutFileId; } else body.path = song.path;
   if (_sfmAction === "move") { body.sourceSection = song.section; body.sourceCategory = song.category === "_raiz" ? "" : (song.category || ""); }
   var endpoint = _sfmAction === "copy" ? "/api/songs/copy" : "/api/songs/move";
   var btn = this; btn.disabled = true; btn.textContent = "Aguarde...";
@@ -5501,7 +5518,7 @@ function _makeTableRow(song, rank) {
 
   row.innerHTML =
     '<span class="song-table-rank">' + String(rank).padStart(2, "0") + '</span>' +
-    '<div class="song-table-name">' + escHtml(song.name) + '</div>' +
+    '<div class="song-table-name">' + escHtml(song.name) + (song.isShortcut ? ' <span style="font-size:9px;font-weight:700;color:var(--text-muted);background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:1px 5px;vertical-align:middle;letter-spacing:.4px">↗ ATALHO</span>' : '') + '</div>' +
     '<div class="song-table-artist">' + escHtml(artistDisplay) + '</div>' +
     '<div class="song-table-cat">' + escHtml(cleanLabel(song.category === "_raiz" ? (song.section || "") : (song.category || song.section || ""))) + '</div>' +
     '<div>' + (keyDisplay ? '<span class="song-table-key">' + escHtml(keyDisplay) + '</span>' : '') + '</div>' +
@@ -5572,7 +5589,59 @@ function _makeTableRow(song, rank) {
   return row;
 }
 
+var _catFilter = "all"; // "all" | "artist"
+
+function _renderSongGridByArtist(songs) {
+  var grid = document.getElementById("song-grid");
+  var empty = document.getElementById("empty-state");
+  var toggleWrap = document.getElementById("view-toggle-wrap");
+  grid.innerHTML = "";
+  _updateCatHeader(songs);
+  var mainEl = document.getElementById("main");
+  if (mainEl) mainEl.classList.toggle("search-mode", !!searchActive);
+  if (!songs.length) {
+    grid.style.display = "none";
+    if (toggleWrap) toggleWrap.style.display = "none";
+    empty.style.display = "flex";
+    document.getElementById("empty-msg").textContent = "Nenhuma música nesta categoria.";
+    return;
+  }
+  grid.style.display = "block";
+  if (toggleWrap) toggleWrap.style.display = "none";
+  empty.style.display = "none";
+  var withArtist = songs.filter(function(s) { return (s.artist || "").trim(); });
+  var noArtist   = songs.filter(function(s) { return !(s.artist || "").trim(); });
+  withArtist.sort(function(a, b) {
+    var ca = _normalize(a.artist); var cb = _normalize(b.artist);
+    return ca < cb ? -1 : ca > cb ? 1 : a.name.localeCompare(b.name, "pt");
+  });
+  noArtist.sort(function(a, b) { return a.name.localeCompare(b.name, "pt"); });
+  var sorted = withArtist.concat(noArtist);
+  var frag = document.createDocumentFragment();
+  var lastKey = null; var rank = 0;
+  sorted.forEach(function(song) {
+    var key = _normalize(song.artist || "");
+    var display = (song.artist || "").trim() || "Sem artista";
+    if (key !== lastKey) {
+      var hdr = document.createElement("div");
+      hdr.className = "song-group-header";
+      hdr.textContent = display;
+      frag.appendChild(hdr);
+      lastKey = key; rank = 0;
+    }
+    rank++;
+    frag.appendChild(_makeTableRow(song, rank));
+  });
+  grid.appendChild(frag);
+}
+
 function renderSongGrid(songs) {
+  // Modo "Artista" só se aplica no desktop e fora de busca
+  if (!searchActive && _catFilter === "artist" && window.innerWidth > 1024) {
+    _renderSongGridByArtist(songs);
+    return;
+  }
+
   var grid = document.getElementById("song-grid");
   var empty = document.getElementById("empty-state");
   var toggleWrap = document.getElementById("view-toggle-wrap");
@@ -5600,7 +5669,7 @@ function renderSongGrid(songs) {
     if (toggleWrap) toggleWrap.style.display = "none";
     empty.style.display = "none";
     var sorted = songs.slice().sort(function(a, b) {
-      var sortVal = document.getElementById("cat-sort-select") ? document.getElementById("cat-sort-select").value : "views";
+      var sortVal = document.getElementById("cat-sort-select") ? document.getElementById("cat-sort-select").value : "az";
       if (sortVal === "az") return a.name.localeCompare(b.name, "pt");
       if (sortVal === "recent") return 0;
       return (_songWithViews(b).views || 0) - (_songWithViews(a).views || 0);
@@ -8860,6 +8929,11 @@ function openImportModal() {
   document.getElementById("import-preview-wrap").style.display = "none";
   document.getElementById("import-url-input").value = "";
   document.getElementById("import-textarea").value = "";
+  document.getElementById("import-title").value = "";
+  document.getElementById("import-artist").value = "";
+  document.getElementById("import-key").value = "";
+  document.getElementById("import-capo").value = "";
+  document.getElementById("import-youtube").value = "";
   importCifraText = "";
   loadImportSections();
 }
@@ -8908,6 +8982,8 @@ function showImportResult(data) {
   var key = data.key || "";
   if (!key && importCifraText) key = detectBaseNote(importCifraText) || "";
   document.getElementById("import-key").value = key;
+  document.getElementById("import-capo").value = data.capo || "";
+  document.getElementById("import-youtube").value = data.youtube || "";
 
   var metaWrap = document.getElementById("import-meta-wrap");
   metaWrap.style.display = "flex";
@@ -8968,6 +9044,8 @@ async function saveImport() {
         title:    title,
         artist:   document.getElementById("import-artist").value.trim(),
         key:      document.getElementById("import-key").value.trim(),
+        capo:     document.getElementById("import-capo").value.trim(),
+        youtube:  document.getElementById("import-youtube").value.trim(),
         section:  section,
         category: category,
         text:     importCifraText
@@ -8975,6 +9053,18 @@ async function saveImport() {
     });
     var data = await resp.json();
     if (data.error) throw new Error(data.error);
+
+    // Persiste metadados no cache local imediatamente, para que reloadLibrary()
+    // já enriqueça a nova música sem precisar abrir e salvar metadados manualmente.
+    if (data.fileId) {
+      _metaStore.set(data.fileId, {
+        artist:  document.getElementById("import-artist").value.trim(),
+        key:     document.getElementById("import-key").value.trim(),
+        capo:    document.getElementById("import-capo").value.trim(),
+        youtube: document.getElementById("import-youtube").value.trim(),
+        tags: [],
+      });
+    }
 
     // Fecha o modal e exibe overlay bloqueante durante atualização da biblioteca
     closeImportModal();
@@ -9123,28 +9213,23 @@ document.addEventListener("DOMContentLoaded", function() {
     return (library[currentCategory.section] || {})[currentCategory.cat] || [];
   }
   var filterAll = document.getElementById("cat-filter-all");
-  var filterRecent = document.getElementById("cat-filter-recent");
+  var filterArtist = document.getElementById("cat-filter-artist");
   var sortSel = document.getElementById("cat-sort-select");
 
   function _setActiveFilter(btn) {
-    [filterAll, filterRecent].forEach(function(b) { if (b) b.classList.remove("active"); });
+    [filterAll, filterArtist].forEach(function(b) { if (b) b.classList.remove("active"); });
     if (btn) btn.classList.add("active");
   }
 
   if (filterAll) filterAll.addEventListener("click", function() {
+    _catFilter = "all";
     _setActiveFilter(filterAll);
     renderSongGrid(_getCatSongs());
   });
-  if (filterRecent) filterRecent.addEventListener("click", function() {
-    _setActiveFilter(filterRecent);
-    var songs = _getCatSongs().slice().sort(function(a, b) {
-      var ta = a.modifiedTime || "";
-      var tb = b.modifiedTime || "";
-      if (tb > ta) return 1;
-      if (tb < ta) return -1;
-      return a.name.localeCompare(b.name, "pt");
-    });
-    renderSongGrid(songs);
+  if (filterArtist) filterArtist.addEventListener("click", function() {
+    _catFilter = "artist";
+    _setActiveFilter(filterArtist);
+    renderSongGrid(_getCatSongs());
   });
   if (sortSel) sortSel.addEventListener("change", function() {
     renderSongGrid(_getCatSongs());

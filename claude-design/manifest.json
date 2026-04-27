@@ -1,0 +1,76 @@
+{
+  "name": "My Cifras — Cifras católicas para ministração",
+  "short_name": "My Cifras",
+  "description": "Biblioteca pessoal de cifras católicas: organize repertórios por missa/ministração, transponha tons, apresente no palco e consulte a liturgia do dia — online e offline.",
+  "start_url": "/?src=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
+  "orientation": "any",
+  "background_color": "#f7f6fb",
+  "theme_color": "#5b4b8a",
+  "lang": "pt-BR",
+  "dir": "ltr",
+  "categories": ["music", "productivity", "lifestyle"],
+  "prefer_related_applications": false,
+  "icons": [
+    { "src": "/static/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/static/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/static/icons/maskable-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "/static/icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
+    { "src": "/static/icons/monochrome-512.png", "sizes": "512x512", "type": "image/png", "purpose": "monochrome" }
+  ],
+  "screenshots": [
+    { "src": "/static/screenshots/home-desktop.png", "sizes": "1920x1080", "type": "image/png", "form_factor": "wide", "label": "Home desktop — busca, liturgia e repertório em montagem" },
+    { "src": "/static/screenshots/cifra-desktop.png", "sizes": "1920x1080", "type": "image/png", "form_factor": "wide", "label": "Cifra aberta com barra de transposição" },
+    { "src": "/static/screenshots/home-mobile.png", "sizes": "402x874", "type": "image/png", "form_factor": "narrow", "label": "Home mobile" },
+    { "src": "/static/screenshots/cifra-mobile.png", "sizes": "402x874", "type": "image/png", "form_factor": "narrow", "label": "Cifra em 2 colunas" }
+  ],
+  "shortcuts": [
+    {
+      "name": "Buscar cifra",
+      "short_name": "Buscar",
+      "description": "Abrir busca por nome, artista ou trecho da letra",
+      "url": "/?action=search",
+      "icons": [{ "src": "/static/icons/shortcut-search.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "Novo repertório",
+      "short_name": "Repertório",
+      "description": "Montar um repertório para uma missa ou ministração",
+      "url": "/repertorios/novo",
+      "icons": [{ "src": "/static/icons/shortcut-rep.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "Liturgia de hoje",
+      "short_name": "Liturgia",
+      "description": "Ver cor, leituras e evangelho do dia",
+      "url": "/liturgia",
+      "icons": [{ "src": "/static/icons/shortcut-liturgy.png", "sizes": "96x96" }]
+    }
+  ],
+  "share_target": {
+    "action": "/importar",
+    "method": "POST",
+    "enctype": "multipart/form-data",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url",
+      "files": [
+        { "name": "cifra", "accept": ["text/plain", "application/pdf", ".docx", ".doc", ".txt"] }
+      ]
+    }
+  },
+  "file_handlers": [
+    {
+      "action": "/importar",
+      "accept": { "text/plain": [".txt", ".cho", ".crd"], "application/pdf": [".pdf"], "application/vnd.openxmlformats-officedocument.wordprocessingml.document": [".docx"] }
+    }
+  ],
+  "protocol_handlers": [
+    { "protocol": "web+mycifras", "url": "/abrir?q=%s" }
+  ],
+  "launch_handler": { "client_mode": "navigate-existing" },
+  "edge_side_panel": { "preferred_width": 420 }
+}

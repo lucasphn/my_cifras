@@ -46,16 +46,52 @@ def fetch_cifra(url):
 # ─── Parsers ─────────────────────────────────────────────────────────────────
 
 def _parse_cifraclub(soup):
-    title = _text(soup.find("h1")) or _meta(soup, "og:title")
-    artist = _text(soup.find("h2")) or ""
+    # Título: <h1 class="t1">Nome da Música</h1>
+    h1 = soup.find("h1", class_="t1") or soup.find("h1")
+    title = _text(h1) or _meta(soup, "og:title")
 
+    # Artista: <h2><a href="/artista/">Nome do Artista</a></h2>
+    h2 = soup.find("h2")
+    artist = ""
+    if h2:
+        a = h2.find("a")
+        artist = _text(a) if a else _text(h2)
+
+    # Tom: <a class="js-modal-trigger" title="alterar o tom">D</a>
     key = ""
-    for tag in soup.find_all(string=re.compile(r"Tom[:\s]+[A-G]", re.I)):
-        m = re.search(r"[A-G][b#]?m?", tag)
-        if m:
-            key = m.group()
-            break
+    key_el = soup.find("a", attrs={"title": re.compile(r"alterar o tom", re.I)})
+    if key_el:
+        key = key_el.get_text(strip=True)
+    if not key:
+        for tag in soup.find_all(string=re.compile(r"Tom[:\s]+[A-G]", re.I)):
+            m = re.search(r"[A-G][b#]?m?", tag)
+            if m:
+                key = m.group()
+                break
 
+    # Capotraste: <span data-cy="song-capo">Capotraste na <a>2ª casa</a></span>
+    capo = ""
+    capo_el = soup.find("span", attrs={"data-cy": "song-capo"})
+    if capo_el:
+        m = re.search(r"(\d+)", capo_el.get_text())
+        if m:
+            capo = m.group(1)
+
+    # YouTube: iframe embed ou link na página
+    youtube = ""
+    for iframe in soup.find_all("iframe"):
+        src = iframe.get("src", "")
+        if "youtube.com/embed/" in src:
+            vid = re.search(r"embed/([A-Za-z0-9_-]{11})", src)
+            if vid:
+                youtube = "https://www.youtube.com/watch?v=" + vid.group(1)
+                break
+    if not youtube:
+        m = re.search(r'youtube\.com/watch\?v=([A-Za-z0-9_-]{11})', str(soup))
+        if m:
+            youtube = "https://www.youtube.com/watch?v=" + m.group(1)
+
+    # Cifra: <pre> ou containers específicos
     text = ""
     pre = soup.find("pre")
     if pre:
@@ -71,6 +107,8 @@ def _parse_cifraclub(soup):
         "title": _clean(title),
         "artist": _clean(artist),
         "key": key,
+        "capo": capo,
+        "youtube": youtube,
         "text": _clean_text(text),
     }
 
@@ -106,6 +144,8 @@ def _parse_cifras_com_br(soup):
         "title": _clean(title),
         "artist": _clean(artist),
         "key": key,
+        "capo": "",
+        "youtube": "",
         "text": _clean_text(text),
     }
 
@@ -167,6 +207,8 @@ def _parse_bananacifras(soup, url):
         "title": _clean(title),
         "artist": _clean(artist),
         "key": key,
+        "capo": "",
+        "youtube": "",
         "text": _clean_text(text),
     }
 
@@ -182,6 +224,8 @@ def _parse_generic(soup):
         "title": _clean(title),
         "artist": _clean(artist),
         "key": "",
+        "capo": "",
+        "youtube": "",
         "text": _clean_text(text),
     }
 

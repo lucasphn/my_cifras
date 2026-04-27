@@ -12,7 +12,8 @@ import io
 import os
 from pathlib import Path
 
-FOLDER_MIME = "application/vnd.google-apps.folder"
+FOLDER_MIME    = "application/vnd.google-apps.folder"
+SHORTCUT_MIME  = "application/vnd.google-apps.shortcut"
 _USERDATA_FOLDER = "_mycifras_data"
 GDOCS_MIME = "application/vnd.google-apps.document"
 
@@ -29,7 +30,7 @@ SUPPORTED_EXTENSIONS = {".docx", ".doc", ".pdf", ".txt", ".md"}
 # ─── Listagem ────────────────────────────────────────────────────────────────
 
 def list_folder(service, folder_id):
-    """Retorna lista de {id, name, mimeType} de todos os itens na pasta."""
+    """Retorna lista de {id, name, mimeType, modifiedTime, shortcutDetails?} de todos os itens na pasta."""
     results = []
     page_token = None
     while True:
@@ -37,7 +38,7 @@ def list_folder(service, folder_id):
             service.files()
             .list(
                 q=f"'{folder_id}' in parents and trashed=false",
-                fields="nextPageToken, files(id, name, mimeType, modifiedTime)",
+                fields="nextPageToken, files(id, name, mimeType, modifiedTime, shortcutDetails)",
                 pageToken=page_token,
                 orderBy="name",
             )
@@ -271,6 +272,17 @@ def copy_file(service, file_id, new_name, target_folder_id):
     return service.files().copy(fileId=file_id, body=body, fields="id").execute()
 
 
+def create_shortcut(service, name, target_id, target_folder_id):
+    """Cria um atalho do Drive apontando para target_id dentro de target_folder_id."""
+    body = {
+        "name": name,
+        "mimeType": SHORTCUT_MIME,
+        "shortcutDetails": {"targetId": target_id},
+        "parents": [target_folder_id],
+    }
+    return service.files().create(body=body, fields="id").execute()
+
+
 def move_file(service, file_id, source_folder_id, target_folder_id):
     """Move arquivo entre pastas no Drive."""
     service.files().update(
@@ -432,20 +444,42 @@ def search_content(service, query, root_folder_id, max_results=50):
 
 def _is_supported(f):
     mime = f.get("mimeType", "")
+    if mime == SHORTCUT_MIME:
+        # atalhos são suportados se o alvo for um formato suportado
+        target_mime = (f.get("shortcutDetails") or {}).get("targetMimeType", "")
+        ext = Path(f.get("name", "")).suffix.lower()
+        return target_mime in SUPPORTED_MIMES or ext in SUPPORTED_EXTENSIONS or target_mime == GDOCS_MIME
     ext = Path(f.get("name", "")).suffix.lower()
     return mime in SUPPORTED_MIMES or ext in SUPPORTED_EXTENSIONS or mime == GDOCS_MIME
 
 
-def _collect_songs(service, folder_id, section, category):
-    return [
-        {
+def _resolve_file_entry(f, section, category):
+    """Converte um item do Drive num dicionário de música, resolvendo atalhos."""
+    if f["mimeType"] == SHORTCUT_MIME:
+        details = f.get("shortcutDetails") or {}
+        return {
             "name": Path(f["name"]).stem,
-            "fileId": f["id"],
-            "mimeType": f["mimeType"],
+            "fileId": details.get("targetId", f["id"]),
+            "mimeType": details.get("targetMimeType", ""),
             "modifiedTime": f.get("modifiedTime", ""),
             "section": section,
             "category": category,
+            "isShortcut": True,
+            "shortcutFileId": f["id"],
         }
+    return {
+        "name": Path(f["name"]).stem,
+        "fileId": f["id"],
+        "mimeType": f["mimeType"],
+        "modifiedTime": f.get("modifiedTime", ""),
+        "section": section,
+        "category": category,
+    }
+
+
+def _collect_songs(service, folder_id, section, category):
+    return [
+        _resolve_file_entry(f, section, category)
         for f in list_folder(service, folder_id)
         if f["mimeType"] != FOLDER_MIME and _is_supported(f)
     ]
@@ -465,14 +499,5 @@ def scan_library(service, root_folder_id):
                 library[sname][item["name"]] = songs  # inclui pastas vazias
             elif _is_supported(item):
                 library[sname].setdefault("_raiz", [])
-                library[sname]["_raiz"].append(
-                    {
-                        "name": Path(item["name"]).stem,
-                        "fileId": item["id"],
-                        "mimeType": item["mimeType"],
-                        "modifiedTime": item.get("modifiedTime", ""),
-                        "section": sname,
-                        "category": "_raiz",
-                    }
-                )
+                library[sname]["_raiz"].append(_resolve_file_entry(item, sname, "_raiz"))
     return library
