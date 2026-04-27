@@ -1,10 +1,12 @@
 """
-Extrai cifra e metadados de URLs de sites de cifras (CifraClub e genérico).
+Extrai cifra e metadados de URLs de sites de cifras.
+Suporte: CifraClub, Cifras.com.br, BananaCifras, genérico.
 """
 
+import json as _json
 import re
 import requests
-from urllib.parse import urlparse
+from urllib.parse import urlparse, urljoin
 
 HEADERS = {
     "User-Agent": (
@@ -33,6 +35,10 @@ def fetch_cifra(url):
 
     if "cifraclub" in domain:
         return _parse_cifraclub(soup)
+    if "bananacifras" in domain:
+        return _parse_bananacifras(soup, url)
+    if "cifras.com.br" in domain:
+        return _parse_cifras_com_br(soup)
 
     return _parse_generic(soup)
 
@@ -43,7 +49,6 @@ def _parse_cifraclub(soup):
     title = _text(soup.find("h1")) or _meta(soup, "og:title")
     artist = _text(soup.find("h2")) or ""
 
-    # Tom: procura padrão "Tom: G" em qualquer lugar da página
     key = ""
     for tag in soup.find_all(string=re.compile(r"Tom[:\s]+[A-G]", re.I)):
         m = re.search(r"[A-G][b#]?m?", tag)
@@ -51,7 +56,6 @@ def _parse_cifraclub(soup):
             key = m.group()
             break
 
-    # Cifra: <pre> principal
     text = ""
     pre = soup.find("pre")
     if pre:
@@ -63,15 +67,107 @@ def _parse_cifraclub(soup):
                 text = el.get_text("\n")
                 break
 
-    # Limpa artefatos de HTML mal convertido
-    text = re.sub(r"[ \t]+\n", "\n", text)
-    text = re.sub(r"\n{3,}", "\n\n", text)
+    return {
+        "title": _clean(title),
+        "artist": _clean(artist),
+        "key": key,
+        "text": _clean_text(text),
+    }
+
+
+def _parse_cifras_com_br(soup):
+    # Título: <h1 class="...song-show-header__song-title...">
+    h1 = soup.find("h1", class_=re.compile(r"song-show-header__song-title", re.I))
+    title = _text(h1) or _meta(soup, "og:title")
+
+    # Artista: <h2 class="...song-show-header__artist..."><a>Nome</a>
+    h2 = soup.find("h2", class_=re.compile(r"song-show-header__artist", re.I))
+    artist = _text(h2.find("a")) if h2 else ""
+
+    # Tom: atributo original-key no web component <song-change-key original-key="C">
+    key = ""
+    key_el = soup.find("song-change-key")
+    if key_el:
+        key = key_el.get("original-key", "")
+
+    # Cifra: <div class="...song-show-chord-content..."><pre>...
+    text = ""
+    content_div = soup.find("div", class_=re.compile(r"song-show-chord-content", re.I))
+    if content_div:
+        pre = content_div.find("pre")
+        if pre:
+            text = pre.get_text()
+    if not text:
+        pre = soup.find("pre")
+        if pre:
+            text = pre.get_text()
 
     return {
         "title": _clean(title),
         "artist": _clean(artist),
         "key": key,
-        "text": text.strip(),
+        "text": _clean_text(text),
+    }
+
+
+def _parse_bananacifras(soup, url):
+    title = ""
+    artist = ""
+
+    # Metadados embutidos como JS inline: songdata={"track_name":"...","artist_name":"..."}
+    for script in soup.find_all("script"):
+        src = script.string or ""
+        m = re.search(r'songdata\s*=\s*(\{.+?\});', src, re.S)
+        if m:
+            try:
+                sd = _json.loads(m.group(1))
+                title = sd.get("track_name", "")
+                artist = sd.get("artist_name", "")
+            except Exception:
+                pass
+            break
+
+    if not title:
+        title = _text(soup.find("h1")) or _meta(soup, "og:title")
+
+    # Conteúdo carregado via endpoint JSON:
+    # bananajs.push(["init_tab", {"json":"/json/tab.js?id=123&v=abc..."}])
+    key = ""
+    text = ""
+    for script in soup.find_all("script"):
+        src = script.string or ""
+        m = re.search(r'bananajs\.push\(\["init_tab"\s*,\s*(\{[^}]+\})\]', src)
+        if m:
+            try:
+                tab_info = _json.loads(m.group(1))
+                json_path = tab_info.get("json", "")
+                if json_path:
+                    json_url = urljoin(url, json_path)
+                    tab_resp = requests.get(json_url, headers=HEADERS, timeout=TIMEOUT)
+                    if tab_resp.ok:
+                        tab_data = tab_resp.json()
+                        # Tentativa por campos comuns de tom e conteúdo
+                        key = (
+                            tab_data.get("key") or tab_data.get("tom") or
+                            tab_data.get("tone") or tab_data.get("original_key") or ""
+                        )
+                        text = (
+                            tab_data.get("content") or tab_data.get("text") or
+                            tab_data.get("tab") or tab_data.get("cifra") or ""
+                        )
+                        # Caso o conteúdo venha com HTML, converte para texto
+                        if text and "<" in text:
+                            from bs4 import BeautifulSoup as _BS
+                            text = _BS(text, "html.parser").get_text()
+            except Exception:
+                pass
+            break
+
+    return {
+        "title": _clean(title),
+        "artist": _clean(artist),
+        "key": key,
+        "text": _clean_text(text),
     }
 
 
@@ -86,7 +182,7 @@ def _parse_generic(soup):
         "title": _clean(title),
         "artist": _clean(artist),
         "key": "",
-        "text": text.strip(),
+        "text": _clean_text(text),
     }
 
 
@@ -102,5 +198,15 @@ def _meta(soup, prop):
 
 
 def _clean(s):
-    """Remove sufixos comuns de título como ' | CifraClub'."""
-    return re.split(r"\s*[|\-–]\s*(?:cifraclub|cifra club)", s, flags=re.I)[0].strip()
+    """Remove sufixos de título como ' | CifraClub', ' - Cifras.com.br', etc."""
+    return re.split(
+        r"\s*[|\-–]\s*(?:cifraclub|cifra\s*club|bananacifras|cifras(?:\.com\.br)?)",
+        s, flags=re.I
+    )[0].strip()
+
+
+def _clean_text(text):
+    """Remove espaços em fim de linha e comprime linhas em branco excessivas."""
+    text = re.sub(r"[ \t]+\n", "\n", text)
+    text = re.sub(r"\n{3,}", "\n\n", text)
+    return text.strip()
