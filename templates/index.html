@@ -2081,6 +2081,24 @@ body.android #presenter-cifra .chord-line {
 }
 .saved-rep-item:hover .sri-menu-btn { opacity: 1; }
 .sri-menu-btn:hover { color: var(--text); background: var(--surface2); }
+/* Touch devices: always show the three-dot button */
+@media (hover: none) { .sri-menu-btn { opacity: 0.55; } }
+
+/* ─── Swipe-to-delete wrapper ──────────────────────────────────────────────── */
+.sri-swipe-wrap {
+  position: relative; overflow: hidden;
+  border-radius: 10px; margin-bottom: 5px;
+}
+.sri-swipe-wrap > .saved-rep-item { margin-bottom: 0; border-radius: 0; will-change: transform; }
+.sri-swipe-action {
+  position: absolute; right: 0; top: 0; bottom: 0; width: 76px;
+  background: #ef4444;
+  display: flex; align-items: center; justify-content: center;
+  flex-direction: column; gap: 3px;
+  color: #fff; font-size: 0.72em; font-weight: 700;
+  border-radius: 0 10px 10px 0;
+  user-select: none; -webkit-user-select: none; cursor: pointer;
+}
 .sri-dropdown {
   display: none; position: absolute; right: 0; top: calc(100% + 4px);
   background: var(--surface); border: 1.5px solid var(--border);
@@ -7187,7 +7205,8 @@ async function loadSavedReps() {
 }
 
 var _REP_LIMIT = 5;
-var _openDropdownId = null; // ID do rep com dropdown aberto
+var _openDropdownId = null;  // ID do rep com dropdown aberto
+var _swipeOpenItem  = null;  // item .saved-rep-item atualmente revelado pelo swipe
 
 function _closeAllDropdowns() {
   document.querySelectorAll(".sri-dropdown.open").forEach(function(d) { d.classList.remove("open"); });
@@ -7243,6 +7262,7 @@ function renderSavedReps() {
         _pendingDelete = null;
         doDeleteSavedRep(id, rep.name);
       });
+      list.appendChild(item);
     } else {
       var _repColors = ['#5b4b8a','#7b6ca8','#8b7bca','#6d5ba5','#a090c0'];
       var _repColor = _repColors[keys.indexOf(id) % _repColors.length];
@@ -7308,8 +7328,69 @@ function renderSavedReps() {
         _pendingDelete = id;
         renderSavedReps();
       });
+
+      // ─── Swipe-to-delete (touch) ─────────────────────────────────────────
+      var _sw = { startX:0, startY:0, curX:0, isHoriz:null, wasOpen:false };
+      var swipeWrap = document.createElement("div");
+      swipeWrap.className = "sri-swipe-wrap";
+      var swipeAction = document.createElement("div");
+      swipeAction.className = "sri-swipe-action";
+      swipeAction.innerHTML =
+        '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">' +
+        '<polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/>' +
+        '<path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg><span>Excluir</span>';
+      swipeAction.addEventListener("click", function(e) {
+        e.stopPropagation();
+        _swipeOpenItem = null;
+        _pendingDelete = id;
+        renderSavedReps();
+      });
+      swipeWrap.appendChild(swipeAction);
+      swipeWrap.appendChild(item);
+      (function(itm, sw) {
+        var T = 55, MAX = 76;
+        itm.addEventListener("touchstart", function(e) {
+          if (_swipeOpenItem && _swipeOpenItem !== itm) {
+            _swipeOpenItem.style.transition = "transform .25s ease";
+            _swipeOpenItem.style.transform = "";
+            _swipeOpenItem = null;
+          }
+          sw.wasOpen = itm.style.transform !== "" && itm.style.transform !== "translateX(0px)";
+          sw.startX = e.touches[0].clientX;
+          sw.startY = e.touches[0].clientY;
+          sw.curX = 0; sw.isHoriz = null;
+          itm.style.transition = "none";
+        }, { passive: true });
+        itm.addEventListener("touchmove", function(e) {
+          var dx = e.touches[0].clientX - sw.startX;
+          var dy = e.touches[0].clientY - sw.startY;
+          if (sw.isHoriz === null) {
+            if (Math.abs(dx) < 5 && Math.abs(dy) < 5) return;
+            sw.isHoriz = Math.abs(dx) >= Math.abs(dy);
+          }
+          if (!sw.isHoriz) return;
+          e.preventDefault();
+          sw.curX = Math.min(0, Math.max(-MAX, dx));
+          itm.style.transform = "translateX(" + sw.curX + "px)";
+        }, { passive: false });
+        itm.addEventListener("touchend", function() {
+          itm.style.transition = "transform .25s ease";
+          if (sw.curX < -T) {
+            itm.style.transform = "translateX(-" + MAX + "px)";
+            _swipeOpenItem = itm;
+          } else {
+            itm.style.transform = "";
+            _swipeOpenItem = null;
+          }
+          sw.isHoriz = null;
+        });
+        // Tap no item swiped → só fecha, não abre o repertório
+        itm.addEventListener("click", function(e) {
+          if (sw.wasOpen) { e.preventDefault(); e.stopPropagation(); sw.wasOpen = false; }
+        }, true);
+      })(item, _sw);
+      list.appendChild(swipeWrap);
     }
-    list.appendChild(item);
   });
 }
 
