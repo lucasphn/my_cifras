@@ -8348,6 +8348,9 @@ document.getElementById("psc-autoscroll").addEventListener("click", function() {
 
   el.addEventListener("touchstart", function(e) {
     if (e.touches.length !== 1) { _swipeActive = false; return; }
+    // Não capturar swipe quando o toque começa dentro do toolbar scrollável
+    var controls = document.getElementById("presenter-song-controls");
+    if (controls && controls.contains(e.target)) { _swipeActive = false; return; }
     _swipeStartX = e.touches[0].clientX;
     _swipeStartY = e.touches[0].clientY;
     _swipeActive = true;
