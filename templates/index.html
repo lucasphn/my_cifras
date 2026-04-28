@@ -1758,111 +1758,225 @@ body.android #presenter-cifra .chord-line {
 }
 
 /* ─── Modo Apresentação ──────────────────────────────────────────────────── */
+/* Design tokens (light) */
+#presenter-overlay {
+  --pr-topbar:      #5b4b8a;
+  --pr-topbar-txt:  #ffffff;
+  --pr-bg:          #ffffff;
+  --pr-head-bg:     #fafbff;
+  --pr-head-brd:    #e8e4f3;
+  --pr-text:        #1a1d2e;
+  --pr-chord:       #5b4b8a;
+  --pr-muted:       #7a6fa8;
+  --pr-ic-bg:       rgba(255,255,255,.20);
+  --pr-ic-hv:       rgba(255,255,255,.36);
+  --pr-pill:        #f5f3fc;
+  --pr-pill-brd:    #d8d0ef;
+  --pr-pill-act:    #5b4b8a;
+  --pr-pill-txt:    #5b4b8a;
+  --pr-nav-bg:      #ffffff;
+  --pr-nav-brd:     #e8e4f3;
+  --pr-dot:         #d1c7ef;
+  --pr-dot-act:     #5b4b8a;
+}
+/* Dark theme (toggled via JS) */
+#presenter-overlay[data-pr-dark="1"] {
+  --pr-topbar:      #1d1a2e;
+  --pr-topbar-txt:  #e8e4f5;
+  --pr-bg:          #0f0e17;
+  --pr-head-bg:     #161426;
+  --pr-head-brd:    #2d2a3e;
+  --pr-text:        #e8e4f5;
+  --pr-chord:       #b39ddb;
+  --pr-muted:       #8b7faa;
+  --pr-ic-bg:       rgba(255,255,255,.10);
+  --pr-ic-hv:       rgba(255,255,255,.20);
+  --pr-pill:        #201d30;
+  --pr-pill-brd:    #3d3757;
+  --pr-pill-act:    #7c6bb5;
+  --pr-pill-txt:    #c8b9ee;
+  --pr-nav-bg:      #161426;
+  --pr-nav-brd:     #2d2a3e;
+  --pr-dot:         #3d3757;
+  --pr-dot-act:     #9d8fd4;
+}
+
 #presenter-overlay {
   display: none; position: fixed; inset: 0; z-index: 500;
-  background: var(--bg); flex-direction: column;
+  background: var(--pr-bg); flex-direction: column; color: var(--pr-text);
 }
 #presenter-overlay.show { display: flex; }
+
+/* ── Topbar ── */
 #presenter-topbar {
-  height: 54px; background: var(--surface);
-  border-bottom: 2px solid var(--border);
-  display: flex; align-items: center; gap: 8px; padding: 0 16px; flex-shrink: 0;
+  height: 54px; background: var(--pr-topbar);
+  display: flex; align-items: center; gap: 8px; padding: 0 14px; flex-shrink: 0;
 }
 #presenter-rep-name {
-  flex: 1; font-weight: 700; font-size: 0.95em; color: #5b4b8a;
-  overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
+  flex: 1; font-weight: 700; font-size: 0.9em; color: var(--pr-topbar-txt);
+  overflow: hidden; white-space: nowrap; text-overflow: ellipsis; min-width: 0;
+}
+.pr-progress-wrap {
+  display: flex; align-items: center; gap: 8px; flex-shrink: 0;
+}
+.pr-progress-track {
+  width: 72px; height: 3px; background: rgba(255,255,255,.22);
+  border-radius: 99px; overflow: hidden;
+}
+.pr-progress-bar {
+  height: 100%; background: rgba(255,255,255,.85); border-radius: 99px;
+  transition: width .3s ease; width: 0%;
 }
 #presenter-pos {
-  font-size: 0.8em; color: var(--text-muted); font-weight: 600;
-  white-space: nowrap; flex-shrink: 0; background: var(--surface2);
-  padding: 3px 9px; border-radius: 99px;
+  font-size: 0.76em; color: rgba(255,255,255,.72); font-weight: 700;
+  white-space: nowrap; flex-shrink: 0; min-width: 32px; text-align: right;
 }
-.pres-ctrl {
-  font-size: 0.8em; font-weight: 700; padding: 5px 9px; border-radius: 7px;
-  border: 1.5px solid var(--border); color: var(--text-muted);
-  transition: all .15s; flex-shrink: 0;
+.pr-icon-btn {
+  width: 34px; height: 34px; border-radius: 8px; flex-shrink: 0;
+  background: var(--pr-ic-bg); border: none; color: var(--pr-topbar-txt);
+  display: flex; align-items: center; justify-content: center;
+  transition: background .15s; cursor: pointer;
 }
-.pres-ctrl:hover { border-color: #5b4b8a; color: #5b4b8a; background: rgba(91,75,138,.07); }
-.pres-ctrl.active { background: #5b4b8a; border-color: #5b4b8a; color: #fff; }
-#btn-pres-close { font-size: 1em; padding: 5px 9px; }
-#presenter-body {
-  flex: 1; overflow-y: auto; padding: 28px 36px;
-  display: flex; flex-direction: column;
-  background: #fff;
+.pr-icon-btn:hover { background: var(--pr-ic-hv); }
+.pr-icon-btn.active { background: rgba(255,255,255,.28); }
+
+/* ── Head (song info + toolbar) ── */
+#presenter-head {
+  background: var(--pr-head-bg); border-bottom: 1px solid var(--pr-head-brd);
+  padding: 14px 28px 12px; flex-shrink: 0;
 }
-@media (max-width: 1024px) { #presenter-body { padding: 18px 16px; } }
 #presenter-song-name {
-  font-size: 1.4em; font-weight: 800; color: #5b4b8a; margin-bottom: 4px;
+  font-size: 1.35em; font-weight: 800; color: var(--pr-chord);
+  margin-bottom: 5px; line-height: 1.2;
 }
 #presenter-song-cat {
-  font-size: 1em; color: #444; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  font-size: 0.88em; color: var(--pr-muted); margin-bottom: 8px;
+  display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
 }
 #presenter-song-controls {
-  display: none; align-items: center; gap: 6px; flex-wrap: wrap;
-  margin-bottom: 16px; padding-bottom: 14px; border-bottom: 2px solid #e8e4f3;
+  display: none; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 2px;
 }
 .psc-group {
-  display: inline-flex; align-items: center; gap: 3px;
-  background: #f5f3fc; border: 1px solid #d8d0ef; border-radius: 8px;
-  padding: 3px 6px;
+  display: inline-flex; align-items: center; gap: 2px;
+  background: var(--pr-pill); border: 1px solid var(--pr-pill-brd);
+  border-radius: 99px; padding: 4px 10px;
 }
-.psc-label { font-size: .72em; color: #7a6fa8; font-weight: 600; margin-right: 2px; white-space: nowrap; }
+.psc-label {
+  font-size: .68em; color: var(--pr-muted); font-weight: 600;
+  margin-right: 3px; white-space: nowrap;
+}
 .psc-btn {
-  font-size: .8em; font-weight: 700; width: 24px; height: 24px; border-radius: 5px;
-  border: 1px solid #d0c8ea; background: #fff; color: #5b4b8a; cursor: pointer;
-  display: flex; align-items: center; justify-content: center; transition: background .1s;
-}
-.psc-btn:hover { background: #ede8f8; }
-.psc-val { font-size: .82em; font-weight: 700; color: #5b4b8a; min-width: 28px; text-align: center; }
-.psc-toggle { font-size: .72em; font-weight: 700; padding: 3px 9px; border-radius: 5px;
-  border: 1px solid #d0c8ea; background: #fff; color: #7a6fa8; cursor: pointer; transition: all .1s; }
-.psc-toggle.active { background: #5b4b8a; border-color: #5b4b8a; color: #fff; }
-#presenter-cifra {
-  font-family: var(--font-mono); line-height: 1.35;
-  white-space: pre-wrap; word-break: break-word; color: #1a1d2e; font-weight: 400;
-  font-weight: 600;
-}
-#presenter-cifra.two-col {
-  columns: 2; column-gap: 2.5em;
-}
-#presenter-cifra .chord-line { color: #5b4b8a; font-weight: 800; }
-#presenter-cifra .section-marker { font-size: 11px; }
-#presenter-loading {
+  font-size: .8em; font-weight: 700; width: 22px; height: 22px;
+  border-radius: 50%; border: none; background: transparent;
+  color: var(--pr-pill-txt); cursor: pointer;
   display: flex; align-items: center; justify-content: center;
-  flex: 1; gap: 10px; color: var(--text-muted); font-size: 0.95em;
+  transition: background .1s;
 }
+.psc-btn:hover { background: var(--pr-pill-brd); }
+.psc-val {
+  font-size: .82em; font-weight: 700; color: var(--pr-pill-txt);
+  min-width: 30px; text-align: center;
+}
+.psc-toggle {
+  font-size: .7em; font-weight: 700; padding: 5px 13px; border-radius: 99px;
+  border: 1px solid var(--pr-pill-brd); background: var(--pr-pill);
+  color: var(--pr-muted); cursor: pointer; transition: all .15s;
+}
+.psc-toggle.active { background: var(--pr-pill-act); border-color: var(--pr-pill-act); color: #fff; }
+
+/* ── Body (scrollable cifra) ── */
+#presenter-body {
+  flex: 1; overflow-y: auto;
+  display: flex; flex-direction: column;
+  background: var(--pr-bg);
+}
+#presenter-loading {
+  flex: 1; display: flex; align-items: center; justify-content: center;
+  gap: 10px; color: var(--pr-muted); font-size: 0.95em; padding: 32px;
+}
+#presenter-cifra {
+  padding: 24px 32px;
+  font-family: var(--font-mono); line-height: 1.4;
+  white-space: pre-wrap; word-break: break-word;
+  color: var(--pr-text); font-weight: 500;
+}
+#presenter-cifra.two-col { columns: 2; column-gap: 2.5em; }
+#presenter-cifra .chord-line { color: var(--pr-chord); font-weight: 800; }
+#presenter-cifra .section-marker { font-size: 11px; }
+
+/* ── Footer nav ── */
 #presenter-nav {
-  height: 58px; background: var(--surface); border-top: 1px solid var(--border);
+  height: 60px; background: var(--pr-nav-bg);
+  border-top: 1px solid var(--pr-nav-brd);
   display: flex; align-items: center; justify-content: space-between;
   padding: 0 16px; flex-shrink: 0; gap: 10px;
 }
 #btn-pres-prev, #btn-pres-next {
-  font-size: 0.88em; font-weight: 600; padding: 8px 20px;
-  border-radius: 8px; border: 1.5px solid var(--border);
-  background: var(--surface); color: var(--text); transition: all .15s;
+  font-size: 0.84em; font-weight: 700; padding: 8px 18px;
+  border-radius: 99px; border: 1.5px solid var(--pr-pill-brd);
+  background: var(--pr-pill); color: var(--pr-pill-txt);
+  transition: all .15s; flex-shrink: 0; cursor: pointer; white-space: nowrap;
 }
-#btn-pres-prev:hover, #btn-pres-next:hover {
-  background: var(--surface2); border-color: #5b4b8a; color: #5b4b8a;
-}
+#btn-pres-prev:hover, #btn-pres-next:hover { background: var(--pr-pill-brd); }
 #btn-pres-prev:disabled, #btn-pres-next:disabled { opacity: 0.3; cursor: default; }
 #presenter-dots {
   display: flex; gap: 6px; align-items: center; flex-wrap: wrap;
   justify-content: center; flex: 1; overflow: hidden; max-height: 30px;
 }
 .pres-dot {
-  width: 7px; height: 7px; border-radius: 50%; background: var(--border);
-  cursor: pointer; transition: background .2s, transform .2s; flex-shrink: 0;
+  width: 7px; height: 7px; border-radius: 99px; background: var(--pr-dot);
+  cursor: pointer; transition: background .2s, width .25s; flex-shrink: 0;
 }
-.pres-dot.active { background: #5b4b8a; transform: scale(1.4); }
+.pres-dot.active { background: var(--pr-dot-act); width: 22px; }
+.pres-dot:not(.active):hover { background: var(--pr-muted); transform: scale(1.4); }
+
+/* ── Spinner ── */
 .loading-spinner {
-  display: inline-block;
-  width: 18px; height: 18px;
-  border: 2px solid var(--border);
-  border-top-color: var(--accent);
-  border-radius: 50%;
-  animation: spin .7s linear infinite;
+  display: inline-block; width: 18px; height: 18px;
+  border: 2px solid rgba(91,75,138,.2); border-top-color: #5b4b8a;
+  border-radius: 50%; animation: spin .7s linear infinite;
 }
 @keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Tablet (769px – 1024px) ── */
+@media (min-width: 769px) and (max-width: 1024px) {
+  #presenter-head { padding: 12px 20px 10px; }
+  #presenter-song-controls { gap: 8px; }
+  .psc-group { padding: 6px 12px; gap: 4px; }
+  .psc-btn { width: 32px; height: 32px; font-size: .88em; }
+  .psc-val { font-size: .88em; min-width: 36px; }
+  .psc-label { font-size: .72em; }
+  .psc-toggle { font-size: .76em; padding: 7px 16px; }
+  #btn-pres-prev, #btn-pres-next { font-size: 0.9em; padding: 10px 22px; }
+  #presenter-nav { height: 64px; }
+}
+
+/* ── Mobile (≤768px) ── */
+@media (max-width: 768px) {
+  #presenter-topbar { height: 50px; padding: 0 10px; gap: 5px; }
+  .pr-progress-track { width: 44px; }
+  /* Head */
+  #presenter-head { padding: 10px 12px 10px; }
+  #presenter-song-name { font-size: 1.05em; }
+  #presenter-song-controls { gap: 6px; }
+  /* Pill groups: maior área de toque */
+  .psc-group { padding: 6px 10px; gap: 3px; border-radius: 12px; }
+  .psc-btn {
+    width: 36px; height: 36px; border-radius: 8px; font-size: .9em;
+  }
+  .psc-val { font-size: .88em; min-width: 32px; }
+  .psc-label { font-size: .68em; }
+  .psc-toggle { font-size: .74em; padding: 8px 14px; border-radius: 10px; }
+  /* Body */
+  #presenter-cifra { padding: 14px 14px; }
+  /* Footer */
+  #presenter-nav { height: 60px; padding: 0 10px; }
+  #btn-pres-prev, #btn-pres-next {
+    font-size: 0.82em; padding: 10px 16px; border-radius: 12px;
+  }
+  .pres-dot { width: 8px; height: 8px; }
+  .pres-dot.active { width: 20px; }
+}
 
 /* ─── Drag & Drop overlay ────────────────────────────────────────────────── */
 #drop-overlay {
@@ -2827,10 +2941,7 @@ body.android #presenter-cifra .chord-line {
   /* Após fechar teclado, reseta scroll */
   #song-grid { scroll-margin-top: 8px; }
 
-  /* Presenter no mobile */
-  #presenter-topbar { padding: 0 10px; gap: 5px; height: 50px; }
-  #presenter-body { padding: 16px 14px; }
-  #presenter-nav { padding: 0 10px; height: 52px; }
+  /* Presenter no mobile: já coberto pelo @media dentro do bloco presenter */
 
   /* Toast acima da bottom nav */
   #toast { bottom: calc(76px + env(safe-area-inset-bottom, 0px)); }
@@ -3066,13 +3177,8 @@ html.pwa-standalone #modal-footer {
 .btn-sm:hover { transform: scale(1.03); }
 .btn-sm:active { transform: scale(.97); }
 
-/* ── Presenter topbar: coesa ─────────────────────────────────────────────── */
-#presenter-topbar { border-bottom-color: var(--border-subtle); }
-#presenter-nav { border-top-color: var(--border-subtle); }
-
 /* ── Dots de navegação no presenter ─────────────────────────────────────── */
-.pres-dot { transition: background 200ms ease, transform 200ms ease; }
-.pres-dot:hover { transform: scale(1.5); background: rgba(91,75,138,.4); }
+.pres-dot { transition: background 200ms ease, width 250ms ease, transform 200ms ease; }
 
 /* ── Bottom nav: feedback de toque ──────────────────────────────────────── */
 .mbn-btn {
@@ -4006,32 +4112,50 @@ html.pwa-standalone #modal-footer {
 
 <!-- Modo Apresentação -->
 <div id="presenter-overlay">
+  <!-- Topbar -->
   <div id="presenter-topbar">
+    <button class="pr-icon-btn" id="btn-pres-close" title="Fechar (Esc)" aria-label="Fechar">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <line x1="2" y1="2" x2="14" y2="14"/><line x1="14" y1="2" x2="2" y2="14"/>
+      </svg>
+    </button>
     <span id="presenter-rep-name"></span>
-    <span id="presenter-pos"></span>
-    <button class="pres-ctrl" id="btn-pres-fullscreen" title="Tela cheia (F)">&#11035;</button>
-    <button class="pres-ctrl" id="btn-pres-close" title="Fechar (Esc)">&#10005;</button>
+    <div class="pr-progress-wrap">
+      <div class="pr-progress-track"><div class="pr-progress-bar" id="pr-progress-bar"></div></div>
+      <span id="presenter-pos"></span>
+    </div>
+    <button class="pr-icon-btn" id="btn-pres-fullscreen" title="Tela cheia (F)" aria-label="Tela cheia">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M2 6V2h4M10 2h4v4M14 10v4h-4M6 14H2v-4"/>
+      </svg>
+    </button>
+    <button class="pr-icon-btn" id="btn-pres-theme" title="Alternar tema" aria-label="Alternar tema claro/escuro">
+      <svg id="pr-theme-icon-moon" width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+        <path d="M14.5 10.2A6.5 6.5 0 0 1 5.8 1.5a6.5 6.5 0 1 0 8.7 8.7z"/>
+      </svg>
+      <svg id="pr-theme-icon-sun" width="16" height="16" viewBox="0 0 16 16" fill="currentColor" style="display:none">
+        <circle cx="8" cy="8" r="3"/>
+        <path d="M8 1v2M8 13v2M1 8h2M13 8h2M3.2 3.2l1.4 1.4M11.4 11.4l1.4 1.4M3.2 12.8l1.4-1.4M11.4 4.6l1.4-1.4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" fill="none"/>
+      </svg>
+    </button>
   </div>
-  <div id="presenter-body">
-    <div id="presenter-loading"><span class="loading-spinner"></span>&nbsp;Carregando cifras...</div>
+  <!-- Head: song info + toolbar -->
+  <div id="presenter-head">
     <div id="presenter-song-name" style="display:none"></div>
     <div id="presenter-song-cat" style="display:none"></div>
     <div id="presenter-song-controls" style="display:none">
-      <!-- Tamanho da fonte -->
       <div class="psc-group">
         <span class="psc-label">Texto</span>
-        <button class="psc-btn" id="psc-zoom-out">A&#8722;</button>
+        <button class="psc-btn" id="psc-zoom-out" title="Diminuir fonte">A&#8722;</button>
         <span class="psc-val" id="psc-zoom-val">100%</span>
-        <button class="psc-btn" id="psc-zoom-in">A+</button>
+        <button class="psc-btn" id="psc-zoom-in" title="Aumentar fonte">A+</button>
       </div>
-      <!-- Transposição -->
       <div class="psc-group">
         <span class="psc-label">Tom</span>
         <button class="psc-btn" id="psc-tp-down">&#9660;</button>
         <span class="psc-val" id="psc-tp-val">0</span>
         <button class="psc-btn" id="psc-tp-up">&#9650;</button>
       </div>
-      <!-- Capo -->
       <div class="psc-group" id="psc-capo-group">
         <span class="psc-label">Capotraste</span>
         <button class="psc-btn" id="psc-capo-dec">&#8722;</button>
@@ -4039,11 +4163,24 @@ html.pwa-standalone #modal-footer {
         <button class="psc-btn" id="psc-capo-inc">+</button>
         <span class="psc-label" id="psc-capo-suffix"></span>
       </div>
-      <!-- Duas colunas -->
-      <button class="psc-toggle" id="psc-twocol">&#9645; 2 colunas</button>
+      <button class="psc-toggle" id="psc-twocol">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" style="vertical-align:-1px;margin-right:4px">
+          <rect x="1" y="1" width="4" height="10" rx="1"/><rect x="7" y="1" width="4" height="10" rx="1"/>
+        </svg>2 colunas
+      </button>
+      <button class="psc-toggle" id="psc-autoscroll" title="Auto-scroll">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" style="vertical-align:-1px;margin-right:4px">
+          <circle cx="6" cy="6" r="5"/><polyline points="4,4 8,6 4,8"/>
+        </svg>Auto-scroll
+      </button>
     </div>
+  </div>
+  <!-- Body: scrollable cifra -->
+  <div id="presenter-body">
+    <div id="presenter-loading"><span class="loading-spinner"></span>&nbsp;Carregando cifras...</div>
     <pre id="presenter-cifra" style="display:none"></pre>
   </div>
+  <!-- Footer nav -->
   <div id="presenter-nav">
     <button id="btn-pres-prev">&#8592; Anterior</button>
     <div id="presenter-dots"></div>
@@ -8002,8 +8139,20 @@ async function openPresenter(repId) {
   document.getElementById("presenter-loading").style.display = "flex";
   document.getElementById("presenter-song-name").style.display = "none";
   document.getElementById("presenter-song-cat").style.display = "none";
+  document.getElementById("presenter-song-controls").style.display = "none";
   document.getElementById("presenter-cifra").style.display = "none";
   document.getElementById("btn-pres-fullscreen").classList.remove("active");
+  // Restore theme from localStorage
+  var savedTheme = localStorage.getItem("mycifras:presenter-theme");
+  if (savedTheme === "dark") {
+    overlay.setAttribute("data-pr-dark", "1");
+    document.getElementById("pr-theme-icon-moon").style.display = "none";
+    document.getElementById("pr-theme-icon-sun").style.display = "";
+  } else {
+    overlay.removeAttribute("data-pr-dark");
+    document.getElementById("pr-theme-icon-moon").style.display = "";
+    document.getElementById("pr-theme-icon-sun").style.display = "none";
+  }
   overlay.classList.add("show");
 
   var songs = rep.songs;
@@ -8092,10 +8241,12 @@ function _renderPresenterSong() {
   cifraEl.classList.toggle("two-col", song.twoCol);
   cifraEl.style.display = "block";
 
-  // Nav
+  // Nav + progress bar
   document.getElementById("presenter-pos").textContent = (presenterIdx + 1) + " / " + presenterSongs.length;
   document.getElementById("btn-pres-prev").disabled = presenterIdx === 0;
   document.getElementById("btn-pres-next").disabled = presenterIdx === presenterSongs.length - 1;
+  var pct = presenterSongs.length > 1 ? (presenterIdx / (presenterSongs.length - 1)) * 100 : 100;
+  document.getElementById("pr-progress-bar").style.width = pct + "%";
 
   var dotsEl = document.getElementById("presenter-dots");
   dotsEl.innerHTML = "";
@@ -8109,12 +8260,97 @@ function _renderPresenterSong() {
     });
   }
   document.getElementById("presenter-body").scrollTop = 0;
+  _presenterStopAutoscroll();
 }
 
 function closePresenter() {
+  _presenterStopAutoscroll();
   document.getElementById("presenter-overlay").classList.remove("show");
   if (document.fullscreenElement) document.exitFullscreen();
 }
+
+// ─── Presenter: dark mode toggle ─────────────────────────────────────────────
+document.getElementById("btn-pres-theme").addEventListener("click", function() {
+  var overlay = document.getElementById("presenter-overlay");
+  var isDark = overlay.hasAttribute("data-pr-dark");
+  if (isDark) {
+    overlay.removeAttribute("data-pr-dark");
+    document.getElementById("pr-theme-icon-moon").style.display = "";
+    document.getElementById("pr-theme-icon-sun").style.display = "none";
+    localStorage.setItem("mycifras:presenter-theme", "light");
+  } else {
+    overlay.setAttribute("data-pr-dark", "1");
+    document.getElementById("pr-theme-icon-moon").style.display = "none";
+    document.getElementById("pr-theme-icon-sun").style.display = "";
+    localStorage.setItem("mycifras:presenter-theme", "dark");
+  }
+});
+
+// ─── Presenter: auto-scroll ───────────────────────────────────────────────────
+var _presenterScrollTimer = null;
+var _presenterScrollSpeed = 1; // px per tick
+
+function _presenterStopAutoscroll() {
+  if (_presenterScrollTimer) { clearInterval(_presenterScrollTimer); _presenterScrollTimer = null; }
+  var btn = document.getElementById("psc-autoscroll");
+  if (btn) btn.classList.remove("active");
+}
+
+document.getElementById("psc-autoscroll").addEventListener("click", function() {
+  if (_presenterScrollTimer) {
+    _presenterStopAutoscroll();
+  } else {
+    this.classList.add("active");
+    var body = document.getElementById("presenter-body");
+    _presenterScrollTimer = setInterval(function() {
+      body.scrollTop += _presenterScrollSpeed;
+      // Auto-stop at bottom
+      if (body.scrollTop + body.clientHeight >= body.scrollHeight - 2) {
+        _presenterStopAutoscroll();
+      }
+    }, 40);
+  }
+});
+
+// ─── Presenter: swipe para navegar ───────────────────────────────────────────
+(function() {
+  var _swipeStartX = 0, _swipeStartY = 0, _swipeActive = false;
+  var SWIPE_THRESHOLD = 55;   // px mínimos para considerar swipe
+  var SWIPE_ANGLE_MAX = 0.6;  // tangente máxima: garante gesto horizontal
+
+  var el = document.getElementById("presenter-overlay");
+
+  el.addEventListener("touchstart", function(e) {
+    if (e.touches.length !== 1) { _swipeActive = false; return; }
+    _swipeStartX = e.touches[0].clientX;
+    _swipeStartY = e.touches[0].clientY;
+    _swipeActive = true;
+  }, { passive: true });
+
+  el.addEventListener("touchmove", function(e) {
+    if (!_swipeActive || e.touches.length !== 1) return;
+    var dx = e.touches[0].clientX - _swipeStartX;
+    var dy = e.touches[0].clientY - _swipeStartY;
+    // Se o gesto ficou mais vertical do que horizontal, cancela swipe
+    if (Math.abs(dy) > Math.abs(dx) * (1 / SWIPE_ANGLE_MAX)) _swipeActive = false;
+  }, { passive: true });
+
+  el.addEventListener("touchend", function(e) {
+    if (!_swipeActive || e.changedTouches.length !== 1) return;
+    var dx = e.changedTouches[0].clientX - _swipeStartX;
+    var dy = e.changedTouches[0].clientY - _swipeStartY;
+    _swipeActive = false;
+    if (Math.abs(dx) < SWIPE_THRESHOLD) return;
+    if (Math.abs(dy) > Math.abs(dx) * SWIPE_ANGLE_MAX) return;
+    if (dx < 0) {
+      // Swipe esquerda → próxima
+      if (presenterIdx < presenterSongs.length - 1) { presenterIdx++; _renderPresenterSong(); }
+    } else {
+      // Swipe direita → anterior
+      if (presenterIdx > 0) { presenterIdx--; _renderPresenterSong(); }
+    }
+  }, { passive: true });
+})();
 
 // Controles individuais por música
 document.getElementById("psc-zoom-out").addEventListener("click", function() {
