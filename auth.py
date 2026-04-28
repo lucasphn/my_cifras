@@ -188,19 +188,26 @@ def callback():
     # Busca nome, e-mail e foto do usuário
     svc = build("oauth2", "v2", credentials=creds)
     info = svc.userinfo().get().execute()
+    # Sessão permanente: cookie salvo em disco (30 dias) — não é descartado
+    # quando iOS/Android fecha o browser em background (ITP mitigation).
+    session.permanent = True
     session["user"] = {
         "email": info.get("email", ""),
         "name": info.get("name", ""),
         "picture": info.get("picture", ""),
     }
-    # Client-side redirect evita que Safari/iOS bloqueie o cookie de sessão
-    # definido em resposta a um redirect cross-site vindo do Google (ITP).
+    # Client-side redirect com pequeno delay: dá tempo ao iOS de registrar
+    # o cookie de sessão antes de navegar para "/", evitando o duplo login.
     return render_template_string(
         '<!doctype html><html><head>'
-        '<meta http-equiv="refresh" content="0;url=/">'
+        '<meta http-equiv="refresh" content="1;url=/">'
         '<title>Entrando...</title></head>'
-        '<body><script>window.location.replace("/");</script>'
-        'Redirecionando...</body></html>'
+        '<body style="font-family:sans-serif;display:flex;align-items:center;'
+        'justify-content:center;height:100vh;margin:0;background:#f5f3fc;color:#5b4b8a">'
+        '<script>'
+        'setTimeout(function(){window.location.replace("/");},800);'
+        '</script>'
+        'Entrando...</body></html>'
     )
 
 

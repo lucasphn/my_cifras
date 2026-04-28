@@ -7648,13 +7648,16 @@ function renderSavedReps() {
           itm.style.transform = "translateX(" + sw.curX + "px)";
         }, { passive: false });
         itm.addEventListener("touchend", function() {
-          itm.style.transition = "transform .25s ease";
           var isTap = (Date.now() - sw.startT) < TAP_MAX_MS;
           if (!isTap && sw.curX < -T) {
+            // Swipe deliberado: anima até abrir completamente
+            itm.style.transition = "transform .25s ease";
             itm.style.transform = "translateX(-" + MAX + "px)";
             _swipeOpenItem = itm;
-            sw.justSwiped = true;  // este toque terminou em swipe-delete
+            sw.justSwiped = true;
           } else {
+            // Tap ou swipe curto: reseta SEM animação para não piscar o botão vermelho
+            itm.style.transition = "none";
             itm.style.transform = "";
             _swipeOpenItem = null;
             sw.justSwiped = false;

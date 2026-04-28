@@ -26,10 +26,14 @@ def _normalize_search(s: str) -> str:
     return re.sub(r"\s+", " ", s).strip()
 
 
+from datetime import timedelta
+
 app = Flask(__name__)
 app.secret_key = os.environ.get("FLASK_SECRET_KEY", "dev-insecure-key-troque-no-env")
 app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
 app.config["SESSION_COOKIE_HTTPONLY"] = True
+# Cookie persistente (salvo em disco) — iOS/Android não descartam ao fechar o browser
+app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(days=30)
 
 # Confia nos headers X-Forwarded-Proto/Host do ngrok/proxy reverso
 from werkzeug.middleware.proxy_fix import ProxyFix
