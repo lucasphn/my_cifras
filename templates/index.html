@@ -1839,6 +1839,11 @@ body.android #presenter-cifra .chord-line {
 }
 .pr-icon-btn:hover { background: var(--pr-ic-hv); }
 .pr-icon-btn.active { background: rgba(255,255,255,.28); }
+/* Botão de sair do foco fica no rodapé (fundo claro) → usa cores do pill */
+#presenter-nav .pr-icon-btn {
+  background: var(--pr-pill); color: var(--pr-pill-txt);
+}
+#presenter-nav .pr-icon-btn:hover { background: var(--pr-pill-brd); }
 
 /* ── Head (song info + toolbar) ── */
 #presenter-head {
@@ -1938,42 +1943,39 @@ body.android #presenter-cifra .chord-line {
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-/* ── Tablet (769px – 1024px) ── */
-@media (min-width: 769px) and (max-width: 1024px) {
-  #presenter-head { padding: 12px 20px 10px; }
-  #presenter-song-controls { gap: 8px; }
-  .psc-group { padding: 6px 12px; gap: 4px; }
-  .psc-btn { width: 32px; height: 32px; font-size: .88em; }
-  .psc-val { font-size: .88em; min-width: 36px; }
-  .psc-label { font-size: .72em; }
-  .psc-toggle { font-size: .76em; padding: 7px 16px; }
-  #btn-pres-prev, #btn-pres-next { font-size: 0.9em; padding: 10px 22px; }
-  #presenter-nav { height: 64px; }
+/* ── Modo Foco (oculta topbar + head) ── */
+#presenter-overlay.pr-focus #presenter-topbar { display: none; }
+#presenter-overlay.pr-focus #presenter-head  { display: none; }
+.pr-unfocus-btn { display: none; }
+#presenter-overlay.pr-focus .pr-unfocus-btn { display: flex; }
+
+/* ── Tablet + Mobile: toolbar em linha única horizontal ── */
+@media (max-width: 1024px) {
+  #presenter-song-controls {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 1px;
+    gap: 5px;
+  }
+  #presenter-song-controls::-webkit-scrollbar { display: none; }
+  /* Grupos: tamanho confortável para toque mas sem exagero */
+  .psc-group { padding: 5px 10px; border-radius: 10px; gap: 2px; flex-shrink: 0; }
+  .psc-btn { width: 30px; height: 30px; font-size: .82em; }
+  .psc-val { min-width: 28px; font-size: .8em; }
+  .psc-label { font-size: .67em; }
+  .psc-toggle { font-size: .72em; padding: 6px 12px; border-radius: 10px; flex-shrink: 0; }
 }
 
 /* ── Mobile (≤768px) ── */
 @media (max-width: 768px) {
   #presenter-topbar { height: 50px; padding: 0 10px; gap: 5px; }
   .pr-progress-track { width: 44px; }
-  /* Head */
-  #presenter-head { padding: 10px 12px 10px; }
+  #presenter-head { padding: 10px 12px 8px; }
   #presenter-song-name { font-size: 1.05em; }
-  #presenter-song-controls { gap: 6px; }
-  /* Pill groups: maior área de toque */
-  .psc-group { padding: 6px 10px; gap: 3px; border-radius: 12px; }
-  .psc-btn {
-    width: 36px; height: 36px; border-radius: 8px; font-size: .9em;
-  }
-  .psc-val { font-size: .88em; min-width: 32px; }
-  .psc-label { font-size: .68em; }
-  .psc-toggle { font-size: .74em; padding: 8px 14px; border-radius: 10px; }
-  /* Body */
-  #presenter-cifra { padding: 14px 14px; }
-  /* Footer */
+  #presenter-cifra { padding: 14px; }
   #presenter-nav { height: 60px; padding: 0 10px; }
-  #btn-pres-prev, #btn-pres-next {
-    font-size: 0.82em; padding: 10px 16px; border-radius: 12px;
-  }
+  #btn-pres-prev, #btn-pres-next { font-size: 0.82em; padding: 10px 16px; border-radius: 12px; }
   .pres-dot { width: 8px; height: 8px; }
   .pres-dot.active { width: 20px; }
 }
@@ -4185,6 +4187,11 @@ html.pwa-standalone #modal-footer {
     <button id="btn-pres-prev">&#8592; Anterior</button>
     <div id="presenter-dots"></div>
     <button id="btn-pres-next">Pr&#243;xima &#8594;</button>
+    <button class="pr-icon-btn pr-unfocus-btn" id="btn-pres-unfocus" title="Sair do modo foco" aria-label="Sair do modo foco" style="flex-shrink:0">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M6 2H2v4M10 2h4v4M14 10v4h-4M6 14H2v-4"/>
+      </svg>
+    </button>
   </div>
 </div>
 
@@ -7625,7 +7632,7 @@ function renderSavedReps() {
           sw.startX = e.touches[0].clientX;
           sw.startY = e.touches[0].clientY;
           sw.startT = Date.now();
-          sw.curX = 0; sw.isHoriz = null;
+          sw.curX = 0; sw.isHoriz = null; sw.justSwiped = false;
           itm.style.transition = "none";
         }, { passive: true });
         itm.addEventListener("touchmove", function(e) {
@@ -7646,9 +7653,11 @@ function renderSavedReps() {
           if (!isTap && sw.curX < -T) {
             itm.style.transform = "translateX(-" + MAX + "px)";
             _swipeOpenItem = itm;
+            sw.justSwiped = true;  // este toque terminou em swipe-delete
           } else {
             itm.style.transform = "";
             _swipeOpenItem = null;
+            sw.justSwiped = false;
           }
           sw.isHoriz = null; sw.curX = 0;
         });
@@ -7656,11 +7665,14 @@ function renderSavedReps() {
           itm.style.transition = "transform .25s ease";
           itm.style.transform = "";
           _swipeOpenItem = null;
-          sw.isHoriz = null; sw.curX = 0;
+          sw.isHoriz = null; sw.curX = 0; sw.justSwiped = false;
         });
-        // Tap no item swiped → só fecha, não abre o repertório
+        // Bloqueia o click se o item estava aberto OU se este toque abriu o delete
         itm.addEventListener("click", function(e) {
-          if (sw.wasOpen) { e.preventDefault(); e.stopPropagation(); sw.wasOpen = false; }
+          if (sw.wasOpen || sw.justSwiped) {
+            e.preventDefault(); e.stopPropagation();
+            sw.wasOpen = false; sw.justSwiped = false;
+          }
         }, true);
       })(item, _sw);
       list.appendChild(swipeWrap);
@@ -8274,7 +8286,9 @@ function _renderPresenterSong() {
 
 function closePresenter() {
   _presenterStopAutoscroll();
-  document.getElementById("presenter-overlay").classList.remove("show");
+  var overlay = document.getElementById("presenter-overlay");
+  overlay.classList.remove("show", "pr-focus");
+  document.getElementById("btn-pres-fullscreen").classList.remove("active");
   if (document.fullscreenElement) document.exitFullscreen();
 }
 
@@ -8434,6 +8448,14 @@ function presenterZoomChange(delta) {
   s.zoom = Math.max(0.5, Math.min(2.5, +(s.zoom + delta).toFixed(1)));
   document.getElementById("psc-zoom-val").textContent = Math.round(s.zoom * 100) + "%";
   document.getElementById("presenter-cifra").style.fontSize = (s.zoom * 0.95) + "em";
+}
+
+// Modo foco: oculta topbar + head, deixa só cifra + nav (funciona em todo device)
+function presenterToggleFocus() {
+  var overlay = document.getElementById("presenter-overlay");
+  var btn = document.getElementById("btn-pres-fullscreen");
+  var entering = overlay.classList.toggle("pr-focus");
+  btn.classList.toggle("active", entering);
 }
 
 async function presenterToggleFullscreen() {
@@ -8991,7 +9013,8 @@ function init() {
     if (presenterIdx < presenterSongs.length - 1) { presenterIdx++; _renderPresenterSong(); }
   });
   document.getElementById("btn-pres-close").addEventListener("click", closePresenter);
-  document.getElementById("btn-pres-fullscreen").addEventListener("click", presenterToggleFullscreen);
+  document.getElementById("btn-pres-fullscreen").addEventListener("click", presenterToggleFocus);
+  document.getElementById("btn-pres-unfocus").addEventListener("click", presenterToggleFocus);
   document.addEventListener("fullscreenchange", function() {
     if (!document.fullscreenElement) {
       document.getElementById("btn-pres-fullscreen").classList.remove("active");
