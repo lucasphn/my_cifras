@@ -5019,6 +5019,52 @@ function closeCatMenu() {
   if (_openCatMenu) { _openCatMenu.remove(); _openCatMenu = null; }
 }
 
+// ─── Fila de operações de arquivo ───────────────────────────────────────────
+// Garante que delete/rename/move/copy/update_meta rodem em série, nunca em paralelo.
+var _opQueue = (function() {
+  var _busy  = false;
+  var _queue = [];
+  var _badge = null;
+
+  function _updateBadge() {
+    var n = _queue.length + (_busy ? 1 : 0);
+    if (!_badge) {
+      _badge = document.createElement("div");
+      _badge.style.cssText =
+        "position:fixed;bottom:20px;left:50%;transform:translateX(-50%);" +
+        "background:var(--primary);color:#fff;font-size:11px;font-weight:700;" +
+        "padding:5px 14px;border-radius:99px;z-index:9998;pointer-events:none;" +
+        "box-shadow:0 4px 12px rgba(0,0,0,.3);transition:opacity .3s";
+      document.body.appendChild(_badge);
+    }
+    if (n > 0) {
+      _badge.textContent = n === 1 ? "Processando operação..." : "Processando " + n + " operações...";
+      _badge.style.opacity = "1";
+      _badge.style.display = "block";
+    } else {
+      _badge.style.opacity = "0";
+      setTimeout(function() { if (_badge) _badge.style.display = "none"; }, 300);
+    }
+  }
+
+  function _next() {
+    if (_busy || !_queue.length) { _updateBadge(); return; }
+    _busy = true;
+    _updateBadge();
+    var task = _queue.shift();
+    task().finally(function() { _busy = false; _next(); });
+  }
+
+  return {
+    add: function(fn) {
+      return new Promise(function(resolve, reject) {
+        _queue.push(function() { return Promise.resolve().then(fn).then(resolve, reject); });
+        _next();
+      });
+    }
+  };
+})();
+
 var _openSongMenu = null;
 function closeOpenSongMenu() { if (_openSongMenu) { _openSongMenu.remove(); _openSongMenu = null; } }
 
@@ -5262,7 +5308,7 @@ function startRenameSong(card, song) {
     var body = {newName: val};
     if (song.fileId) { body.fileId = song.fileId; if (song.shortcutFileId) body.shortcutFileId = song.shortcutFileId; } else body.path = song.path;
     try {
-      var r = await fetch("/api/songs/rename", {method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify(body)});
+      var r = await _opQueue.add(function() { return fetch("/api/songs/rename", {method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify(body)}); });
       var j = await r.json();
       if (!r.ok) { alert(j.error || "Erro ao renomear"); _saving = false; cancel(); return; }
       await reloadLibrary();
@@ -5330,7 +5376,7 @@ function confirmDeleteSong(card, song) {
     try {
       var body = {};
       if (song.fileId) { body.fileId = song.fileId; if (song.shortcutFileId) body.shortcutFileId = song.shortcutFileId; } else body.path = song.path;
-      var r = await fetch("/api/songs/delete", {method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify(body)});
+      var r = await _opQueue.add(function() { return fetch("/api/songs/delete", {method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify(body)}); });
       var j = await r.json();
       if (!r.ok) { showToast(j.error || "Erro ao excluir"); return; }
       await reloadLibrary();
@@ -5409,7 +5455,7 @@ document.getElementById("sfm-ok").addEventListener("click", async function() {
   if (_sfmAction === "move") { body.sourceSection = song.section; body.sourceCategory = song.category === "_raiz" ? "" : (song.category || ""); }
   var endpoint = _sfmAction === "copy" ? "/api/songs/copy" : "/api/songs/move";
   var btn = this; btn.disabled = true; btn.textContent = "Aguarde...";
-  var r = await fetch(endpoint, {method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify(body)});
+  var r = await _opQueue.add(function() { return fetch(endpoint, {method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify(body)}); });
   var j = await r.json();
   btn.disabled = false; btn.textContent = "Confirmar";
   if (!r.ok) { alert(j.error || "Erro"); return; }
@@ -6495,11 +6541,11 @@ async function saveMetadata() {
   if (currentModal.path)   payload.path   = currentModal.path;
 
   try {
-    var resp = await fetch("/api/songs/update_meta", {
+    var resp = await _opQueue.add(function() { return fetch("/api/songs/update_meta", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
-    });
+    }); });
     if (resp.status === 401) { _handleAuthExpired(); return; }
     var data = await resp.json();
     if (data.error) throw new Error(data.error);
