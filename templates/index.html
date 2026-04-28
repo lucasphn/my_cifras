@@ -6767,7 +6767,10 @@ function _updateSaveBtn() {
   var hasPrefs = !!(prefs.my_key || prefs.my_capo);
   var keyChanged = !!songId && currentSemitone !== 0 && currentSemitone !== _mtSavedSemitone;
   var savedCapo = parseInt(prefs.my_capo) || 0;
-  var capoChanged = !!songId && _mtCapoValue !== savedCapo;
+  var fileCapo  = parseInt((currentModal && currentModal.capo) || 0);
+  // Baseline: preferência salva se existir, senão capo original do arquivo
+  var baseCapo  = hasPrefs ? savedCapo : fileCapo;
+  var capoChanged = !!songId && _mtCapoValue !== baseCapo;
   var showSave = keyChanged || capoChanged;
   saveBtn.textContent = hasPrefs ? "\u21bb Atualizar Meu Tom" : "\u2605 Salvar como Meu Tom";
   saveBtn.style.display = showSave ? "inline-flex" : "none";
