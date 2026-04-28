@@ -5554,7 +5554,7 @@ function _makeTableRow(song, rank) {
 
   row.innerHTML =
     '<span class="song-table-rank">' + String(rank).padStart(2, "0") + '</span>' +
-    '<div class="song-table-name">' + escHtml(song.name) + (song.isShortcut ? ' <span style="font-size:9px;font-weight:700;color:var(--text-muted);background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:1px 5px;vertical-align:middle;letter-spacing:.4px">↗ ATALHO</span>' : '') + '</div>' +
+    '<div class="song-table-name">' + escHtml(song.name) + (song.isShortcut && _isOwner ? ' <span style="font-size:9px;font-weight:700;color:var(--text-muted);background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:1px 5px;vertical-align:middle;letter-spacing:.4px">↗ ATALHO</span>' : '') + '</div>' +
     '<div class="song-table-artist">' + escHtml(artistDisplay) + '</div>' +
     '<div class="song-table-cat">' + escHtml(cleanLabel(song.category === "_raiz" ? (song.section || "") : (song.category || song.section || ""))) + '</div>' +
     '<div>' + (keyDisplay ? '<span class="song-table-key">' + escHtml(keyDisplay) + '</span>' : '') + '</div>' +

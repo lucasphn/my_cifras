@@ -283,6 +283,24 @@ def create_shortcut(service, name, target_id, target_folder_id):
     return service.files().create(body=body, fields="id").execute()
 
 
+def find_shortcuts_to(service, target_id):
+    """Retorna lista de IDs de atalhos que apontam para target_id."""
+    results = []
+    page_token = None
+    q = f"mimeType='{SHORTCUT_MIME}' and shortcutDetails.targetId='{target_id}' and trashed=false"
+    while True:
+        resp = service.files().list(
+            q=q,
+            fields="nextPageToken, files(id)",
+            pageToken=page_token,
+        ).execute()
+        results.extend(f["id"] for f in resp.get("files", []))
+        page_token = resp.get("nextPageToken")
+        if not page_token:
+            break
+    return results
+
+
 def move_file(service, file_id, source_folder_id, target_folder_id):
     """Move arquivo entre pastas no Drive."""
     service.files().update(

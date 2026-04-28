@@ -1040,11 +1040,20 @@ def api_folder_delete(section, category):
 @owner_required
 def api_song_delete():
     data = request.get_json(force=True)
-    file_id = (data.get("shortcutFileId") or data.get("fileId") or "").strip()
-    path = (data.get("path") or "").strip()
-    if file_id:
+    shortcut_file_id = (data.get("shortcutFileId") or "").strip()
+    file_id          = (data.get("fileId") or "").strip()
+    path             = (data.get("path") or "").strip()
+    if shortcut_file_id:
+        # Excluir atalho: apenas o atalho é enviado para a lixeira
         import drive as drv
-        drv.trash_file(get_service(), file_id)
+        drv.trash_file(get_service(), shortcut_file_id)
+    elif file_id:
+        # Excluir original: manda para lixeira + todos os atalhos que apontam para ele
+        import drive as drv
+        svc = get_service()
+        drv.trash_file(svc, file_id)
+        for sc_id in drv.find_shortcuts_to(svc, file_id):
+            drv.trash_file(svc, sc_id)
     elif path:
         if not is_safe_path(path):
             return jsonify({"error": "Caminho não permitido"}), 403
@@ -1063,18 +1072,22 @@ def api_song_delete():
 @owner_required
 def api_song_rename():
     data = request.get_json(force=True)
-    # Para atalhos, renomeia o atalho em si (não o original)
-    file_id = (data.get("shortcutFileId") or data.get("fileId") or "").strip()
-    path = (data.get("path") or "").strip()
+    shortcut_file_id = (data.get("shortcutFileId") or "").strip()
+    file_id          = (data.get("fileId") or "").strip()
+    path             = (data.get("path") or "").strip()
     new_name = (data.get("newName") or "").strip()
     if not new_name:
         return jsonify({"error": "newName obrigatório"}), 400
     if file_id:
         import drive as drv
         svc = get_service()
+        # Renomeia sempre o arquivo original (targetId)
         current = drv.get_file_name(svc, file_id)
         ext = Path(current).suffix or ".md"
         drv.rename_file(svc, file_id, new_name + ext)
+        # Se vier de um atalho, sincroniza o nome do atalho também
+        if shortcut_file_id:
+            drv.rename_file(svc, shortcut_file_id, new_name + ext)
     elif path:
         if not is_safe_path(path):
             return jsonify({"error": "Caminho não permitido"}), 403
