@@ -127,7 +127,7 @@ def _is_auth_error(e):
 
 def _auth_error_response():
     session.clear()
-    return jsonify({"error": "Sessão expirada", "login_url": "/login"}), 401
+    return jsonify({"error": "Sessão expirada", "login_url": "/"}), 401
 
 
 # ---------------------------------------------------------------------------
@@ -1345,7 +1345,7 @@ def api_library():
                          "unauthorized", "401", "revoked", "invalid_token")
         if any(s in full for s in _AUTH_SIGNALS):
             session.clear()
-            return jsonify({"error": "Sessão expirada", "login_url": "/login"}), 401
+            return jsonify({"error": "Sessão expirada", "login_url": "/"}), 401
         return jsonify({"error": f"Erro ao carregar biblioteca: {err}"}), 500
 
 
