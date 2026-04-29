@@ -10,7 +10,7 @@ Contexto e instruções para o Claude Code trabalhar neste projeto.
 
 Stack: **Python 3.10+ · Flask · HTML/CSS/JS puro · python-docx · PyMuPDF · Google Drive API · Google Calendar API · OAuth 2.0 · FullCalendar 6 · Docker · Gunicorn**
 
-Versão atual em produção: **v3.2**
+Versão atual em produção: **v3.4**
 
 ---
 
@@ -31,8 +31,8 @@ my_cifras/
 ├── _shares.json            ← registro local de compartilhamentos (fallback quando Drive indisponível)
 ├── templates/
 │   ├── index.html          ← toda a UI do app: HTML + CSS + JS em um único arquivo
-│   ├── landing.html        ← landing page pública (rota /)
-│   ├── login.html          ← tela de login OAuth
+│   ├── landing.html        ← landing page pública (rota / para não-autenticados); contém botões "Entrar com Google"
+│   ├── login.html          ← arquivo mantido mas não usado; /login redireciona para /
 │   ├── privacy.html        ← Política de Privacidade (pública)
 │   └── terms.html          ← Termos de Serviço (público)
 ├── static/
@@ -56,6 +56,7 @@ GOOGLE_CALENDAR_ID=primary
 CALENDAR_KEYWORDS=missa,ensaio,louvor,música,repertório,liturgia,celebração,casamento
 OWNER_EMAIL=email@exemplo.com,outro@exemplo.com
 GOOGLE_SITE_VERIFICATION=<token>
+SESSION_FILE_DIR=/tmp/flask_session   # opcional; padrão é tmpdir do SO
 ```
 
 Se `OWNER_EMAIL` não estiver definido, todos os usuários têm acesso de owner (dev local).
@@ -104,7 +105,7 @@ No frontend:
 | GET | `/` | Landing (não autenticado) ou App (autenticado) |
 | GET | `/privacy` | Política de Privacidade (pública) |
 | GET | `/terms` | Termos de Serviço (público) |
-| GET | `/login` | Tela de login |
+| GET | `/login` | Redireciona para `/` (landing page tem os botões OAuth) |
 | GET | `/login/google` | Inicia fluxo OAuth |
 | GET | `/oauth/callback` | Callback OAuth do Google |
 | GET | `/logout` | Encerra sessão |
@@ -200,8 +201,9 @@ _songs_meta: dict    # metadados globais de músicas (artist, key, capo, youtube
 ### Metadados globais (`_songs_meta.json`)
 - Arquivo em `CIFRAS_FOLDER_ID` (acervo do owner)
 - Contém `artist`, `key`, `capo`, `youtube` por `fileId`
-- Carregado lazy na primeira requisição via `_ensure_songs_meta_loaded()`
-- Persistido em background thread via `_persist_songs_meta()`
+- Carregado lazy via `_ensure_songs_meta_loaded()` com **TTL de 5 min** (`SONGS_META_TTL = 300`) — re-lê o Drive para sincronizar entre processos/instâncias
+- Persistido em background thread via `_persist_songs_meta(svc)` — **`svc` obrigatório**, passado pelo chamador no contexto de request (não chama `get_service()` dentro da thread, pois Flask session não existe fora do request context)
+- Todos os callers devem passar `svc`: `_set_song_meta(..., svc=svc)` e `_persist_songs_meta(svc=svc)`
 - Bundle endpoint inclui esses metadados para seed do `_metaStore` no cliente
 
 ### Invalidação
@@ -243,6 +245,23 @@ get_file_name / trash_file / rename_file / copy_file / move_file
 find_folder_by_name / create_folder / rename_folder
 is_folder_empty / delete_folder / get_or_create_folder / resolve_folder
 ```
+
+---
+
+## Sessões (Flask-Session)
+
+Sessões server-side com filesystem backend (`Flask-Session==0.8.0`). O cookie contém apenas um ID de sessão assinado (~40 chars), eliminando:
+- Problemas de tamanho de cookie (OAuth tokens + dados de usuário)
+- Rejeição por ITP do iOS Safari em redirecionamentos OAuth cross-site
+
+```python
+app.config["SESSION_TYPE"] = "filesystem"
+app.config["SESSION_FILE_DIR"] = _session_dir  # env SESSION_FILE_DIR ou tmpdir
+app.config["SESSION_PERMANENT"] = True
+app.config["SESSION_USE_SIGNER"] = True
+```
+
+**Importante:** sessões ficam no filesystem — em ambientes onde o `/tmp` é volátil (ex: reinicialização de container), usuários precisarão re-autenticar. Para persistência entre restarts, configurar `SESSION_FILE_DIR` para volume persistente.
 
 ---
 
@@ -370,6 +389,20 @@ gunicorn app:app --bind 0.0.0.0:8000 --workers 1 --worker-class gthread --thread
 - `@media (display-mode: standalone)` é pouco confiável no iOS Safari — preferir `html.pwa-standalone`
 - Focus mode: `html.pwa-standalone #modal.focus-mode #modal-body { padding-top: env(safe-area-inset-top) }` — necessário pois `#modal-header` é ocultado
 - `-webkit-fill-available` apenas dentro de `@media (max-width: 1024px)` — **não** global (quebra layout desktop)
+
+### Modo Apresentação (Presenter)
+
+Layout de 5 zonas: `#presenter-topbar` (nav) → `#presenter-head` (título/artista) → `#presenter-body` (cifra) → `#presenter-footer` (controles) → `.pr-progress-bar` (base).
+
+CSS tokens em `#presenter-overlay` com variante dark via `[data-pr-dark="1"]`.
+
+**Modo foco** (`pr-focus`): oculta topbar + head. Ativado pelo botão fullscreen em mobile/tablet. Saída pelo `.pr-unfocus-btn` flutuante.
+
+**Swipe lateral**: `touchstart` verifica se target está dentro de `#presenter-song-controls` — se sim, não ativa navegação (evita conflito com scroll horizontal da toolbar).
+
+**Auto-scroll**: `_presenterScrollTimer` a 40ms, para no fim do conteúdo e ao navegar.
+
+**Tema**: persiste em `localStorage('mycifras:presenter-theme')`. Ícones SVG trocam entre lua/sol.
 
 ### YouTube nos cards mobile
 - `_makeHomeCard()` renderiza `.hc-yt-link` quando `song.youtube` está populado

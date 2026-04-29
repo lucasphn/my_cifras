@@ -1,8 +1,8 @@
 # PRD — My Cifras
-**Versão:** 3.3
+**Versão:** 3.4
 **Produto:** Aplicação web para o músico individual gerenciar cifras, transpor tons, criar e compartilhar repertórios, e acompanhar sua agenda litúrgica
 **Autor:** Lucas Almeida
-**Status:** Em produção (v3.3)
+**Status:** Em produção (v3.4)
 
 ---
 
@@ -46,7 +46,9 @@ Oferecer ao músico um acervo pessoal, sempre sincronizado com o Google Drive, a
 ## 5. Funcionalidades
 
 ### 5.1 Landing Page pública (`/`)
-Página de apresentação para visitantes não autenticados. Hero com CTA "Entrar com Google", seção de features, "Como funciona", links de privacidade/termos.
+Página de apresentação para visitantes não autenticados. Hero com CTA "Entrar com Google" (aponta diretamente para `/login/google`), seção de features, "Como funciona", links de privacidade/termos.
+
+> Não há tela de login intermediária — usuários não autenticados são redirecionados para a landing page, que já contém os botões de acesso OAuth.
 
 ### 5.2 Páginas legais
 `/privacy` e `/terms` — públicas, necessárias para o Google OAuth consent screen.
@@ -102,7 +104,13 @@ Scraping de URL (CifraClub etc.) ou texto colado → salva como `.md` com frontm
 - Tag discreta "Compartilhado" nos repertórios com shares ativos
 
 ### 5.14 Modo Apresentação
-Tela cheia, navega cifra a cifra (botões, dots ou teclado). Tom = Meu Tom do usuário.
+Tela cheia refinada com layout de 5 zonas (topbar, head, body, footer, progress bar). Recursos:
+- **Tema claro/escuro** independente do tema geral do app (persiste no localStorage)
+- **Modo foco** (oculta topbar + head): ativado pelo botão fullscreen no mobile/tablet; saída pelo botão `⊙` flutuante
+- **Swipe lateral** para navegar entre músicas (excluindo toolbar de controles)
+- **Auto-scroll** configurable com pausa ao navegar
+- **Barra de progresso** na base indicando posição no repertório
+- Tom = Meu Tom do usuário
 
 ### 5.15 Exportação de repertório
 Formatos: HTML (PDF-ready) e DOCX. Tom exportado = Meu Tom do usuário.
@@ -170,6 +178,7 @@ Pesos de fonte nas cifras: corpo `600`, acordes `800`.
 | Frontend | HTML + CSS + JavaScript puro |
 | Calendar UI | FullCalendar 6 (CDN) |
 | Cache offline | IndexedDB (`mycifras-offline`) |
+| Sessões | Flask-Session 0.8.0 (filesystem server-side) |
 | Deploy | Docker + Gunicorn (1 worker gthread, 4 threads) + Render.com |
 
 ---
@@ -229,6 +238,10 @@ _mycifras_data/ (no Drive de cada usuário)
 - [x] iOS: sem zoom ao focar na busca
 - [x] iOS: bottom nav posicionada corretamente (sem flutuar acima do home indicator)
 - [x] iOS: botões do modal footer acima do home bar
+- [x] Modo Apresentação: dark mode, foco, swipe, auto-scroll, barra de progresso
+- [x] Metadados (`artist`, `key`, `capo`, `youtube`) sincronizados entre dispositivos via `_songs_meta.json` no Drive (TTL 5 min)
+- [x] Sessões server-side (Flask-Session) — sem double-login em iOS/Android
+- [x] Offline: Service Worker + IndexedDB (leitura funciona sem internet)
 
 ---
 
@@ -244,15 +257,18 @@ _mycifras_data/ (no Drive de cada usuário)
 
 ## 12. Roadmap
 
-### Fase 1 — Produto individual (atual v3.3)
+### Fase 1 — Produto individual (atual v3.4)
 - Owner + viewers com roles distintos
 - Dados pessoais isolados por usuário no Drive
 - Sync offline completo via bundle endpoint
 - Compartilhamento de repertórios entre usuários
-- Metadados globais (`_songs_meta.json`) compartilhados entre dispositivos
+- Metadados globais (`_songs_meta.json`) sincronizados entre dispositivos (TTL 5 min)
 - Live sharing: alterações no repertório propagadas automaticamente para shares ativos
 - Performance: renderização em batch (DocumentFragment), presenter paralelo (Promise.all + IDB-first)
 - PWA iOS: safe area correta incluindo focus mode; ícone YouTube nos cards mobile
+- Sessões server-side (Flask-Session): elimina double-login em iOS/Android
+- Modo Apresentação P1 Refinado: dark mode, foco, swipe, auto-scroll, barra de progresso
+- Offline: leitura completa do acervo sem internet (Service Worker + IndexedDB)
 
 ### Fase 2 — Workspace compartilhado
 - Músico convida outros membros para colaborar no mesmo acervo

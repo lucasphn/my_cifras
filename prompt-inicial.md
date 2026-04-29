@@ -28,17 +28,20 @@ Você é um desenvolvedor Python + JavaScript experiente. Vamos evoluir a aplica
 
 ---
 
-### Estado atual do app (v3.2)
+### Estado atual do app (v3.4)
 
 O app está **em produção** na Render.com. As seguintes funcionalidades já estão implementadas:
 
 #### Backend (`app.py` + `auth.py` + `drive.py`)
 
 - OAuth 2.0 completo com Google (escopos: `drive`, `calendar.events`, `userinfo`)
+- **Sessões server-side:** Flask-Session 0.8.0 com filesystem — cookie contém apenas ID de sessão; elimina double-login em iOS/Android
+- **Sem tela de login:** `/login` redireciona para `/`; landing page tem botões "Entrar com Google" (`/login/google`)
 - **Roles:** `OWNER_EMAIL` no env define owners; sem ENV → todos são owner (dev local)
 - **Dados por usuário:** prefs, repertórios e views em `_mycifras_data` no Drive de cada usuário
 - **Bundle sync:** `GET /api/cifras/bundle` com ETag/304; build paralelo 4 workers
 - **Cache de biblioteca:** TTL 120s
+- **Metadados globais:** `_songs_meta.json` no Drive; TTL 5 min; `_persist_songs_meta(svc)` exige svc do caller
 - CRUD completo de cifras, pastas, repertórios e eventos de calendário
 - Limite de 5 repertórios por usuário
 - **Compartilhamento de repertórios:**
@@ -51,8 +54,8 @@ O app está **em produção** na Render.com. As seguintes funcionalidades já es
   - `GET /api/notifications/count` — badge do sino
   - Armazenamento: `_shares.json` em `CIFRAS_FOLDER_ID` com fallback local
 - **Metadados:** campo `youtube` (substituiu `tags`) no frontmatter YAML
+- **Offline:** Service Worker (`/static/sw.js`) + IndexedDB — leitura completa do acervo sem internet
 - Páginas públicas: `/privacy`, `/terms`
-- Service Worker em `/sw.js`
 
 #### Frontend (`templates/index.html`)
 
@@ -76,6 +79,7 @@ O app está **em produção** na Render.com. As seguintes funcionalidades já es
 - **`_closeAllDropdowns()`** — fecha menus antes de abrir outro
 - Google Calendar com FullCalendar 6, CRUD completo, drag-and-drop
 - Modo Apresentação, Export HTML/DOCX, Busca, PWA
+- **Modo Apresentação (Presenter):** layout 5 zonas, dark mode independente, modo foco (fullscreen oculta topbar+head), swipe lateral para navegar, auto-scroll, barra de progresso
 - **iOS/Android:**
   - `font-size: 16px` em todos os inputs (evita zoom automático do iOS Safari)
   - Bottom nav: `bottom: env(safe-area-inset-bottom, 6px)` (sem margem extra acima da safe area)
@@ -92,7 +96,8 @@ O app está **em produção** na Render.com. As seguintes funcionalidades já es
 - **Calendar:** Google Calendar API v3
 - **Frontend:** HTML + CSS + JS puro em `templates/index.html` (sem frameworks, sem npm)
 - **Calendar UI:** FullCalendar 6 via CDN
-- **Cache offline:** IndexedDB (`mycifras-offline` / `cifras`)
+- **Cache offline:** IndexedDB (`mycifras-offline` / `cifras`) + Service Worker stale-while-revalidate
+- **Sessões:** Flask-Session 0.8.0 (filesystem)
 - **Deploy:** Docker + Gunicorn (1 worker gthread, 4 threads, timeout 180s) + Render.com
 
 ---
