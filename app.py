@@ -841,15 +841,20 @@ def _load_songs_meta_from_drive():
     except Exception:
         pass
 
-def _persist_songs_meta():
-    """Salva _songs_meta no Drive em background (não bloqueia a request)."""
-    def _save():
+def _persist_songs_meta(svc=None):
+    """Salva _songs_meta no Drive em background, usando o svc já autenticado.
+
+    O svc DEVE ser passado pelo chamador (contexto de request). Chamar
+    get_service() dentro da thread de background falha silenciosamente porque
+    a Flask session não existe fora do contexto de request.
+    """
+    if svc is None or not _use_drive() or not CIFRAS_FOLDER_ID:
+        return
+
+    def _save(svc):
         global _songs_meta_file_id
-        if not _use_drive() or not CIFRAS_FOLDER_ID:
-            return
         try:
             import drive as drv
-            svc = get_service()
             with _meta_lock:
                 data = dict(_songs_meta)
                 fid  = _songs_meta_file_id
@@ -860,20 +865,25 @@ def _persist_songs_meta():
             drv.save_songs_meta(svc, fid, data)
         except Exception:
             pass
-    threading.Thread(target=_save, daemon=True).start()
+
+    threading.Thread(target=_save, args=(svc,), daemon=True).start()
 
 _songs_meta_loaded = False
+_songs_meta_loaded_ts = 0.0
+SONGS_META_TTL = 300  # 5 min — re-lê do Drive para sincronizar com outros processos
 
 def _ensure_songs_meta_loaded():
-    """Carrega _songs_meta do Drive na primeira chamada após restart do processo."""
-    global _songs_meta_loaded
+    """Carrega _songs_meta do Drive na primeira chamada, ou quando o TTL expira."""
+    global _songs_meta_loaded, _songs_meta_loaded_ts
+    now = time.monotonic()
     with _meta_lock:
-        if _songs_meta_loaded:
+        if _songs_meta_loaded and (now - _songs_meta_loaded_ts) < SONGS_META_TTL:
             return
-        _songs_meta_loaded = True  # marca antes para evitar chamadas duplas
+        _songs_meta_loaded = True
+        _songs_meta_loaded_ts = now
     _load_songs_meta_from_drive()
 
-def _set_song_meta(file_id: str, meta: dict, persist: bool = False):
+def _set_song_meta(file_id: str, meta: dict, persist: bool = False, svc=None):
     with _meta_lock:
         _songs_meta[file_id] = {
             "artist":  meta.get("artist", ""),
@@ -882,7 +892,7 @@ def _set_song_meta(file_id: str, meta: dict, persist: bool = False):
             "youtube": meta.get("youtube", ""),
         }
     if persist:
-        _persist_songs_meta()
+        _persist_songs_meta(svc)
 
 def _get_song_meta(file_id: str) -> dict:
     with _meta_lock:
@@ -1538,7 +1548,7 @@ def api_cifras_bundle():
                 bundle[fid] = data
                 _set_song_meta(fid, data)  # alimenta cache em memória
 
-    _persist_songs_meta()  # salva metadados atualizados no Drive em background
+    _persist_songs_meta(svc=_gdrive_build("drive", "v3", credentials=creds, cache_discovery=False))  # salva metadados atualizados no Drive em background
 
     with _bundle_lock:
         _bundle_cache["etag"] = etag
@@ -1918,7 +1928,7 @@ def api_import_save():
         folder_id = drive.resolve_folder(svc, section, category or "_raiz", CIFRAS_FOLDER_ID)
         file_id = drive.upload_md(svc, title, content, folder_id)
         _ensure_songs_meta_loaded()
-        _set_song_meta(file_id, meta, persist=True)
+        _set_song_meta(file_id, meta, persist=True, svc=svc)
         invalidate_library_cache()
         return jsonify({"ok": True, "fileId": file_id})
     else:
@@ -2111,7 +2121,7 @@ def api_update_meta():
             if _is_auth_error(e):
                 return _auth_error_response()
             return jsonify({"error": str(e)}), 500
-        _set_song_meta(file_id, new_meta, persist=True)
+        _set_song_meta(file_id, new_meta, persist=True, svc=svc)
         invalidate_library_cache()
         return jsonify({"ok": True})
 
