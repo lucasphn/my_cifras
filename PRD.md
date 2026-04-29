@@ -8,9 +8,11 @@
 
 ## 1. Visão Geral
 
-**My Cifras** centraliza o acervo pessoal de cifras de um músico no Google Drive e oferece ferramentas para transposição de tom, montagem de repertórios, compartilhamento de repertórios com colaboradores, geração de documentos exportáveis, liturgia diária e agenda via Google Calendar.
+**My Cifras** é uma plataforma SaaS para músicos de missa e grupo de oração. Oferece um **acervo base completo** — pronto no primeiro acesso, sem configuração — mais ferramentas de transposição, repertórios pessoais, compartilhamento, liturgia diária, agenda e acesso offline.
 
-O produto é **comercializável**: cada músico tem sua própria instância conectada ao seu Drive pessoal. Não é um app de grupo — é uma ferramenta individual que também permite colaboração pontual via compartilhamento de repertórios.
+O músico entra com Google e já encontra centenas de músicas organizadas por seção e categoria. Pode adicionar suas próprias cifras (via URL ou texto) em uma área pessoal com a mesma estrutura do acervo base. O frontend apresenta os dois acervos de forma unificada e transparente.
+
+Não é um app de grupo — é uma ferramenta individual que também permite colaboração pontual via compartilhamento de repertórios.
 
 ---
 
@@ -25,12 +27,13 @@ Músicos litúrgicos e gospel enfrentam dificuldades práticas na preparação e
 - A liturgia do dia precisa ser consultada em outro site
 - O acervo não está acessível no celular durante a performance
 - Compartilhar um setlist com outro músico exige copiar e colar manualmente
+- Montar um acervo do zero exige horas de trabalho antes de qualquer uso real
 
 ---
 
 ## 3. Objetivo
 
-Oferecer ao músico um acervo pessoal, sempre sincronizado com o Google Drive, acessível em qualquer dispositivo, com transposição em 1 clique, tom salvo automaticamente, busca por nome ou letra, metadados estruturados, mini-player de YouTube, liturgia do dia, agenda integrada, exportação elegante para PDF e compartilhamento de repertórios com outros usuários.
+Oferecer ao músico um **acervo completo e pronto para uso no primeiro acesso** — sem configuração — com transposição em 1 clique, tom salvo por música, possibilidade de adicionar cifras próprias, compartilhamento de repertórios, acesso offline, liturgia do dia, agenda integrada e exportação elegante.
 
 ---
 
@@ -53,10 +56,19 @@ Página de apresentação para visitantes não autenticados. Hero com CTA "Entra
 ### 5.2 Páginas legais
 `/privacy` e `/terms` — públicas, necessárias para o Google OAuth consent screen.
 
-### 5.3 Biblioteca de cifras
-- Lê automaticamente a estrutura do Google Drive (`CIFRAS_FOLDER_ID`)
+### 5.3 Biblioteca de cifras — dois acervos, uma visão
+
+**Acervo base** (`CIFRAS_FOLDER_ID` — Drive do owner/Lucas):
+- Curado e mantido pelo administrador; disponível a todos os usuários
 - Organização: **Seção** → **Categoria/pasta**
 - Suporte a `.md`, `.docx`, `.pdf`, `.txt` e Google Docs nativos
+- Read-only para viewers
+
+**Acervo pessoal** (pasta `My Cifras/` no Drive do próprio usuário):
+- Criado automaticamente no primeiro import do usuário
+- Mesma estrutura de Seção/Categoria do acervo base
+- Read-write pelo usuário — músicas importadas via URL ou texto colado
+- **Etapa seguinte** (não implementado): frontend faz merge transparente dos dois acervos em uma única biblioteca unificada
 
 ### 5.4 Home screen
 - Cards de volumetria (total de músicas + por seção)
@@ -269,6 +281,12 @@ _mycifras_data/ (no Drive de cada usuário)
 - Sessões server-side (Flask-Session): elimina double-login em iOS/Android
 - Modo Apresentação P1 Refinado: dark mode, foco, swipe, auto-scroll, barra de progresso
 - Offline: leitura completa do acervo sem internet (Service Worker + IndexedDB)
+
+### Fase 1.5 — Acervo pessoal integrado (próxima etapa)
+- Import via URL/texto salva no Drive do próprio usuário (pasta `My Cifras/` com mesma estrutura)
+- Frontend faz merge transparente: acervo base (read-only) + músicas pessoais (read-write)
+- Diferenciação visual sutil entre músicas do acervo base e músicas pessoais
+- Operações de escrita (renomear, mover, excluir) limitadas ao acervo pessoal do usuário
 
 ### Fase 2 — Workspace compartilhado
 - Músico convida outros membros para colaborar no mesmo acervo

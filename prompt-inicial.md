@@ -15,14 +15,15 @@ Você é um desenvolvedor Python + JavaScript experiente. Vamos evoluir a aplica
 
 ### Contexto
 
-**My Cifras** é um produto para o músico litúrgico e gospel. Não é um app de grupo — é uma ferramenta individual que também permite colaboração pontual via compartilhamento de repertórios. O valor central está em:
+**My Cifras** é uma plataforma SaaS para músicos de missa e grupo de oração. O valor central está em:
 
-1. **Transposição + Meu Tom:** muda o tom em 1 clique e salva no Drive do próprio usuário
-2. **Repertórios pessoais e compartilhados:** montagem, organização e compartilhamento do setlist
-3. **Mini-player YouTube:** link da música no metadado, player de áudio inline no modal
-4. **Navegação litúrgica:** categorias de Missa e Ministração para encontrar a música certa
-5. **Liturgia diária:** integração com a liturgia do dia
-6. **Agenda pessoal:** Google Calendar integrado para ensaios, missas e compromissos
+1. **Acervo base completo:** centenas de músicas já organizadas por seção/categoria — prontas no primeiro acesso, sem configuração. O acervo base é curado por Lucas e disponibilizado a todos os usuários.
+2. **Acervo pessoal (próxima etapa):** usuário pode adicionar suas próprias cifras via URL/texto, que ficam em `My Cifras/` no Drive dele, com a mesma estrutura. O frontend mescla os dois acervos de forma transparente.
+3. **Transposição + Meu Tom:** muda o tom em 1 clique e salva por música, por usuário
+4. **Repertórios pessoais e compartilhados:** montagem, organização e compartilhamento do setlist por e-mail
+5. **Acesso offline:** Service Worker + IndexedDB — leitura completa do acervo sem internet
+6. **Mini-player YouTube:** link da música no metadado, player de áudio inline no modal
+7. **Liturgia diária + agenda:** Google Calendar integrado
 
 **Lucas Almeida** é músico litúrgico em Jaraguá do Sul (SC) e criador do produto.
 
@@ -133,8 +134,15 @@ GOOGLE_SITE_VERIFICATION=<token-search-console>
 
 ---
 
-### Próximas funcionalidades sugeridas
+### Próximas funcionalidades
 
+**Fase 1.5 — Acervo pessoal integrado (próxima etapa prioritária):**
+- Import via URL/texto salva no Drive do próprio usuário (`My Cifras/` com mesma estrutura Seção/Categoria)
+- Frontend faz merge: acervo base (read-only) + músicas pessoais (read-write)
+- Diferenciação visual sutil entre os dois acervos
+- Operações de escrita limitadas ao acervo pessoal do usuário
+
+**Fase 2+:**
 - Workspace colaborativo: múltiplos owners editando o mesmo acervo
 - Notificações push para novos compartilhamentos
 - Planos de assinatura por workspace (SaaS)

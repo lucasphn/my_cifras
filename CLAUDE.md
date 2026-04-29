@@ -6,7 +6,7 @@ Contexto e instruções para o Claude Code trabalhar neste projeto.
 
 ## O que é este projeto
 
-**My Cifras** é uma aplicação web para o **músico individual** gerenciar seu acervo pessoal de cifras, transpor tons, criar repertórios, compartilhar repertórios com colaboradores e acompanhar a liturgia diária e sua agenda de compromissos.
+**My Cifras** é uma plataforma SaaS para músicos de missa e grupo de oração. Oferece um **acervo base completo** (curado pelo admin/Lucas, disponível a todos os usuários no primeiro acesso) mais ferramentas de transposição, repertórios pessoais, compartilhamento, liturgia e agenda. Usuários podem adicionar suas próprias cifras em uma área pessoal com a mesma estrutura do acervo base — etapa seguinte de implementação.
 
 Stack: **Python 3.10+ · Flask · HTML/CSS/JS puro · python-docx · PyMuPDF · Google Drive API · Google Calendar API · OAuth 2.0 · FullCalendar 6 · Docker · Gunicorn**
 
@@ -149,6 +149,22 @@ No frontend:
 | DELETE | `/api/calendar/events/<id>` | Exclui evento |
 | GET | `/api/preferences` | Meu Tom por música |
 | POST | `/api/preferences` | Salva preferência de tom |
+
+---
+
+## Modelo de acervo (arquitetura atual vs. próxima etapa)
+
+### Atual
+- **Acervo base** (`CIFRAS_FOLDER_ID`): Drive do owner (Lucas). Todos os usuários lêem dali. Read-only para viewers.
+- **Dados pessoais** (`_mycifras_data/` no Drive de cada usuário): preferências de tom, repertórios, views.
+- Import via URL: salva no acervo base (owner only). Viewers não podem importar.
+
+### Próxima etapa (Fase 1.5 — não implementado)
+- **Acervo pessoal** (`My Cifras/` no Drive do usuário, mesma estrutura Seção/Categoria): criado no primeiro import do usuário.
+- Import via URL/texto: passa a salvar no acervo pessoal do usuário (não mais no acervo base do owner).
+- Frontend: merge transparente dos dois acervos. Bundle endpoint precisa buscar de duas fontes.
+- Diferenciação visual sutil entre músicas base e músicas pessoais.
+- Operações de escrita (editar, mover, excluir) limitadas ao acervo pessoal.
 
 ---
 
