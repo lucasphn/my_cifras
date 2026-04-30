@@ -159,12 +159,18 @@ No frontend:
 - **Dados pessoais** (`_mycifras_data/` no Drive de cada usuário): preferências de tom, repertórios, views.
 - Import via URL: salva no acervo base (owner only). Viewers não podem importar.
 
+### Decisões arquiteturais para o modelo SaaS (a implementar)
+- **Service Account**: acesso ao Drive do owner via chave de serviço no servidor — elimina escopo `drive` do OAuth do usuário
+- **Supabase (Postgres)**: substituir JSONs do Drive para dados de usuário (prefs, repertórios, views, assinaturas, eventos de calendário)
+- **Calendário próprio**: remover integração Google Calendar; implementar calendário próprio com dados no Supabase — elimina escopo `calendar.events`
+- **OAuth final**: apenas `openid`, `email`, `profile` — escopos básicos, sem verificação Google necessária
+- **Acervo pessoal do usuário** (Fase 1.5): músicas importadas salvas no Drive do owner, particionadas por email do usuário (subpasta `_users/{email}/`), mesma estrutura Seção/Categoria
+
 ### Próxima etapa (Fase 1.5 — não implementado)
-- **Acervo pessoal** (`My Cifras/` no Drive do usuário, mesma estrutura Seção/Categoria): criado no primeiro import do usuário.
-- Import via URL/texto: passa a salvar no acervo pessoal do usuário (não mais no acervo base do owner).
-- Frontend: merge transparente dos dois acervos. Bundle endpoint precisa buscar de duas fontes.
-- Diferenciação visual sutil entre músicas base e músicas pessoais.
-- Operações de escrita (editar, mover, excluir) limitadas ao acervo pessoal.
+- Import via URL/texto salva em `_users/{email}/` no Drive do owner (não no Drive do usuário)
+- Frontend: merge transparente do acervo base + músicas pessoais
+- Diferenciação visual sutil entre os dois acervos
+- Operações de escrita limitadas ao acervo pessoal do usuário
 
 ---
 

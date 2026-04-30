@@ -214,7 +214,21 @@ _mycifras_data/ (no Drive de cada usuário)
 
 ---
 
-## 9. Escopos OAuth
+## 9. Decisões arquiteturais para SaaS
+
+| Componente | Atual | Alvo (SaaS) |
+|---|---|---|
+| Acesso ao Drive | OAuth do usuário (escopo `drive`) | Service Account no servidor |
+| Dados do usuário | JSONs no Drive do usuário | Supabase (Postgres) |
+| Calendário | Google Calendar API | Calendário próprio no Supabase |
+| Assinaturas | — | Stripe + Supabase |
+| OAuth do usuário | 5 escopos (drive, calendar…) | Apenas login (`openid`, `email`, `profile`) |
+
+Benefícios: sem verificação restrita do Google, onboarding simplificado, dados centralizados.
+
+---
+
+## 10. Escopos OAuth (modelo atual)
 
 | Escopo | Uso |
 |---|---|
@@ -226,7 +240,7 @@ _mycifras_data/ (no Drive de cada usuário)
 
 ---
 
-## 10. Critérios de Aceite
+## 11. Critérios de Aceite
 
 - [x] Login OAuth redireciona corretamente
 - [x] Roles: owner vê botões de admin, viewer não

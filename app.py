@@ -1789,13 +1789,35 @@ def _build_export_html(songs, title, auto_print=False):
     .btn-back {{ display: inline-flex; align-items: center; gap: .4rem; }}
   }}
 
-  /* ── Print ── */
+  /* ── Print / WeasyPrint ── */
+  @page {{
+    size: A4 portrait;
+    margin: 1.1cm 1.4cm 1.1cm 1.4cm;
+  }}
   @media print {{
-    body {{ background: #fff; }}
-    .doc-banner {{ -webkit-print-color-adjust: exact; print-color-adjust: exact; }}
-    .badge {{ -webkit-print-color-adjust: exact; print-color-adjust: exact; }}
-    .song {{ border: 1px solid #ddd; margin-bottom: 16px; }}
+    body {{
+      background: #fff;
+      max-width: 100%;
+      padding: 0;
+    }}
+    .doc-banner {{
+      padding: 12px 18px 10px;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }}
+    .doc-banner .logo svg {{ height: 36px; }}
+    .doc-title {{ font-size: 1.25em; }}
+    .doc-body {{ padding: 10px 0 0; }}
+    .song {{
+      border: 1px solid #ddd;
+      margin-bottom: 10px;
+      padding: 10px 14px 12px;
+      border-radius: 8px;
+    }}
+    .song-meta {{ margin-bottom: 8px; }}
+    .doc-footer {{ margin: 16px 0 0; }}
     .btn-back {{ display: none !important; }}
+    .badge {{ -webkit-print-color-adjust: exact; print-color-adjust: exact; }}
   }}
 </style>
 </head>
