@@ -29,6 +29,8 @@ self.addEventListener('activate', function(e) {
 self.addEventListener('fetch', function(e) {
   var url = new URL(e.request.url);
 
+  // Só processa http/https — chrome-extension e outros schemes não são cacheáveis
+  if (url.protocol !== 'http:' && url.protocol !== 'https:') return;
   // API calls handled by IndexedDB in main JS — pass through
   if (url.pathname.startsWith('/api/')) return;
   // Auth and login — always network
