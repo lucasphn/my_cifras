@@ -28,10 +28,16 @@ def _normalize_search(s: str) -> str:
 
 from datetime import timedelta
 from flask_session import Session
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 app = Flask(__name__)
+# ProxyFix: Render.com termina SSL no proxy — sem isso request.url chega como
+# http:// no callback OAuth, causando mismatch com redirect_uri https:// e
+# fazendo o fetch_token falhar silenciosamente (usuário volta à landing page).
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
 app.secret_key = os.environ.get("FLASK_SECRET_KEY", "dev-insecure-key-troque-no-env")
 app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+app.config["SESSION_COOKIE_SECURE"] = os.environ.get("RENDER", "") != ""  # True em produção
 app.config["SESSION_COOKIE_HTTPONLY"] = True
 app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(days=30)
 

@@ -179,7 +179,11 @@ def callback():
     code_verifier = session.pop("code_verifier", None)
     if code_verifier:
         flow.code_verifier = code_verifier
-    flow.fetch_token(authorization_response=request.url)
+    # Garante https:// mesmo atrás de proxy reverso (Render termina SSL)
+    auth_response = request.url
+    if auth_response.startswith("http://") and request.headers.get("X-Forwarded-Proto") == "https":
+        auth_response = "https://" + auth_response[len("http://"):]
+    flow.fetch_token(authorization_response=auth_response)
     creds = flow.credentials
     _save_creds(creds)
 
