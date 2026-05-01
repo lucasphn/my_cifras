@@ -195,10 +195,27 @@ def save_preferences(service, file_id, data):
 
 SHARES_FILENAME = "_shares.json"
 
+def _find_json_file(service, name, parent_id):
+    """Retorna file_id se o arquivo existir, ou None. Nunca cria."""
+    resp = (
+        service.files()
+        .list(
+            q=f"name='{name}' and '{parent_id}' in parents and trashed=false",
+            fields="files(id)",
+        )
+        .execute()
+    )
+    files = resp.get("files", [])
+    return files[0]["id"] if files else None
+
+
 def load_shares(service, root_folder_id):
-    """Carrega dict de shares do Drive. Retorna (data, file_id)."""
+    """Carrega dict de shares do Drive. Retorna (data, file_id).
+    Usa find-only (sem create) para funcionar com credenciais read-only."""
     import json
-    file_id = _get_or_create_json_file(service, SHARES_FILENAME, root_folder_id)
+    file_id = _find_json_file(service, SHARES_FILENAME, root_folder_id)
+    if not file_id:
+        return {}, None
     try:
         content = download_bytes(service, file_id)
         return json.loads(content.decode("utf-8") or "{}"), file_id

@@ -587,15 +587,15 @@ def _load_shares_raw():
         return data
     except Exception:
         pass
-    # Cold start sem arquivo local: carrega do Drive com credenciais do owner
-    if _use_drive() and CIFRAS_FOLDER_ID and is_owner():
+    # Cold start sem arquivo local: qualquer usuário pode ler (load_shares só faz GET)
+    if _use_drive() and CIFRAS_FOLDER_ID:
         try:
             import drive as drv
             svc = get_service()
             data, fid = drv.load_shares(svc, CIFRAS_FOLDER_ID)
-            _shares_drive_file_id = fid
+            if fid:
+                _shares_drive_file_id = fid
             _shares_cache_data = data
-            # Persiste localmente para requests futuros de viewers
             try:
                 SHARES_LOCAL.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
             except Exception:
