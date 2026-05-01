@@ -580,28 +580,42 @@ def _load_shares_raw():
     global _shares_drive_file_id, _shares_cache_data
     if _shares_cache_data is not None:
         return _shares_cache_data
-    if _use_drive() and CIFRAS_FOLDER_ID:
+    # Tenta arquivo local primeiro (sempre atualizado por _save_shares_raw)
+    try:
+        data = json.loads(SHARES_LOCAL.read_text(encoding="utf-8"))
+        _shares_cache_data = data
+        return data
+    except Exception:
+        pass
+    # Cold start sem arquivo local: carrega do Drive com credenciais do owner
+    if _use_drive() and CIFRAS_FOLDER_ID and is_owner():
         try:
             import drive as drv
             svc = get_service()
             data, fid = drv.load_shares(svc, CIFRAS_FOLDER_ID)
             _shares_drive_file_id = fid
             _shares_cache_data = data
+            # Persiste localmente para requests futuros de viewers
+            try:
+                SHARES_LOCAL.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+            except Exception:
+                pass
             return data
         except Exception:
             pass
-    try:
-        data = json.loads(SHARES_LOCAL.read_text(encoding="utf-8"))
-        _shares_cache_data = data
-        return data
-    except Exception:
-        return {}
+    _shares_cache_data = {}
+    return {}
 
 
 def _save_shares_raw(data):
     """Persiste o registro de shares e atualiza cache em memória."""
     global _shares_drive_file_id, _shares_cache_data
     _shares_cache_data = data  # atualiza cache imediatamente
+    # Sempre salva local — é a fonte de verdade para viewers sem acesso direto ao Drive
+    try:
+        SHARES_LOCAL.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+    except Exception:
+        pass
     if _use_drive() and CIFRAS_FOLDER_ID:
         try:
             import drive as drv
@@ -609,10 +623,8 @@ def _save_shares_raw(data):
             if not _shares_drive_file_id:
                 _, _shares_drive_file_id = drv.load_shares(svc, CIFRAS_FOLDER_ID)
             drv.save_shares(svc, _shares_drive_file_id, data)
-            return
         except Exception:
             pass
-    SHARES_LOCAL.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
 def _do_share_rep(rep_id, to_email, me, reps, shares, group_id=None):
