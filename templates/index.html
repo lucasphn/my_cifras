@@ -7457,10 +7457,15 @@ async function loadSavedReps() {
     if (r.status === 401) { _handleAuthExpired(); return; }
     if (!r.ok) return;
     savedReps = await r.json();
+    try { localStorage.setItem("mycifras:reps_cache", JSON.stringify(savedReps)); } catch(_) {}
     renderSavedReps();
     _updateHeaderStats();
   } catch(e) {
-    // silencia — Drive pode não estar disponível
+    // Offline — tenta carregar do cache local
+    try {
+      var cached = localStorage.getItem("mycifras:reps_cache");
+      if (cached) { savedReps = JSON.parse(cached); renderSavedReps(); _updateHeaderStats(); }
+    } catch(_) {}
   }
 }
 
