@@ -572,22 +572,19 @@ def api_reps_delete(rep_id):
 SHARES_LOCAL = Path(__file__).parent / "_shares.json"
 _shares_lock = threading.Lock()
 _shares_drive_file_id: str | None = None  # cache do file_id no Drive
-_shares_cache_data: dict | None = None    # cache em memória
 
 
 def _load_shares_raw():
-    """Lê o registro central de shares com cache em memória."""
-    global _shares_drive_file_id, _shares_cache_data
-    if _shares_cache_data is not None:
-        return _shares_cache_data
-    # Tenta arquivo local primeiro (sempre atualizado por _save_shares_raw)
+    """Lê o registro central de shares.
+    Sempre lê do arquivo local (fonte de verdade compartilhada entre workers).
+    Cold start: carrega do Drive e grava o arquivo local."""
+    global _shares_drive_file_id
+    # Arquivo local é sempre atualizado por _save_shares_raw — fonte de verdade
     try:
-        data = json.loads(SHARES_LOCAL.read_text(encoding="utf-8"))
-        _shares_cache_data = data
-        return data
+        return json.loads(SHARES_LOCAL.read_text(encoding="utf-8"))
     except Exception:
         pass
-    # Cold start sem arquivo local: qualquer usuário pode ler (load_shares só faz GET)
+    # Cold start: arquivo local não existe ainda, carrega do Drive
     if _use_drive() and CIFRAS_FOLDER_ID:
         try:
             import drive as drv
@@ -595,7 +592,6 @@ def _load_shares_raw():
             data, fid = drv.load_shares(svc, CIFRAS_FOLDER_ID)
             if fid:
                 _shares_drive_file_id = fid
-            _shares_cache_data = data
             try:
                 SHARES_LOCAL.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
             except Exception:
@@ -603,7 +599,6 @@ def _load_shares_raw():
             return data
         except Exception:
             pass
-    _shares_cache_data = {}
     return {}
 
 
