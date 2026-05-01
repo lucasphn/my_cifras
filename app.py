@@ -2,6 +2,7 @@ import concurrent.futures
 import functools
 import hashlib
 import json
+import logging
 import os
 import re
 import tempfile
@@ -11,10 +12,13 @@ import unicodedata
 from datetime import date
 from pathlib import Path
 
+log = logging.getLogger(__name__)
+
 from dotenv import load_dotenv
 from flask import Flask, request, jsonify, render_template, Response, session
 
 load_dotenv()
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 
 
 def _normalize_search(s: str) -> str:
@@ -50,10 +54,6 @@ app.config["SESSION_FILE_DIR"] = _session_dir
 app.config["SESSION_PERMANENT"] = True
 app.config["SESSION_USE_SIGNER"] = True  # assina o cookie ID contra tampering
 Session(app)
-
-# Confia nos headers X-Forwarded-Proto/Host do ngrok/proxy reverso
-from werkzeug.middleware.proxy_fix import ProxyFix
-app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
 
 CIFRAS_ROOT = os.environ.get("CIFRAS_ROOT", str(Path.home() / "OneDrive" / "Cifras"))
 CIFRAS_FOLDER_ID = os.environ.get("CIFRAS_FOLDER_ID", "")
@@ -585,11 +585,12 @@ def _load_shares_raw():
     Sempre lê do arquivo local (fonte de verdade compartilhada entre workers).
     Cold start: carrega do Drive e grava o arquivo local."""
     global _shares_drive_file_id
-    # Arquivo local é sempre atualizado por _save_shares_raw — fonte de verdade
     try:
-        return json.loads(SHARES_LOCAL.read_text(encoding="utf-8"))
-    except Exception:
-        pass
+        data = json.loads(SHARES_LOCAL.read_text(encoding="utf-8"))
+        log.debug("[shares] lido arquivo local (%d shares)", len(data))
+        return data
+    except Exception as e:
+        log.info("[shares] arquivo local indisponível (%s) — tentando Drive", e)
     # Cold start: arquivo local não existe ainda, carrega do Drive
     if _use_drive() and CIFRAS_FOLDER_ID:
         try:
@@ -598,25 +599,26 @@ def _load_shares_raw():
             data, fid = drv.load_shares(svc, CIFRAS_FOLDER_ID)
             if fid:
                 _shares_drive_file_id = fid
+            log.info("[shares] carregado do Drive (%d shares)", len(data))
             try:
                 SHARES_LOCAL.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
-            except Exception:
-                pass
+                log.info("[shares] arquivo local criado em %s", SHARES_LOCAL)
+            except Exception as e:
+                log.error("[shares] falha ao gravar arquivo local: %s", e)
             return data
-        except Exception:
-            pass
+        except Exception as e:
+            log.error("[shares] falha ao carregar do Drive: %s", e)
     return {}
 
 
 def _save_shares_raw(data):
-    """Persiste o registro de shares e atualiza cache em memória."""
-    global _shares_drive_file_id, _shares_cache_data
-    _shares_cache_data = data  # atualiza cache imediatamente
-    # Sempre salva local — é a fonte de verdade para viewers sem acesso direto ao Drive
+    """Persiste o registro de shares."""
+    global _shares_drive_file_id
     try:
         SHARES_LOCAL.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
-    except Exception:
-        pass
+        log.info("[shares] arquivo local salvo (%d shares)", len(data))
+    except Exception as e:
+        log.error("[shares] falha ao gravar arquivo local: %s", e)
     if _use_drive() and CIFRAS_FOLDER_ID:
         try:
             import drive as drv
@@ -624,8 +626,9 @@ def _save_shares_raw(data):
             if not _shares_drive_file_id:
                 _, _shares_drive_file_id = drv.load_shares(svc, CIFRAS_FOLDER_ID)
             drv.save_shares(svc, _shares_drive_file_id, data)
-        except Exception:
-            pass
+            log.info("[shares] Drive atualizado")
+        except Exception as e:
+            log.error("[shares] falha ao salvar no Drive: %s", e)
 
 
 def _do_share_rep(rep_id, to_email, me, reps, shares, group_id=None):

@@ -18,6 +18,9 @@ Configuração necessária no .env:
 
 import os
 import functools
+import logging
+
+log = logging.getLogger(__name__)
 
 from flask import Blueprint, session, redirect, request, url_for, render_template, render_template_string, jsonify
 from google.oauth2.credentials import Credentials
@@ -103,7 +106,8 @@ def _get_creds_refreshed():
         try:
             creds.refresh(Request())
             _save_creds(creds)
-        except Exception:
+        except Exception as e:
+            log.error("[auth] token refresh falhou — limpando sessão: %s", e)
             session.clear()
             from flask import abort
             abort(401)
@@ -174,18 +178,23 @@ def login_google():
 
 @bp.route("/oauth/callback")
 def callback():
+    log.info("[auth] callback iniciado — url=%s proto=%s",
+             request.url, request.headers.get("X-Forwarded-Proto"))
     flow = _make_flow()
-    # Restaura o code_verifier para que o fetch_token funcione corretamente
     code_verifier = session.pop("code_verifier", None)
     if code_verifier:
         flow.code_verifier = code_verifier
-    # Garante https:// mesmo atrás de proxy reverso (Render termina SSL)
     auth_response = request.url
     if auth_response.startswith("http://") and request.headers.get("X-Forwarded-Proto") == "https":
         auth_response = "https://" + auth_response[len("http://"):]
-    flow.fetch_token(authorization_response=auth_response)
+    try:
+        flow.fetch_token(authorization_response=auth_response)
+    except Exception as e:
+        log.error("[auth] fetch_token falhou: %s", e)
+        return redirect(url_for("index"))
     creds = flow.credentials
     _save_creds(creds)
+    log.info("[auth] token salvo na sessão — email será carregado a seguir")
 
     # Busca nome, e-mail e foto do usuário
     svc = build("oauth2", "v2", credentials=creds)
@@ -198,8 +207,7 @@ def callback():
         "name": info.get("name", ""),
         "picture": info.get("picture", ""),
     }
-    # Client-side redirect com pequeno delay: dá tempo ao iOS de registrar
-    # o cookie de sessão antes de navegar para "/", evitando o duplo login.
+    log.info("[auth] sessão salva para %s — redirecionando para /", info.get("email"))
     return render_template_string(
         '<!doctype html><html><head>'
         '<meta http-equiv="refresh" content="1;url=/">'
