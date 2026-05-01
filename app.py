@@ -432,17 +432,40 @@ def api_groups_create():
 @app.route("/api/groups/<gid>", methods=["PUT"])
 @login_required
 def api_groups_update(gid):
+    from datetime import datetime
     body = request.get_json(force=True)
     groups = _load_groups()
     if gid not in groups:
         return jsonify({"error": "Grupo não encontrado"}), 404
+    old_members = set(groups[gid].get("members", []))
     if "name" in body:
         name = body["name"].strip()
         if name:
             groups[gid]["name"] = name
     if "members" in body:
         groups[gid]["members"] = [e.strip().lower() for e in body["members"] if e.strip()]
+    new_members = set(groups[gid]["members"])
+    added = new_members - old_members
     _save_groups(groups)
+
+    # Propaga compartilhamentos existentes do grupo para membros novos
+    if added:
+        me = current_user()
+        my_email = me.get("email", "").lower()
+        reps = _load_reps()
+        with _shares_lock:
+            shares = _load_shares_raw()
+            group_rep_ids = {s["rep_id"] for s in shares.values()
+                             if s.get("group_id") == gid
+                             and s.get("from_email", "").lower() == my_email}
+            for email in added:
+                if email == my_email:
+                    continue
+                for rep_id in group_rep_ids:
+                    _do_share_rep(rep_id, email, me, reps, shares, group_id=gid)
+            if group_rep_ids:
+                _save_shares_raw(shares)
+
     return jsonify(groups[gid])
 
 
@@ -592,7 +615,7 @@ def _save_shares_raw(data):
     SHARES_LOCAL.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
-def _do_share_rep(rep_id, to_email, me, reps, shares):
+def _do_share_rep(rep_id, to_email, me, reps, shares, group_id=None):
     """Cria um share individual. Retorna (share_dict | None, error_str | None)."""
     from datetime import datetime
     rep = reps.get(rep_id)
@@ -615,6 +638,8 @@ def _do_share_rep(rep_id, to_email, me, reps, shares):
         "shared_at": datetime.utcnow().isoformat(),
         "seen_by": [], "dismissed_by": [],
     }
+    if group_id:
+        share["group_id"] = group_id
     shares[share_id] = share
     return share, None
 
@@ -657,7 +682,7 @@ def api_share_rep():
                     existing["shared_at"] = datetime.utcnow().isoformat()
                     created.append(existing)
                 else:
-                    share, _ = _do_share_rep(rep_id, email, me, reps, shares)
+                    share, _ = _do_share_rep(rep_id, email, me, reps, shares, group_id=group_id)
                     if share:
                         created.append(share)
             _save_shares_raw(shares)
