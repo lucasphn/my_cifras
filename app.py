@@ -368,6 +368,95 @@ def _save_reps(data):
         _save_reps_local(data)
 
 
+# ─── Grupos ──────────────────────────────────────────────────────────────────
+
+_groups_cache: dict = {}  # { email: {"file_id": str} }
+
+def _load_groups():
+    if _use_drive():
+        import drive as drv
+        svc = get_service()
+        folder_id = _get_user_data_folder_id(svc)
+        email = current_user().get("email", "_local")
+        data, file_id = drv.load_groups(svc, folder_id)
+        _groups_cache[email] = {"file_id": file_id}
+        return data
+    return {}
+
+def _save_groups(data):
+    if _use_drive():
+        import drive as drv
+        svc = get_service()
+        folder_id = _get_user_data_folder_id(svc)
+        email = current_user().get("email", "_local")
+        cached = _groups_cache.get(email)
+        if cached and cached.get("file_id"):
+            file_id = cached["file_id"]
+        else:
+            _, file_id = drv.load_groups(svc, folder_id)
+        drv.save_groups(svc, file_id, data)
+        _groups_cache[email] = {"file_id": file_id}
+
+
+@app.route("/api/groups", methods=["GET"])
+@login_required
+def api_groups_list():
+    try:
+        return jsonify(_load_groups())
+    except Exception as e:
+        if _is_auth_error(e):
+            return _auth_error_response()
+        return jsonify({}), 200
+
+
+@app.route("/api/groups", methods=["POST"])
+@login_required
+def api_groups_create():
+    body = request.get_json(force=True)
+    name = (body.get("name") or "").strip()
+    members = [e.strip().lower() for e in body.get("members", []) if e.strip()]
+    if not name:
+        return jsonify({"error": "Nome obrigatório"}), 400
+    groups = _load_groups()
+    if len(groups) >= 20:
+        return jsonify({"error": "Limite de 20 grupos atingido"}), 400
+    gid = "grp_" + os.urandom(6).hex()
+    from datetime import datetime
+    group = {"id": gid, "name": name, "members": members,
+             "created_at": datetime.utcnow().isoformat()}
+    groups[gid] = group
+    _save_groups(groups)
+    return jsonify(group), 201
+
+
+@app.route("/api/groups/<gid>", methods=["PUT"])
+@login_required
+def api_groups_update(gid):
+    body = request.get_json(force=True)
+    groups = _load_groups()
+    if gid not in groups:
+        return jsonify({"error": "Grupo não encontrado"}), 404
+    if "name" in body:
+        name = body["name"].strip()
+        if name:
+            groups[gid]["name"] = name
+    if "members" in body:
+        groups[gid]["members"] = [e.strip().lower() for e in body["members"] if e.strip()]
+    _save_groups(groups)
+    return jsonify(groups[gid])
+
+
+@app.route("/api/groups/<gid>", methods=["DELETE"])
+@login_required
+def api_groups_delete(gid):
+    groups = _load_groups()
+    if gid not in groups:
+        return jsonify({"error": "Grupo não encontrado"}), 404
+    del groups[gid]
+    _save_groups(groups)
+    return jsonify({"ok": True})
+
+
 @app.route("/api/repertorios", methods=["GET"])
 @login_required
 def api_reps_list():
@@ -503,21 +592,84 @@ def _save_shares_raw(data):
     SHARES_LOCAL.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
+def _do_share_rep(rep_id, to_email, me, reps, shares):
+    """Cria um share individual. Retorna (share_dict | None, error_str | None)."""
+    from datetime import datetime
+    rep = reps.get(rep_id)
+    if not rep:
+        return None, "Repertório não encontrado"
+    my_email = me.get("email", "").lower()
+    if to_email == my_email:
+        return None, "Você não pode compartilhar com você mesmo"
+    for s in shares.values():
+        if (s.get("rep_id") == rep_id
+                and s.get("from_email", "").lower() == my_email
+                and s.get("to_email", "").lower() == to_email):
+            return None, f"Já compartilhado com {to_email}"
+    share_id = "shr_" + os.urandom(6).hex()
+    share = {
+        "id": share_id, "rep_id": rep_id, "rep_name": rep["name"],
+        "songs": rep.get("songs", []),
+        "from_email": my_email, "from_name": me.get("name", my_email),
+        "from_picture": me.get("picture", ""), "to_email": to_email,
+        "shared_at": datetime.utcnow().isoformat(),
+        "seen_by": [], "dismissed_by": [],
+    }
+    shares[share_id] = share
+    return share, None
+
+
 @app.route("/api/share-rep", methods=["POST"])
 @login_required
 def api_share_rep():
-    from datetime import datetime
     body = request.get_json(force=True)
     rep_id = (body.get("rep_id") or "").strip()
     to_email = (body.get("to_email") or "").strip().lower()
-    if not rep_id or not to_email:
+    group_id = (body.get("group_id") or "").strip()
+    if not rep_id or (not to_email and not group_id):
+        return jsonify({"error": "rep_id e to_email (ou group_id) são obrigatórios"}), 400
+    reps = _load_reps()
+    me = current_user()
+    my_email = me.get("email", "").lower()
+
+    # Compartilhamento para grupo
+    if group_id:
+        groups = _load_groups()
+        group = groups.get(group_id)
+        if not group:
+            return jsonify({"error": "Grupo não encontrado"}), 404
+        emails = [e for e in group.get("members", []) if e and e != my_email]
+        if not emails:
+            return jsonify({"error": "Grupo sem membros válidos"}), 400
+        from datetime import datetime
+        created = []
+        with _shares_lock:
+            shares = _load_shares_raw()
+            rep = reps.get(rep_id)
+            for email in emails:
+                # Se já existe share para este membro, atualiza (renova songs e timestamp)
+                existing = next((s for s in shares.values()
+                                 if s.get("rep_id") == rep_id
+                                 and s.get("from_email", "").lower() == my_email
+                                 and s.get("to_email", "").lower() == email), None)
+                if existing:
+                    existing["songs"] = rep.get("songs", []) if rep else existing["songs"]
+                    existing["shared_at"] = datetime.utcnow().isoformat()
+                    created.append(existing)
+                else:
+                    share, _ = _do_share_rep(rep_id, email, me, reps, shares)
+                    if share:
+                        created.append(share)
+            _save_shares_raw(shares)
+        return jsonify({"shared": len(created), "skipped": len(emails) - len(created)}), 201
+
+    # Compartilhamento individual
+    if not to_email:
         return jsonify({"error": "rep_id e to_email são obrigatórios"}), 400
     reps = _load_reps()
     rep = reps.get(rep_id)
     if not rep:
         return jsonify({"error": "Repertório não encontrado"}), 404
-    me = current_user()
-    my_email = me.get("email", "").lower()
     if to_email == my_email:
         return jsonify({"error": "Você não pode compartilhar com você mesmo"}), 400
     with _shares_lock:
@@ -528,6 +680,7 @@ def api_share_rep():
                     and s.get("to_email", "").lower() == to_email):
                 return jsonify({"error": "Já compartilhado com este usuário"}), 400
         share_id = "shr_" + os.urandom(6).hex()
+        from datetime import datetime
         share = {
             "id": share_id,
             "rep_id": rep_id,

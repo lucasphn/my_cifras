@@ -1411,6 +1411,129 @@ button, a, .song-card, .home-card, .home-top-card, .sidebar-cat,
 /* Rep meta row hidden (count shown in draft header) */
 #rep-meta-row { display: none; }
 
+/* ─── Grupos ────────────────────────────────────────────────────────────── */
+#groups-section {
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 0 12px 16px;
+}
+#groups-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 0 8px; flex-shrink: 0;
+}
+#groups-header .section-label {
+  font-size: 10.5px; font-weight: 800; text-transform: uppercase;
+  letter-spacing: 1.4px; color: var(--text-muted);
+}
+#groups-list { padding: 0; }
+#groups-empty {
+  padding: 10px 0 14px; font-size: 0.82em;
+  color: var(--text-muted); text-align: center;
+}
+.group-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 10px; border-radius: 10px;
+  border: 1px solid transparent; background: var(--bg);
+  margin-bottom: 5px; cursor: default;
+  transition: background .15s;
+}
+.group-item:hover { background: var(--surface2); border-color: var(--border); }
+.group-icon {
+  width: 34px; height: 34px; border-radius: 9px;
+  background: rgba(91,75,138,.12);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; font-size: 15px;
+}
+.group-info { flex: 1; min-width: 0; }
+.group-name {
+  font-size: 0.87em; font-weight: 700;
+  overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
+  color: var(--text);
+}
+.group-members-count { font-size: 0.68em; color: var(--text-muted); }
+.group-menu-btn {
+  font-size: 1.1em; color: var(--text-muted); padding: 2px 6px;
+  border-radius: 6px; flex-shrink: 0; opacity: 0;
+  transition: opacity .15s, background .15s;
+}
+.group-item:hover .group-menu-btn { opacity: 1; }
+.group-menu-btn:hover { background: var(--surface2); color: var(--text); }
+
+/* Diálogo de grupo */
+#group-dialog-overlay {
+  display: none; position: fixed; inset: 0; z-index: 1001;
+  background: rgba(0,0,0,.45);
+  align-items: center; justify-content: center;
+}
+#group-dialog-overlay.open { display: flex; }
+#group-dialog {
+  background: var(--surface); border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg); padding: 24px;
+  width: min(440px, calc(100vw - 32px));
+  display: flex; flex-direction: column; gap: 14px;
+}
+#group-dialog h3 { font-size: 1em; font-weight: 800; }
+#group-name-input {
+  width: 100%; padding: 9px 12px; border-radius: 9px;
+  border: 1.5px solid var(--border); background: var(--surface2);
+  font-size: 0.9em; color: var(--text);
+}
+#group-name-input:focus { outline: none; border-color: var(--primary); }
+.group-members-label {
+  font-size: 0.78em; font-weight: 700; color: var(--text-muted);
+  text-transform: uppercase; letter-spacing: .8px;
+}
+#group-members-list { display: flex; flex-direction: column; gap: 6px; max-height: 180px; overflow-y: auto; }
+.group-member-row {
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 10px; border-radius: 8px; background: var(--surface2);
+  font-size: 0.83em;
+}
+.group-member-email { flex: 1; color: var(--text); }
+.group-member-remove {
+  color: var(--text-muted); font-size: 0.9em; padding: 1px 5px;
+  border-radius: 5px; transition: color .15s, background .15s;
+}
+.group-member-remove:hover { color: var(--danger); background: rgba(220,38,38,.1); }
+.group-add-email-row { display: flex; gap: 8px; }
+#group-add-email-input {
+  flex: 1; padding: 8px 11px; border-radius: 8px;
+  border: 1.5px solid var(--border); background: var(--surface2);
+  font-size: 0.85em; color: var(--text);
+}
+#group-add-email-input:focus { outline: none; border-color: var(--primary); }
+#group-dialog-error { font-size: 0.8em; color: var(--danger); min-height: 16px; }
+.group-dialog-actions { display: flex; gap: 8px; justify-content: flex-end; }
+.group-dialog-actions button { font-size: 0.85em; padding: 8px 18px; border-radius: 8px; font-weight: 700; }
+#btn-group-cancel { background: var(--surface2); color: var(--text); border: 1.5px solid var(--border); }
+#btn-group-save { background: var(--primary); color: #fff; border: none; }
+
+/* Tabs no diálogo de compartilhar */
+.share-tabs { display: flex; gap: 0; border-bottom: 1.5px solid var(--border); margin-bottom: 12px; }
+.share-tab {
+  flex: 1; padding: 7px 0; font-size: 0.82em; font-weight: 700;
+  text-align: center; border-bottom: 2px solid transparent;
+  color: var(--text-muted); cursor: pointer; transition: color .15s, border-color .15s;
+  margin-bottom: -1.5px;
+}
+.share-tab.active { color: var(--primary); border-bottom-color: var(--primary); }
+#share-tab-email-content, #share-tab-group-content { display: none; }
+#share-tab-email-content.active, #share-tab-group-content.active { display: block; }
+#share-groups-list { display: flex; flex-direction: column; gap: 6px; max-height: 200px; overflow-y: auto; margin-top: 4px; }
+.share-group-option {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 10px; border-radius: 9px; cursor: pointer;
+  border: 1.5px solid var(--border); background: var(--surface2);
+  transition: border-color .15s, background .15s;
+}
+.share-group-option:hover, .share-group-option.selected {
+  border-color: var(--primary); background: rgba(91,75,138,.07);
+}
+.share-group-option .sgo-name { font-size: 0.86em; font-weight: 700; color: var(--text); flex: 1; }
+.share-group-option .sgo-count { font-size: 0.72em; color: var(--text-muted); }
+
 /* ─── Modal de cifra ─────────────────────────────────────────────────────── */
 #modal-overlay {
   display: none;
@@ -3960,6 +4083,15 @@ html.pwa-standalone #modal-footer {
         <div id="saved-reps-list"></div>
         <div id="saved-reps-empty">Nenhum repertório salvo.</div>
       </div>
+      <!-- Grupos -->
+      <div id="groups-section">
+        <div id="groups-header">
+          <span class="section-label">Grupos</span>
+          <button class="btn-sm" id="btn-group-new">+ Novo</button>
+        </div>
+        <div id="groups-list"></div>
+        <div id="groups-empty">Nenhum grupo criado.</div>
+      </div>
       <!-- Shared with me -->
       <div id="shared-reps-section" style="display:none">
         <div id="shared-reps-header">
@@ -3988,12 +4120,42 @@ html.pwa-standalone #modal-footer {
 <div id="share-dialog-overlay">
   <div id="share-dialog">
     <h3>Compartilhar repertório</h3>
-    <p id="share-dialog-desc">Digite o e-mail Google do colaborador. Ele verá este repertório na seção <em>Compartilhados comigo</em>.</p>
-    <input type="email" id="share-email-input" placeholder="email@gmail.com" autocomplete="off" spellcheck="false">
+    <div class="share-tabs">
+      <div class="share-tab active" data-tab="email">E-mail</div>
+      <div class="share-tab" data-tab="group">Grupo</div>
+    </div>
+    <div id="share-tab-email-content" class="active">
+      <p id="share-dialog-desc">Digite o e-mail Google do colaborador.</p>
+      <input type="email" id="share-email-input" placeholder="email@gmail.com" autocomplete="off" spellcheck="false">
+    </div>
+    <div id="share-tab-group-content">
+      <p style="font-size:0.82em;color:var(--text-muted);margin-bottom:6px;">Selecione um grupo para compartilhar com todos os membros.</p>
+      <div id="share-groups-list"></div>
+      <p id="share-no-groups" style="font-size:0.82em;color:var(--text-muted);text-align:center;padding:12px 0;display:none;">Nenhum grupo criado ainda.</p>
+    </div>
     <div id="share-dialog-error"></div>
     <div class="share-dialog-actions">
       <button id="btn-share-cancel">Cancelar</button>
       <button id="btn-share-confirm">Compartilhar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Diálogo de grupo -->
+<div id="group-dialog-overlay">
+  <div id="group-dialog">
+    <h3 id="group-dialog-title">Novo grupo</h3>
+    <input type="text" id="group-name-input" placeholder="Nome do grupo (ex: Banda Vida em Santidade)" maxlength="60">
+    <div class="group-members-label">Membros</div>
+    <div id="group-members-list"></div>
+    <div class="group-add-email-row">
+      <input type="email" id="group-add-email-input" placeholder="email@gmail.com">
+      <button class="btn-sm btn-accent" id="btn-group-add-member">+ Adicionar</button>
+    </div>
+    <div id="group-dialog-error"></div>
+    <div class="group-dialog-actions">
+      <button id="btn-group-cancel">Cancelar</button>
+      <button id="btn-group-save">Salvar grupo</button>
     </div>
   </div>
 </div>
@@ -7813,12 +7975,14 @@ function openShareDialog(repId) {
   _shareTargetRepId = repId;
   var rep = savedReps[repId];
   var desc = document.getElementById("share-dialog-desc");
-  if (desc && rep) desc.innerHTML = 'Digite o e-mail Google do colaborador para compartilhar <strong>' + escHtml(rep.name) + '</strong>.';
+  if (desc && rep) desc.innerHTML = 'Compartilhe <strong>' + escHtml(rep.name) + '</strong> por e-mail ou com um grupo.';
   var inp = document.getElementById("share-email-input");
-  if (inp) { inp.value = ""; inp.focus(); }
+  if (inp) { inp.value = ""; }
   var err = document.getElementById("share-dialog-error");
   if (err) err.textContent = "";
+  _switchShareTab("email");
   document.getElementById("share-dialog-overlay").classList.add("open");
+  if (inp) inp.focus();
 }
 
 function closeShareDialog() {
@@ -7844,8 +8008,11 @@ function openManageSharesDialog(repId) {
       item.innerHTML =
         '<span class="msl-email">' + escHtml(share.to_email) + '</span>' +
         '<button class="msl-unshare">Remover</button>';
-      item.querySelector(".msl-unshare").addEventListener("click", function() {
-        doUnshare(share.id, repId, share.to_email);
+      item.querySelector(".msl-unshare").addEventListener("click", async function() {
+        var btn = this;
+        btn.disabled = true;
+        btn.textContent = "Removendo...";
+        await doUnshare(share.id, repId, share.to_email);
       });
       listEl.appendChild(item);
     });
@@ -7878,28 +8045,294 @@ async function doUnshare(shareId, repId, toEmail) {
   } catch(e) { showToast("Erro: " + e.message); }
 }
 
-async function doShareRep() {
-  var email = (document.getElementById("share-email-input").value || "").trim().toLowerCase();
-  var err = document.getElementById("share-dialog-error");
-  var btn = document.getElementById("btn-share-confirm");
+// ─── Grupos ──────────────────────────────────────────────────────────────────
+
+var myGroups = {};
+var _editingGroupId = null;
+var _groupMembers = [];
+var _selectedGroupId = null;
+var _shareActiveTab = "email";
+
+async function loadGroups() {
+  try {
+    var r = await fetch("/api/groups");
+    if (!r.ok) return;
+    myGroups = await r.json();
+    try { localStorage.setItem("mycifras:groups_cache", JSON.stringify(myGroups)); } catch(_) {}
+  } catch(e) {
+    var cached = localStorage.getItem("mycifras:groups_cache");
+    if (cached) { try { myGroups = JSON.parse(cached); } catch(_) {} }
+  }
+  renderGroups();
+}
+
+function renderGroups() {
+  var list = document.getElementById("groups-list");
+  var empty = document.getElementById("groups-empty");
+  if (!list) return;
+  var keys = Object.keys(myGroups);
+  if (empty) empty.style.display = keys.length === 0 ? "" : "none";
+  if (keys.length === 0) { list.innerHTML = ""; return; }
+  list.innerHTML = keys.map(function(gid) {
+    var g = myGroups[gid];
+    var count = (g.members || []).length;
+    return '<div class="group-item" data-gid="' + gid + '">' +
+      '<span class="group-icon">👥</span>' +
+      '<span class="group-name">' + escHtml(g.name) + '</span>' +
+      '<span style="font-size:0.75em;color:var(--text-muted);margin-left:4px;">(' + count + ')</span>' +
+      '<button class="group-menu-btn" onclick="_openGroupMenu(event,\'' + gid + '\')">⋯</button>' +
+    '</div>';
+  }).join("");
+}
+
+function _openGroupMenu(e, gid) {
+  e.stopPropagation();
+  _closeAllDropdowns();
+
+  var btn = e.currentTarget;
+  var dd = document.createElement("div");
+  dd.className = "sri-dropdown";
+  dd.innerHTML =
+    '<button class="sri-dd-btn">' +
+      '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>' +
+      ' Editar grupo</button>' +
+    '<button class="sri-dd-btn danger">' +
+      '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>' +
+      ' Excluir grupo</button>';
+
+  document.body.appendChild(dd);
+  _openRepMenu    = dd;
+  _openDropdownId = "__group__" + gid;
+
+  var rect = btn.getBoundingClientRect();
+  var ddH  = dd.offsetHeight;
+  var spaceBelow = window.innerHeight - rect.bottom;
+  dd.style.position = "fixed";
+  dd.style.right = (window.innerWidth - rect.right) + "px";
+  if (spaceBelow < ddH + 8) {
+    dd.style.top    = "auto";
+    dd.style.bottom = (window.innerHeight - rect.top + 4) + "px";
+  } else {
+    dd.style.top    = (rect.bottom + 4) + "px";
+    dd.style.bottom = "auto";
+  }
+
+  dd.querySelectorAll(".sri-dd-btn")[0].addEventListener("click", function(ev) {
+    ev.stopPropagation(); _closeAllDropdowns(); openGroupDialog(gid);
+  });
+  dd.querySelectorAll(".sri-dd-btn")[1].addEventListener("click", function(ev) {
+    ev.stopPropagation(); _closeAllDropdowns(); doDeleteGroup(gid);
+  });
+}
+
+function openGroupDialog(gid) {
+  _editingGroupId = gid || null;
+  var overlay = document.getElementById("group-dialog-overlay");
+  var title = document.getElementById("group-dialog-title");
+  var nameInput = document.getElementById("group-name-input");
+  var err = document.getElementById("group-dialog-error");
+  err.textContent = "";
+  if (gid && myGroups[gid]) {
+    title.textContent = "Editar grupo";
+    nameInput.value = myGroups[gid].name || "";
+    _groupMembers = (myGroups[gid].members || []).slice();
+  } else {
+    title.textContent = "Novo grupo";
+    nameInput.value = "";
+    _groupMembers = [];
+  }
+  _renderGroupMembers();
+  overlay.classList.add("open");
+}
+
+function closeGroupDialog() {
+  document.getElementById("group-dialog-overlay").classList.remove("open");
+  _editingGroupId = null;
+  _groupMembers = [];
+}
+
+function _renderGroupMembers() {
+  var container = document.getElementById("group-members-list");
+  if (!container) return;
+  if (_groupMembers.length === 0) {
+    container.innerHTML = '<span style="font-size:0.8em;color:var(--text-muted);">Nenhum membro.</span>';
+    return;
+  }
+  container.innerHTML = _groupMembers.map(function(em, i) {
+    return '<span class="group-member-tag">' + escHtml(em) +
+      ' <button onclick="_groupRemoveMember(' + i + ')" style="background:none;border:none;cursor:pointer;font-size:0.9em;padding:0 2px;color:var(--text-muted);">✕</button>' +
+      '</span>';
+  }).join("");
+}
+
+function _groupRemoveMember(i) {
+  _groupMembers.splice(i, 1);
+  _renderGroupMembers();
+}
+
+function _groupAddMember() {
+  var input = document.getElementById("group-add-email-input");
+  var email = (input.value || "").trim().toLowerCase();
+  var err = document.getElementById("group-dialog-error");
+  var myEmail = (document.body.dataset.userEmail || "").toLowerCase();
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    err.textContent = "Digite um e-mail válido.";
+    err.textContent = "E-mail inválido.";
+    return;
+  }
+  if (email === myEmail) {
+    err.textContent = "Você não pode adicionar seu próprio e-mail.";
+    return;
+  }
+  if (_groupMembers.includes(email)) {
+    err.textContent = "E-mail já adicionado.";
+    return;
+  }
+  err.textContent = "";
+  _groupMembers.push(email);
+  input.value = "";
+  _renderGroupMembers();
+}
+
+async function doSaveGroup() {
+  var name = (document.getElementById("group-name-input").value || "").trim();
+  var err = document.getElementById("group-dialog-error");
+  var btn = document.getElementById("btn-group-save");
+  if (!name) { err.textContent = "Nome do grupo é obrigatório."; return; }
+  if (!_editingGroupId && Object.keys(myGroups).length >= 5) {
+    err.textContent = "Limite de 5 grupos atingido.";
     return;
   }
   err.textContent = "";
   btn.disabled = true;
+  btn.textContent = "Salvando...";
+  try {
+    var method = _editingGroupId ? "PUT" : "POST";
+    var url = _editingGroupId ? "/api/groups/" + encodeURIComponent(_editingGroupId) : "/api/groups";
+    var r = await fetch(url, {
+      method: method,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: name, members: _groupMembers })
+    });
+    var data = await r.json();
+    if (!r.ok) { err.textContent = data.error || "Erro ao salvar."; return; }
+    if (_editingGroupId) {
+      myGroups[_editingGroupId] = data;
+    } else {
+      myGroups[data.id] = data;
+    }
+    try { localStorage.setItem("mycifras:groups_cache", JSON.stringify(myGroups)); } catch(_) {}
+    renderGroups();
+    closeGroupDialog();
+    showToast(_editingGroupId ? "Grupo atualizado!" : "Grupo criado!");
+  } catch(e) {
+    err.textContent = "Erro: " + e.message;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Salvar";
+  }
+}
+
+async function doDeleteGroup(gid) {
+  if (!confirm("Excluir este grupo?")) return;
+  try {
+    var r = await fetch("/api/groups/" + encodeURIComponent(gid), { method: "DELETE" });
+    var data = await r.json();
+    if (!r.ok) { showToast(data.error || "Erro ao excluir."); return; }
+    delete myGroups[gid];
+    try { localStorage.setItem("mycifras:groups_cache", JSON.stringify(myGroups)); } catch(_) {}
+    renderGroups();
+    showToast("Grupo excluído.");
+  } catch(e) { showToast("Erro: " + e.message); }
+}
+
+function _switchShareTab(tab) {
+  _shareActiveTab = tab;
+  document.querySelectorAll(".share-tab").forEach(function(el) {
+    el.classList.toggle("active", el.dataset.tab === tab);
+  });
+  var emailPane = document.getElementById("share-tab-email-content");
+  var groupPane = document.getElementById("share-tab-group-content");
+  if (emailPane) emailPane.classList.toggle("active", tab === "email");
+  if (groupPane) groupPane.classList.toggle("active", tab === "group");
+  if (tab === "group") _renderShareGroups();
+}
+
+function _renderShareGroups() {
+  var container = document.getElementById("share-groups-list");
+  if (!container) return;
+  var keys = Object.keys(myGroups);
+  _selectedGroupId = null;
+  if (keys.length === 0) {
+    container.innerHTML = '<p style="font-size:0.85em;color:var(--text-muted);">Nenhum grupo. Crie um na seção Grupos.</p>';
+    return;
+  }
+  container.innerHTML = keys.map(function(gid) {
+    var g = myGroups[gid];
+    var count = (g.members || []).length;
+    return '<div class="share-group-option" data-gid="' + gid + '" onclick="_selectShareGroup(this,\'' + gid + '\')">' +
+      '<span class="group-icon" style="font-size:1.1em;">👥</span>' +
+      '<div><div style="font-weight:700;">' + escHtml(g.name) + '</div>' +
+      '<div style="font-size:0.78em;color:var(--text-muted);">' + count + ' membro' + (count !== 1 ? 's' : '') + '</div></div>' +
+    '</div>';
+  }).join("");
+}
+
+function _selectShareGroup(el, gid) {
+  document.querySelectorAll(".share-group-option").forEach(function(o) { o.classList.remove("selected"); });
+  el.classList.add("selected");
+  _selectedGroupId = gid;
+}
+
+async function doShareRep() {
+  var err = document.getElementById("share-dialog-error");
+  var btn = document.getElementById("btn-share-confirm");
+  err.textContent = "";
+
+  if (_shareActiveTab === "group") {
+    if (!_selectedGroupId) { err.textContent = "Selecione um grupo."; return; }
+    btn.disabled = true;
+    btn.textContent = "Compartilhando...";
+    try {
+      var r = await fetch("/api/share-rep", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ rep_id: _shareTargetRepId, group_id: _selectedGroupId })
+      });
+      var data = await r.json();
+      if (!r.ok) { err.textContent = data.error || "Erro ao compartilhar."; return; }
+      if (data.shared === 0) { err.textContent = "Nenhum membro recebeu o compartilhamento (já compartilhado ou grupo vazio)."; return; }
+      var g = myGroups[_selectedGroupId];
+      showToast('Compartilhado com ' + data.shared + ' membro(s) do grupo "' + (g ? g.name : "") + '"!');
+      closeShareDialog();
+      loadSharesByMe();
+    } catch(e) {
+      err.textContent = "Erro: " + e.message;
+    } finally {
+      btn.disabled = false;
+      btn.textContent = "Compartilhar";
+    }
+    return;
+  }
+
+  // tab "email"
+  var email = (document.getElementById("share-email-input").value || "").trim().toLowerCase();
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    err.textContent = "Digite um e-mail válido.";
+    return;
+  }
+  btn.disabled = true;
   btn.textContent = "Compartilhando...";
   try {
-    var r = await fetch("/api/share-rep", {
+    var r2 = await fetch("/api/share-rep", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ rep_id: _shareTargetRepId, to_email: email })
     });
-    var data = await r.json();
-    if (!r.ok) { err.textContent = data.error || "Erro ao compartilhar."; return; }
+    var data2 = await r2.json();
+    if (!r2.ok) { err.textContent = data2.error || "Erro ao compartilhar."; return; }
     showToast("Compartilhado com " + email + "!");
     closeShareDialog();
-    loadSharesByMe(); // atualiza tag "Compartilhado"
+    loadSharesByMe();
   } catch(e) {
     err.textContent = "Erro: " + e.message;
   } finally {
@@ -8780,6 +9213,18 @@ function init() {
   window.addEventListener('offline', function() { _showOfflineBanner(); });
   if (!navigator.onLine) _showOfflineBanner();
 
+  // Recarrega shares ao voltar para a aba (detecta descompartilhamentos feitos por terceiros)
+  document.addEventListener('visibilitychange', function() {
+    if (document.visibilityState === 'visible' && navigator.onLine) {
+      loadSharedWithMe();
+      loadSharesByMe();
+    }
+  });
+  // Poll leve a cada 3 minutos para manter shares sincronizados
+  setInterval(function() {
+    if (navigator.onLine) { loadSharedWithMe(); loadSharesByMe(); }
+  }, 3 * 60 * 1000);
+
   // Registra Service Worker
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('/sw.js').catch(function(e) {
@@ -8986,6 +9431,29 @@ function init() {
   loadSavedReps();
   loadSharedWithMe();
   loadSharesByMe();
+  loadGroups();
+
+  // ─── Groups ────────────────────────────────────────────────────────────────
+  var _btnGroupNew = document.getElementById("btn-group-new");
+  if (_btnGroupNew) _btnGroupNew.addEventListener("click", function() { openGroupDialog(null); });
+  var _btnSaveGroup = document.getElementById("btn-group-save");
+  if (_btnSaveGroup) _btnSaveGroup.addEventListener("click", doSaveGroup);
+  var _btnCancelGroup = document.getElementById("btn-group-cancel");
+  if (_btnCancelGroup) _btnCancelGroup.addEventListener("click", closeGroupDialog);
+  document.getElementById("group-dialog-overlay").addEventListener("click", function(e) {
+    if (e.target === this) closeGroupDialog();
+  });
+  var _btnGroupAddMember = document.getElementById("btn-group-add-member");
+  if (_btnGroupAddMember) _btnGroupAddMember.addEventListener("click", _groupAddMember);
+  var _groupMemberInput = document.getElementById("group-add-email-input");
+  if (_groupMemberInput) _groupMemberInput.addEventListener("keydown", function(e) {
+    if (e.key === "Enter") { e.preventDefault(); _groupAddMember(); }
+  });
+
+  // share tabs
+  document.querySelectorAll(".share-tab").forEach(function(el) {
+    el.addEventListener("click", function() { _switchShareTab(el.dataset.tab); });
+  });
 
   // ─── Bell / notificações ───────────────────────────────────────────────────
   var _btnNotif = document.getElementById("btn-notif");

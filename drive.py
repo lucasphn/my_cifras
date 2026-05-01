@@ -81,6 +81,7 @@ def export_gdoc_as_text(service, file_id):
 REPERTORIOS_FILENAME  = "_repertorios.json"
 VIEWS_FILENAME        = "_views.json"
 PREFERENCES_FILENAME  = "_preferences.json"
+GROUPS_FILENAME       = "_groups.json"
 
 def _get_or_create_json_file(service, name, parent_id):
     """Retorna file_id de um arquivo JSON, criando-o vazio se não existir."""
@@ -115,6 +116,28 @@ def load_repertorios(service, root_folder_id):
 
 def save_repertorios(service, file_id, data):
     """Salva o dict de repertórios no Drive."""
+    import json
+    from googleapiclient.http import MediaIoBaseUpload
+    content = json.dumps(data, ensure_ascii=False, indent=2).encode("utf-8")
+    media = MediaIoBaseUpload(io.BytesIO(content), mimetype="application/json")
+    service.files().update(fileId=file_id, media_body=media).execute()
+
+
+# ─── Groups (JSON no Drive) ──────────────────────────────────────────────────
+
+def load_groups(service, root_folder_id):
+    """Carrega o dict de grupos do Drive. Retorna (data, file_id)."""
+    import json
+    file_id = _get_or_create_json_file(service, GROUPS_FILENAME, root_folder_id)
+    try:
+        content = download_bytes(service, file_id)
+        return json.loads(content.decode("utf-8") or "{}"), file_id
+    except Exception:
+        return {}, file_id
+
+
+def save_groups(service, file_id, data):
+    """Salva o dict de grupos no Drive."""
     import json
     from googleapiclient.http import MediaIoBaseUpload
     content = json.dumps(data, ensure_ascii=False, indent=2).encode("utf-8")
