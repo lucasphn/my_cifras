@@ -2790,6 +2790,8 @@ body.android #presenter-cifra .chord-line {
   font-size: .75rem;
   color: var(--text-muted);
   font-style: italic;
+  word-break: break-word;
+  overflow-wrap: anywhere;
 }
 
 /* ─── Batch fix de tonalidades ───────────────────────────────────────────── */
@@ -7870,6 +7872,9 @@ function renderSharedWithMe() {
     var item = document.createElement("div");
     var count = (share.songs || []).length;
     var isSeen = (share.seen_by || []).map(function(e){ return e.toLowerCase(); }).includes(userEmail);
+    var sharedRecently = share.shared_at &&
+      (Date.now() - new Date(share.shared_at + "Z").getTime()) < 24 * 3600 * 1000;
+    var isNew = !isSeen || sharedRecently;
     var isActive = share.id === currentSharedId;
     item.className = "shared-rep-item" + (isActive ? " active" : "");
     item.dataset.shareId = share.id;
@@ -7885,7 +7890,7 @@ function renderSharedWithMe() {
         '<span class="sri2-name">' + escHtml(share.rep_name) + '</span>' +
         '<span class="sri2-from">De: ' + fromLabel + ' &bull; ' + count + ' m&#250;sica' + (count !== 1 ? 's' : '') + '</span>' +
       '</div>' +
-      (!isSeen ? '<span class="sri2-new">Novo</span>' : '') +
+      (isNew ? '<span class="sri2-new">Novo</span>' : '') +
       '<button class="sri2-play" title="Apresentar">&#9654;</button>' +
       '<button class="sri2-dismiss" title="Remover">&#10005;</button>';
 
@@ -7952,9 +7957,15 @@ async function openSharedRepPresenter(shareId) {
 }
 
 async function doDismissShare(shareId) {
+  var item = document.querySelector('[data-share-id="' + shareId + '"]');
+  var btn = item ? item.querySelector(".sri2-dismiss") : null;
+  if (btn) { btn.disabled = true; btn.textContent = "…"; }
   try {
     var r = await fetch("/api/share/" + encodeURIComponent(shareId) + "/dismiss", { method: "POST" });
-    if (!r.ok) { showToast("Erro ao remover."); return; }
+    if (!r.ok) {
+      if (btn) { btn.disabled = false; btn.innerHTML = "&#10005;"; }
+      showToast("Erro ao remover."); return;
+    }
     sharedWithMe = sharedWithMe.filter(function(s){ return s.id !== shareId; });
     if (currentSharedId === shareId) {
       currentSharedId = null;
@@ -8233,16 +8244,18 @@ async function doSaveGroup() {
 }
 
 async function doDeleteGroup(gid) {
-  if (!confirm("Excluir este grupo?")) return;
-  try {
-    var r = await fetch("/api/groups/" + encodeURIComponent(gid), { method: "DELETE" });
-    var data = await r.json();
-    if (!r.ok) { showToast(data.error || "Erro ao excluir."); return; }
-    delete myGroups[gid];
-    try { localStorage.setItem("mycifras:groups_cache", JSON.stringify(myGroups)); } catch(_) {}
-    renderGroups();
-    showToast("Grupo excluído.");
-  } catch(e) { showToast("Erro: " + e.message); }
+  var name = (myGroups[gid] && myGroups[gid].name) ? myGroups[gid].name : "este grupo";
+  _confirmDialog('Excluir "' + name + '"? Esta ação não pode ser desfeita.', "Excluir", async function() {
+    try {
+      var r = await fetch("/api/groups/" + encodeURIComponent(gid), { method: "DELETE" });
+      var data = await r.json();
+      if (!r.ok) { showToast(data.error || "Erro ao excluir."); return; }
+      delete myGroups[gid];
+      try { localStorage.setItem("mycifras:groups_cache", JSON.stringify(myGroups)); } catch(_) {}
+      renderGroups();
+      showToast("Grupo excluído.");
+    } catch(e) { showToast("Erro: " + e.message); }
+  });
 }
 
 function _switchShareTab(tab) {

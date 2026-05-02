@@ -568,6 +568,16 @@ def api_reps_delete(rep_id):
             return jsonify({"error": "Não encontrado"}), 404
         del reps[rep_id]
         _save_reps(reps)
+    # Remove todas as shares deste rep
+    my_email = current_user().get("email", "").lower()
+    with _shares_lock:
+        shares = _load_shares_raw()
+        before = len(shares)
+        shares = {k: v for k, v in shares.items()
+                  if not (v.get("rep_id") == rep_id and
+                          v.get("from_email", "").lower() == my_email)}
+        if len(shares) < before:
+            _save_shares_raw(shares)
     return jsonify({"ok": True})
 
 
@@ -619,7 +629,8 @@ def _save_shares_raw(data):
         log.info("[shares] arquivo local salvo (%d shares)", len(data))
     except Exception as e:
         log.error("[shares] falha ao gravar arquivo local: %s", e)
-    if _use_drive() and CIFRAS_FOLDER_ID:
+    # Só o owner tem permissão de escrita no Drive — viewer usa apenas arquivo local
+    if _use_drive() and CIFRAS_FOLDER_ID and is_owner():
         try:
             import drive as drv
             svc = get_service()
@@ -1512,13 +1523,14 @@ def terms():
 def index():
     cal_kw_raw = os.environ.get("CALENDAR_KEYWORDS", "").strip()
     cal_keywords = cal_kw_raw if cal_kw_raw else ""
-    # Modo local (sem OAuth): vai direto para o app
     if not is_oauth_configured():
         return render_template("index.html", user={}, is_owner=True, cal_keywords=cal_keywords)
-    # OAuth configurado: se autenticado vai para o app, senão mostra landing
     if session.get("token"):
         user = current_user()
+        log.info("[index] sessão encontrada para %s", user.get("email"))
         return render_template("index.html", user=user, is_owner=is_owner(), cal_keywords=cal_keywords)
+    log.info("[index] sessão não encontrada — exibindo landing (cookie=%s)",
+             bool(request.cookies.get("session")))
     return render_template(
         "landing.html",
         google_verification=os.environ.get("GOOGLE_SITE_VERIFICATION", "")
