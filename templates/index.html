@@ -4821,6 +4821,14 @@ var _pendingDelete = null; // ID aguardando confirmação de exclusão
 var sharedWithMe = [];     // repertórios compartilhados comigo
 var sharesByMe = {};       // { rep_id: [share, ...] } — meus shares ativos
 var currentSharedId = null;// ID do share atualmente aberto (compartilhado comigo)
+
+// Estado local de shares — persiste no browser independente de deploy
+function _lsSeenShares()      { try { return new Set(JSON.parse(localStorage.getItem("mycifras:seen_shares") || "[]")); } catch(e) { return new Set(); } }
+function _lsDismissedShares() { try { return new Set(JSON.parse(localStorage.getItem("mycifras:dismissed_shares") || "[]")); } catch(e) { return new Set(); } }
+function _lsMarkSeen(id)      { try { var s = _lsSeenShares(); s.add(id); localStorage.setItem("mycifras:seen_shares", JSON.stringify([...s])); } catch(e) {} }
+function _lsMarkDismissed(id) { try { var s = _lsDismissedShares(); s.add(id); localStorage.setItem("mycifras:dismissed_shares", JSON.stringify([...s])); } catch(e) {} }
+function _lsIsSeen(id)        { return _lsSeenShares().has(id); }
+function _lsIsDismissed(id)   { return _lsDismissedShares().has(id); }
 var _shareTargetRepId = null; // rep sendo compartilhado no diálogo
 var _isSaving = false;     // impede múltiplos saves simultâneos
 var presenterSongs = [];   // cifras carregadas no modo apresentação
@@ -7817,7 +7825,9 @@ async function loadSharedWithMe() {
     var r = await fetch("/api/shared-with-me");
     if (r.status === 401) return;
     if (!r.ok) return;
-    sharedWithMe = await r.json();
+    var all = await r.json();
+    // Filtra shares que o viewer descartou localmente (persiste entre deploys)
+    sharedWithMe = all.filter(function(s) { return !_lsIsDismissed(s.id); });
     renderSharedWithMe();
     _updateNotifBadge();
   } catch(e) { /* silencia */ }
@@ -7845,7 +7855,8 @@ function _updateNotifBadge() {
   if (!btn || !badge) return;
   var userEmail = (document.body.dataset.userEmail || "").toLowerCase();
   var unseen = sharedWithMe.filter(function(s) {
-    return !(s.seen_by || []).map(function(e){ return e.toLowerCase(); }).includes(userEmail);
+    var seenServer = (s.seen_by || []).map(function(e){ return e.toLowerCase(); }).includes(userEmail);
+    return !seenServer && !_lsIsSeen(s.id);
   }).length;
   if (unseen > 0) {
     badge.textContent = unseen > 9 ? "9+" : String(unseen);
@@ -7871,7 +7882,8 @@ function renderSharedWithMe() {
   sharedWithMe.forEach(function(share) {
     var item = document.createElement("div");
     var count = (share.songs || []).length;
-    var isSeen = (share.seen_by || []).map(function(e){ return e.toLowerCase(); }).includes(userEmail);
+    var isSeen = (share.seen_by || []).map(function(e){ return e.toLowerCase(); }).includes(userEmail)
+               || _lsIsSeen(share.id);
     var sharedRecently = share.shared_at &&
       (Date.now() - new Date(share.shared_at + "Z").getTime()) < 24 * 3600 * 1000;
     var isNew = !isSeen || sharedRecently;
@@ -7926,17 +7938,10 @@ function openSharedRep(shareId) {
   requestAnimationFrame(refreshGridBtns);
   showToast(share.rep_name + " aberto.");
   // Marcar como visto no servidor (background)
-  fetch("/api/share/" + encodeURIComponent(shareId) + "/seen", { method: "POST" }).then(function() {
-    // Atualiza cache local
-    var s = sharedWithMe.find(function(x){ return x.id === shareId; });
-    if (s) {
-      var email = (document.body.dataset.userEmail || "").toLowerCase();
-      if (!s.seen_by) s.seen_by = [];
-      if (!s.seen_by.map(function(e){return e.toLowerCase();}).includes(email)) s.seen_by.push(email);
-    }
-    renderSharedWithMe();
-    _updateNotifBadge();
-  }).catch(function(){});
+  _lsMarkSeen(shareId);
+  renderSharedWithMe();
+  _updateNotifBadge();
+  fetch("/api/share/" + encodeURIComponent(shareId) + "/seen", { method: "POST" }).catch(function(){});
 }
 
 function _markActiveSharedRep() {
@@ -7966,6 +7971,7 @@ async function doDismissShare(shareId) {
       if (btn) { btn.disabled = false; btn.innerHTML = "&#10005;"; }
       showToast("Erro ao remover."); return;
     }
+    _lsMarkDismissed(shareId);
     sharedWithMe = sharedWithMe.filter(function(s){ return s.id !== shareId; });
     if (currentSharedId === shareId) {
       currentSharedId = null;
@@ -8371,17 +8377,12 @@ function toggleNotifPanel() {
 function _markAllNotifSeen() {
   var userEmail = (document.body.dataset.userEmail || "").toLowerCase();
   var unseen = sharedWithMe.filter(function(s) {
-    return !(s.seen_by || []).map(function(e){ return e.toLowerCase(); }).includes(userEmail);
+    var seenServer = (s.seen_by || []).map(function(e){ return e.toLowerCase(); }).includes(userEmail);
+    return !seenServer && !_lsIsSeen(s.id);
   });
   unseen.forEach(function(share) {
-    fetch("/api/share/" + encodeURIComponent(share.id) + "/seen", { method: "POST" })
-      .then(function() {
-        var s = sharedWithMe.find(function(x){ return x.id === share.id; });
-        if (s) {
-          if (!s.seen_by) s.seen_by = [];
-          if (!s.seen_by.map(function(e){return e.toLowerCase();}).includes(userEmail)) s.seen_by.push(userEmail);
-        }
-      }).catch(function(){});
+    _lsMarkSeen(share.id);
+    fetch("/api/share/" + encodeURIComponent(share.id) + "/seen", { method: "POST" }).catch(function(){});
   });
   var badge = document.getElementById("notif-badge");
   if (badge) badge.style.display = "none";
@@ -8401,7 +8402,8 @@ function renderNotifPanel() {
   var userEmail = (document.body.dataset.userEmail || "").toLowerCase();
   sharedWithMe.forEach(function(share) {
     var item = document.createElement("div");
-    var isSeen = (share.seen_by || []).map(function(e){ return e.toLowerCase(); }).includes(userEmail);
+    var isSeen = (share.seen_by || []).map(function(e){ return e.toLowerCase(); }).includes(userEmail)
+               || _lsIsSeen(share.id);
     item.className = "notif-item" + (isSeen ? " seen" : "");
     var fromLabel = escHtml(share.from_name || share.from_email || "Alguém");
     var dt = share.shared_at ? new Date(share.shared_at + "Z").toLocaleDateString("pt-BR") : "";

@@ -210,17 +210,7 @@ def callback():
         "picture": info.get("picture", ""),
     }
     log.info("[auth] sessão salva para %s — redirecionando para /", info.get("email"))
-    return render_template_string(
-        '<!doctype html><html><head>'
-        '<meta http-equiv="refresh" content="1;url=/">'
-        '<title>Entrando...</title></head>'
-        '<body style="font-family:sans-serif;display:flex;align-items:center;'
-        'justify-content:center;height:100vh;margin:0;background:#f5f3fc;color:#5b4b8a">'
-        '<script>'
-        'setTimeout(function(){window.location.replace("/");},800);'
-        '</script>'
-        'Entrando...</body></html>'
-    )
+    return redirect(url_for("index"))
 
 
 @bp.route("/logout")
