@@ -1,6 +1,5 @@
-const SHELL_CACHE = 'mycifras-shell-v4';
+const SHELL_CACHE = 'mycifras-shell-v5';
 const SHELL_URLS = [
-  '/',
   '/static/brand/logo-light.svg',
   '/static/brand/favicon.svg',
   '/static/manifest.json',
@@ -29,14 +28,16 @@ self.addEventListener('activate', function(e) {
 self.addEventListener('fetch', function(e) {
   var url = new URL(e.request.url);
 
-  // Só processa http/https — chrome-extension e outros schemes não são cacheáveis
+  // Só processa http/https
   if (url.protocol !== 'http:' && url.protocol !== 'https:') return;
-  // API calls handled by IndexedDB in main JS — pass through
+  // API calls — pass through
   if (url.pathname.startsWith('/api/')) return;
-  // Auth and login — always network
-  if (url.pathname.startsWith('/login') || url.pathname.startsWith('/oauth')) return;
+  // Auth, login e raiz — sempre network (sessão varia por usuário)
+  if (url.pathname === '/' ||
+      url.pathname.startsWith('/login') ||
+      url.pathname.startsWith('/oauth')) return;
 
-  // App shell: stale-while-revalidate
+  // Assets estáticos: stale-while-revalidate
   e.respondWith(
     caches.open(SHELL_CACHE).then(function(cache) {
       return cache.match(e.request).then(function(cached) {

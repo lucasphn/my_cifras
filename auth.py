@@ -149,8 +149,8 @@ def login_required(f):
             return f(*args, **kwargs)
         if not session.get("token"):
             if request.path.startswith("/api/"):
-                return jsonify({"error": "Não autenticado", "login_url": "/"}), 401
-            return redirect(url_for("index"))
+                return jsonify({"error": "Não autenticado", "login_url": "/login"}), 401
+            return redirect(url_for("auth.login"))
         return f(*args, **kwargs)
     return decorated
 
@@ -159,7 +159,9 @@ def login_required(f):
 
 @bp.route("/login")
 def login():
-    return redirect(url_for("index"))
+    if session.get("token"):
+        return redirect(url_for("index"))
+    return render_template("login.html", oauth_configured=is_oauth_configured())
 
 
 @bp.route("/login/google")
