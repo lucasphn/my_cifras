@@ -31,29 +31,15 @@ def _normalize_search(s: str) -> str:
 
 
 from datetime import timedelta
-from flask_session import Session
 from werkzeug.middleware.proxy_fix import ProxyFix
 
 app = Flask(__name__)
-# ProxyFix: Render.com termina SSL no proxy — sem isso request.url chega como
-# http:// no callback OAuth, causando mismatch com redirect_uri https:// e
-# fazendo o fetch_token falhar silenciosamente (usuário volta à landing page).
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
 app.secret_key = os.environ.get("FLASK_SECRET_KEY", "dev-insecure-key-troque-no-env")
 app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
-app.config["SESSION_COOKIE_SECURE"] = os.environ.get("RENDER", "") != ""  # True em produção
+app.config["SESSION_COOKIE_SECURE"] = os.environ.get("RENDER", "") != ""
 app.config["SESSION_COOKIE_HTTPONLY"] = True
 app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(days=30)
-
-# Sessões server-side: cookie guarda apenas um ID de sessão (~40 chars).
-# Elimina problemas de ITP (iOS Safari), tamanho de cookie e cross-site redirect.
-_session_dir = os.environ.get("SESSION_FILE_DIR", str(Path(tempfile.gettempdir()) / "flask_session"))
-Path(_session_dir).mkdir(parents=True, exist_ok=True)
-app.config["SESSION_TYPE"] = "filesystem"
-app.config["SESSION_FILE_DIR"] = _session_dir
-app.config["SESSION_PERMANENT"] = True
-app.config["SESSION_USE_SIGNER"] = True  # assina o cookie ID contra tampering
-Session(app)
 
 CIFRAS_ROOT = os.environ.get("CIFRAS_ROOT", str(Path.home() / "OneDrive" / "Cifras"))
 CIFRAS_FOLDER_ID = os.environ.get("CIFRAS_FOLDER_ID", "")
