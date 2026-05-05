@@ -2919,8 +2919,13 @@ _CATHOLIC_ARTISTS_BR = [
 ]
 
 _TITLE_BLOCK = {
+    # Rezas e devoções — não são músicas
+    "rosário", "terço", "novena", "via crucis", "hora santa",
+    "adoração ao santíssimo", "quaresma", "| dia ",
+    # Conteúdo não-musical
     "vlog", "reflexão", "meditação", "reel", "ep.", "podcast",
     "entrevista", "depoimento", "pregação", "homilia",
+    # Compilações
     "1 hora", "2 horas", "3 horas", "4 horas", "5 horas",
     "coletânea", "compilado", "as melhores", "mix",
     "canto para missa", "cantos para missa", "canto de comunhão",
@@ -2934,6 +2939,9 @@ _TITLE_ALLOW = {
 }
 
 _TAGS_ALLOW = {"música", "música católica", "louvor", "worship", "canção", "hino"}
+
+_MAX_DURATION_S = 5 * 60   # 5 minutos — exclui rosários/sessões de oração longas
+_MAX_PER_CHANNEL = 2        # variedade: no máximo 2 vídeos por canal
 
 
 def _parse_duration_seconds(iso: str) -> int:
@@ -2950,8 +2958,9 @@ def _is_music_video(item: dict) -> bool:
     title = snippet.get("title", "").lower()
     category = snippet.get("categoryId", "")
     tags = {t.lower() for t in (snippet.get("tags") or [])}
+    duration_s = _parse_duration_seconds(content.get("duration", ""))
 
-    if _parse_duration_seconds(content.get("duration", "")) <= 60:
+    if duration_s <= 60 or duration_s > _MAX_DURATION_S:
         return False
     if any(w in title for w in _TITLE_BLOCK):
         return False
@@ -2968,9 +2977,9 @@ def _fetch_youtube_trending():
         log.warning("[trending] YOUTUBE_API_KEY não definida")
         return []
 
-    published_after = (dt.now(timezone.utc) - timedelta(days=90)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    published_after = (dt.now(timezone.utc) - timedelta(days=30)).strftime("%Y-%m-%dT%H:%M:%SZ")
 
-    # Passo 1: coleta candidatos via search.list por artista
+    # Passo 1: coleta candidatos via search.list por artista (armazena channelId)
     candidates = {}
     for artist in _CATHOLIC_ARTISTS_BR:
         if len(candidates) >= 60:
@@ -3003,6 +3012,7 @@ def _fetch_youtube_trending():
                     "videoId": vid_id,
                     "title": snip.get("title", ""),
                     "channel": snip.get("channelTitle", ""),
+                    "channelId": snip.get("channelId", ""),
                     "thumbnail": thumb,
                 }
         except Exception as e:
@@ -3011,7 +3021,26 @@ def _fetch_youtube_trending():
     if not candidates:
         return []
 
-    # Passo 2: busca detalhes em batch (snippet + contentDetails + statistics)
+    # Passo 2a: verifica país dos canais — exclui canais com país explicitamente não-BR
+    channel_ids = list({v["channelId"] for v in candidates.values() if v.get("channelId")})
+    non_br_channels = set()
+    for i in range(0, len(channel_ids), 50):
+        batch = channel_ids[i:i + 50]
+        try:
+            r = rq.get(
+                "https://www.googleapis.com/youtube/v3/channels",
+                params={"part": "snippet", "id": ",".join(batch), "key": api_key},
+                timeout=10,
+            )
+            r.raise_for_status()
+            for ch in r.json().get("items", []):
+                country = ch.get("snippet", {}).get("country", "").upper()
+                if country and country != "BR":
+                    non_br_channels.add(ch["id"])
+        except Exception as e:
+            log.error("[trending] erro em channels.list: %s", e)
+
+    # Passo 2b: busca detalhes em batch (snippet + contentDetails + statistics)
     detailed = {}
     vid_ids = list(candidates.keys())
     for i in range(0, len(vid_ids), 50):
@@ -3032,18 +3061,26 @@ def _fetch_youtube_trending():
         except Exception as e:
             log.error("[trending] erro em videos.list: %s", e)
 
-    # Passo 3 e 4: filtra e ordena por views
+    # Passo 3 e 4: filtra, limita por canal e ordena por views
+    channel_counts: dict = {}
     results = []
     for vid_id, candidate in candidates.items():
+        if candidate.get("channelId") in non_br_channels:
+            continue
         detail = detailed.get(vid_id)
         if not detail or not _is_music_video(detail):
             continue
+        ch = candidate["channel"]
+        if channel_counts.get(ch, 0) >= _MAX_PER_CHANNEL:
+            continue
+        channel_counts[ch] = channel_counts.get(ch, 0) + 1
         candidate["viewCount"] = int(detail.get("statistics", {}).get("viewCount", 0))
         results.append(candidate)
 
     results.sort(key=lambda v: v.get("viewCount", 0), reverse=True)
     for v in results:
         v.pop("viewCount", None)
+        v.pop("channelId", None)
     return results[:10]
 
 
