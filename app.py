@@ -39,7 +39,7 @@ app.secret_key = os.environ.get("FLASK_SECRET_KEY", "dev-insecure-key-troque-no-
 app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
 app.config["SESSION_COOKIE_SECURE"] = os.environ.get("RENDER", "") != ""
 app.config["SESSION_COOKIE_HTTPONLY"] = True
-app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(days=30)
+app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(days=90)
 
 CIFRAS_ROOT = os.environ.get("CIFRAS_ROOT", str(Path.home() / "OneDrive" / "Cifras"))
 CIFRAS_FOLDER_ID = os.environ.get("CIFRAS_FOLDER_ID", "")
@@ -2940,7 +2940,7 @@ _TITLE_ALLOW = {
 
 _TAGS_ALLOW = {"música", "música católica", "louvor", "worship", "canção", "hino"}
 
-_MAX_DURATION_S = 5 * 60   # 5 minutos — exclui rosários/sessões de oração longas
+_MAX_DURATION_S = 5 * 60   # 25 minutos — exclui rosários/sessões de oração longas
 _MAX_PER_CHANNEL = 2        # variedade: no máximo 2 vídeos por canal
 
 
@@ -2950,6 +2950,21 @@ def _parse_duration_seconds(iso: str) -> int:
         return 0
     h, mn, s = (int(x or 0) for x in m.groups())
     return h * 3600 + mn * 60 + s
+
+
+def _fmt_duration(iso: str) -> str:
+    s = _parse_duration_seconds(iso)
+    m, sec = divmod(s, 60)
+    return f"{m}:{sec:02d}"
+
+
+def _fmt_views(n: int) -> str:
+    if n >= 1_000_000:
+        v = n / 1_000_000
+        return f"{v:.1f}M".replace(".0M", "M")
+    if n >= 1_000:
+        return f"{n // 1_000}k"
+    return str(n)
 
 
 def _is_music_video(item: dict) -> bool:
@@ -3074,7 +3089,11 @@ def _fetch_youtube_trending():
         if channel_counts.get(ch, 0) >= _MAX_PER_CHANNEL:
             continue
         channel_counts[ch] = channel_counts.get(ch, 0) + 1
-        candidate["viewCount"] = int(detail.get("statistics", {}).get("viewCount", 0))
+        view_count = int(detail.get("statistics", {}).get("viewCount", 0))
+        iso_dur = detail.get("contentDetails", {}).get("duration", "")
+        candidate["viewCount"] = view_count
+        candidate["views"] = _fmt_views(view_count)
+        candidate["duration"] = _fmt_duration(iso_dur)
         results.append(candidate)
 
     results.sort(key=lambda v: v.get("viewCount", 0), reverse=True)
