@@ -2895,47 +2895,70 @@ def api_fix_keys():
 _TRENDING_FILE = Path(__file__).parent / "_trending.json"
 _TRENDING_MAX_AGE = 86400  # 24 horas
 
-_YOUTUBE_QUERIES = [
-    "louvor católico padre",
-    "música litúrgica católica missa",
-    "música mariana nossa senhora católica",
-    "padre marcelo rossi música",
-    "grupo louvor católico brasil",
-    "jovens católicos música",
+# Artistas católicos brasileiros — buscados diretamente pelo nome
+_CATHOLIC_ARTISTS_BR = [
+    "Frei Gilson",
+    "GBA Music",
+    "Flavio Vitor Jr",
+    "Ramon e Rafael",
+    "Juninho Casimiro",
+    "Rosa de Saron",
+    "Colo de Deus",
+    "Fraternidade São João Paulo II",
+    "Missionário Shalom",
+    "Comunidade Católica Shalom",
+    "Anjos de Resgate",
+    "Adriana Arydes",
+    "Padre Marcelo Rossi",
+    "Thiago Brado",
+    "Livres Oficial",
+    "Eliana Ribeiro",
+    "Walmir Alencar",
+    "Vida Reluz",
+    "Voz da Verdade",
+    "Frei Zezinho",
 ]
 
-# Canais/artistas evangélicos conhecidos para ignorar
-_YOUTUBE_BLOCKED_CHANNELS = {
-    "gabriela rocha", "aline barros", "fernandinho", "diante do trono",
-    "hillsong", "bethel", "elevation worship", "ana paula valadão",
-    "eyshila", "isadora pompeo", "ministério zoe", "ministério alive",
-    "cancao nova evangelica", "davi sacer", "midian lima", "bruna karla",
-    "anderson freire", "kemuel", "thalles roberto",
-}
+# Palavras no título que indicam compilação ou canto litúrgico — ignorar
+_TRENDING_BLOCKED_TITLE = [
+    "1 hora", "2 horas", "3 horas", "4 horas", "5 horas",
+    "coletânea", "compilado", "playlist", "as melhores", "mix",
+    "canto para missa", "cantos para missa", "canto de comunhão",
+    "canto de entrada", "canto de ofertório", "hinário",
+    "liturgia das horas", "hora de louvor",
+]
+
+
+def _is_compilation(title: str) -> bool:
+    t = title.lower()
+    return any(w in t for w in _TRENDING_BLOCKED_TITLE)
 
 
 def _fetch_youtube_trending():
     import requests as rq
-    from datetime import timezone, datetime as dt
+    from datetime import timezone, datetime as dt, timedelta
     api_key = os.environ.get("YOUTUBE_API_KEY", "")
     if not api_key:
         log.warning("[trending] YOUTUBE_API_KEY não definida")
         return []
 
-    # Últimos 30 dias → tendência recente, não ranking histórico
-    published_after = (dt.now(timezone.utc).replace(day=1) - __import__("datetime").timedelta(days=30)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    # Últimos 90 dias — janela generosa para artistas que não lançam todo mês
+    published_after = (dt.now(timezone.utc) - timedelta(days=90)).strftime("%Y-%m-%dT%H:%M:%SZ")
 
     seen = {}
-    for query in _YOUTUBE_QUERIES:
+    for artist in _CATHOLIC_ARTISTS_BR:
+        if len(seen) >= 20:
+            break
         try:
             r = rq.get(
                 "https://www.googleapis.com/youtube/v3/search",
                 params={
                     "part": "snippet",
-                    "q": query,
+                    "q": artist,
                     "type": "video",
-                    "videoCategoryId": "10",   # Music
-                    "maxResults": 5,
+                    "videoCategoryId": "10",      # Music
+                    "videoDuration": "medium",    # 4–20 min — exclui compilações longas
+                    "maxResults": 3,
                     "order": "viewCount",
                     "publishedAfter": published_after,
                     "regionCode": "BR",
@@ -2950,19 +2973,19 @@ def _fetch_youtube_trending():
                 if vid_id in seen:
                     continue
                 snip = item["snippet"]
-                channel = snip.get("channelTitle", "")
-                if channel.lower().strip() in _YOUTUBE_BLOCKED_CHANNELS:
+                title = snip.get("title", "")
+                if _is_compilation(title):
                     continue
                 thumbs = snip.get("thumbnails", {})
                 thumb = (thumbs.get("medium") or thumbs.get("high") or thumbs.get("default") or {}).get("url", "")
                 seen[vid_id] = {
                     "videoId": vid_id,
-                    "title": snip.get("title", ""),
-                    "channel": channel,
+                    "title": title,
+                    "channel": snip.get("channelTitle", ""),
                     "thumbnail": thumb,
                 }
         except Exception as e:
-            log.error("[trending] erro buscando '%s': %s", query, e)
+            log.error("[trending] erro buscando '%s': %s", artist, e)
     return list(seen.values())[:10]
 
 
