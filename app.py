@@ -2889,6 +2889,89 @@ def api_fix_keys():
 
 
 # ---------------------------------------------------------------------------
+# YouTube Trending
+# ---------------------------------------------------------------------------
+
+_TRENDING_FILE = Path(__file__).parent / "_trending.json"
+_TRENDING_MAX_AGE = 86400  # 24 horas
+
+_YOUTUBE_QUERIES = [
+    "músicas católicas mais tocadas",
+    "adoração católica",
+    "louvor jovem católico",
+    "worship católico",
+    "músicas marianas",
+]
+
+
+def _fetch_youtube_trending():
+    import requests as rq
+    api_key = os.environ.get("YOUTUBE_API_KEY", "")
+    if not api_key:
+        log.warning("[trending] YOUTUBE_API_KEY não definida")
+        return []
+    seen = {}
+    for query in _YOUTUBE_QUERIES:
+        try:
+            r = rq.get(
+                "https://www.googleapis.com/youtube/v3/search",
+                params={
+                    "part": "snippet",
+                    "q": query,
+                    "type": "video",
+                    "maxResults": 5,
+                    "order": "viewCount",
+                    "regionCode": "BR",
+                    "relevanceLanguage": "pt",
+                    "key": api_key,
+                },
+                timeout=10,
+            )
+            r.raise_for_status()
+            for item in r.json().get("items", []):
+                vid_id = item["id"]["videoId"]
+                if vid_id not in seen:
+                    snip = item["snippet"]
+                    thumbs = snip.get("thumbnails", {})
+                    thumb = (thumbs.get("medium") or thumbs.get("high") or thumbs.get("default") or {}).get("url", "")
+                    seen[vid_id] = {
+                        "videoId": vid_id,
+                        "title": snip.get("title", ""),
+                        "channel": snip.get("channelTitle", ""),
+                        "thumbnail": thumb,
+                    }
+        except Exception as e:
+            log.error("[trending] erro buscando '%s': %s", query, e)
+    return list(seen.values())[:10]
+
+
+def _refresh_youtube_trending():
+    try:
+        if _TRENDING_FILE.exists():
+            age = time.time() - _TRENDING_FILE.stat().st_mtime
+            if age < _TRENDING_MAX_AGE:
+                return
+        log.info("[trending] atualizando cache YouTube...")
+        data = _fetch_youtube_trending()
+        if data:
+            _TRENDING_FILE.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
+            log.info("[trending] %d vídeos salvos", len(data))
+    except Exception as e:
+        log.error("[trending] falha no refresh: %s", e)
+
+
+threading.Thread(target=_refresh_youtube_trending, daemon=True).start()
+
+
+@app.route("/api/trending")
+@login_required
+def api_trending():
+    if _TRENDING_FILE.exists():
+        return Response(_TRENDING_FILE.read_text(encoding="utf-8"), mimetype="application/json")
+    return jsonify([])
+
+
+# ---------------------------------------------------------------------------
 # Entry point
 # ---------------------------------------------------------------------------
 
