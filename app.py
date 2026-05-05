@@ -2895,7 +2895,6 @@ def api_fix_keys():
 _TRENDING_FILE = Path(__file__).parent / "_trending.json"
 _TRENDING_MAX_AGE = 86400  # 24 horas
 
-# Artistas católicos brasileiros — buscados diretamente pelo nome
 _CATHOLIC_ARTISTS_BR = [
     "Frei Gilson",
     "GBA Music",
@@ -2919,19 +2918,46 @@ _CATHOLIC_ARTISTS_BR = [
     "Frei Zezinho",
 ]
 
-# Palavras no título que indicam compilação ou canto litúrgico — ignorar
-_TRENDING_BLOCKED_TITLE = [
+_TITLE_BLOCK = {
+    "vlog", "reflexão", "meditação", "reel", "ep.", "podcast",
+    "entrevista", "depoimento", "pregação", "homilia",
     "1 hora", "2 horas", "3 horas", "4 horas", "5 horas",
-    "coletânea", "compilado", "playlist", "as melhores", "mix",
+    "coletânea", "compilado", "as melhores", "mix",
     "canto para missa", "cantos para missa", "canto de comunhão",
     "canto de entrada", "canto de ofertório", "hinário",
     "liturgia das horas", "hora de louvor",
-]
+}
+
+_TITLE_ALLOW = {
+    "cover", "ao vivo", "live", "letra", "clipe", "oficial",
+    "louvor", "adoração", "canto", "canção", "hino", "música",
+}
+
+_TAGS_ALLOW = {"música", "música católica", "louvor", "worship", "canção", "hino"}
 
 
-def _is_compilation(title: str) -> bool:
-    t = title.lower()
-    return any(w in t for w in _TRENDING_BLOCKED_TITLE)
+def _parse_duration_seconds(iso: str) -> int:
+    m = re.match(r"PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?", iso or "")
+    if not m:
+        return 0
+    h, mn, s = (int(x or 0) for x in m.groups())
+    return h * 3600 + mn * 60 + s
+
+
+def _is_music_video(item: dict) -> bool:
+    snippet = item.get("snippet", {})
+    content = item.get("contentDetails", {})
+    title = snippet.get("title", "").lower()
+    category = snippet.get("categoryId", "")
+    tags = {t.lower() for t in (snippet.get("tags") or [])}
+
+    if _parse_duration_seconds(content.get("duration", "")) <= 60:
+        return False
+    if any(w in title for w in _TITLE_BLOCK):
+        return False
+    if category != "10" and not any(w in title for w in _TITLE_ALLOW):
+        return False
+    return category == "10" or bool(tags & _TAGS_ALLOW) or any(w in title for w in _TITLE_ALLOW)
 
 
 def _fetch_youtube_trending():
@@ -2942,12 +2968,12 @@ def _fetch_youtube_trending():
         log.warning("[trending] YOUTUBE_API_KEY não definida")
         return []
 
-    # Últimos 90 dias — janela generosa para artistas que não lançam todo mês
     published_after = (dt.now(timezone.utc) - timedelta(days=90)).strftime("%Y-%m-%dT%H:%M:%SZ")
 
-    seen = {}
+    # Passo 1: coleta candidatos via search.list por artista
+    candidates = {}
     for artist in _CATHOLIC_ARTISTS_BR:
-        if len(seen) >= 20:
+        if len(candidates) >= 60:
             break
         try:
             r = rq.get(
@@ -2956,9 +2982,7 @@ def _fetch_youtube_trending():
                     "part": "snippet",
                     "q": artist,
                     "type": "video",
-                    "videoCategoryId": "10",      # Music
-                    "videoDuration": "medium",    # 4–20 min — exclui compilações longas
-                    "maxResults": 3,
+                    "maxResults": 5,
                     "order": "viewCount",
                     "publishedAfter": published_after,
                     "regionCode": "BR",
@@ -2970,23 +2994,57 @@ def _fetch_youtube_trending():
             r.raise_for_status()
             for item in r.json().get("items", []):
                 vid_id = item["id"]["videoId"]
-                if vid_id in seen:
+                if vid_id in candidates:
                     continue
                 snip = item["snippet"]
-                title = snip.get("title", "")
-                if _is_compilation(title):
-                    continue
                 thumbs = snip.get("thumbnails", {})
                 thumb = (thumbs.get("medium") or thumbs.get("high") or thumbs.get("default") or {}).get("url", "")
-                seen[vid_id] = {
+                candidates[vid_id] = {
                     "videoId": vid_id,
-                    "title": title,
+                    "title": snip.get("title", ""),
                     "channel": snip.get("channelTitle", ""),
                     "thumbnail": thumb,
                 }
         except Exception as e:
             log.error("[trending] erro buscando '%s': %s", artist, e)
-    return list(seen.values())[:10]
+
+    if not candidates:
+        return []
+
+    # Passo 2: busca detalhes em batch (snippet + contentDetails + statistics)
+    detailed = {}
+    vid_ids = list(candidates.keys())
+    for i in range(0, len(vid_ids), 50):
+        batch = vid_ids[i:i + 50]
+        try:
+            r = rq.get(
+                "https://www.googleapis.com/youtube/v3/videos",
+                params={
+                    "part": "snippet,contentDetails,statistics",
+                    "id": ",".join(batch),
+                    "key": api_key,
+                },
+                timeout=10,
+            )
+            r.raise_for_status()
+            for item in r.json().get("items", []):
+                detailed[item["id"]] = item
+        except Exception as e:
+            log.error("[trending] erro em videos.list: %s", e)
+
+    # Passo 3 e 4: filtra e ordena por views
+    results = []
+    for vid_id, candidate in candidates.items():
+        detail = detailed.get(vid_id)
+        if not detail or not _is_music_video(detail):
+            continue
+        candidate["viewCount"] = int(detail.get("statistics", {}).get("viewCount", 0))
+        results.append(candidate)
+
+    results.sort(key=lambda v: v.get("viewCount", 0), reverse=True)
+    for v in results:
+        v.pop("viewCount", None)
+    return results[:10]
 
 
 def _refresh_youtube_trending():
