@@ -2909,7 +2909,6 @@ _CATHOLIC_ARTISTS_BR = [
     "Anjos de Resgate",
     "Adriana Arydes",
     "Padre Marcelo Rossi",
-    "Thiago Brado",
     "Livres Oficial",
     "Eliana Ribeiro",
     "Walmir Alencar",
@@ -2940,7 +2939,7 @@ _TITLE_ALLOW = {
 
 _TAGS_ALLOW = {"música", "música católica", "louvor", "worship", "canção", "hino"}
 
-_MAX_DURATION_S = 5 * 60   # 25 minutos — exclui rosários/sessões de oração longas
+_MAX_DURATION_S = 5 * 60    # 5 minutos — apenas clipes/músicas curtas
 _MAX_PER_CHANNEL = 2        # variedade: no máximo 2 vídeos por canal
 
 

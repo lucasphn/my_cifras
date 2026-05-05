@@ -10130,7 +10130,8 @@ function _ytPopulate(videos) {
   var rest = videos.slice(5);
   rest.forEach(function(v, i) {
     var row = _ytMakeRow(v, i + 5);
-    row.hidden = true;
+    row.style.display = 'none';
+    row.dataset.ytHidden = '1';
     list.appendChild(row);
   });
   if (moreBtn) {
@@ -10138,7 +10139,10 @@ function _ytPopulate(videos) {
       moreBtn.style.display = 'flex';
       moreBtn.innerHTML = 'Ver mais ' + rest.length + ' <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>';
       moreBtn.addEventListener('click', function() {
-        list.querySelectorAll('li[hidden]').forEach(function(el) { el.hidden = false; });
+        list.querySelectorAll('[data-yt-hidden]').forEach(function(el) {
+          el.style.display = '';
+          delete el.dataset.ytHidden;
+        });
         moreBtn.style.display = 'none';
       }, { once: true });
     } else {
