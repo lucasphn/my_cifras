@@ -3723,18 +3723,19 @@ html.pwa-standalone #modal-footer {
   background: rgba(0,0,0,.88); align-items: center; justify-content: center;
 }
 #yt-modal.open { display: flex; }
-#yt-modal-inner {
-  position: relative; width: min(92vw, 820px); aspect-ratio: 16/9;
-  border-radius: 14px; overflow: hidden; background: #000;
-  box-shadow: 0 24px 80px rgba(0,0,0,.6);
-}
-#yt-modal-iframe { width: 100%; height: 100%; border: none; display: block; }
+#yt-modal-box { position: relative; width: min(92vw, 820px); }
 #yt-modal-close {
   position: absolute; top: -40px; right: 0;
   background: none; border: none; color: #fff; font-size: 28px;
   cursor: pointer; line-height: 1; padding: 4px 8px; opacity: .8;
 }
 #yt-modal-close:hover { opacity: 1; }
+#yt-modal-inner {
+  width: 100%; aspect-ratio: 16/9;
+  border-radius: 14px; overflow: hidden; background: #000;
+  box-shadow: 0 24px 80px rgba(0,0,0,.6);
+}
+#yt-modal-iframe { width: 100%; height: 100%; border: none; display: block; }
 </style>
 </head>
 <body data-owner="{% if is_owner %}1{% else %}0{% endif %}" data-user-email="{{ user.email if user else '' }}" data-user-name="{{ user.name if user else '' }}">
@@ -9380,6 +9381,15 @@ function init() {
   loadGroups();
   loadYoutubeTrending();
 
+  // YouTube modal controls
+  var _ytModal = document.getElementById('yt-modal');
+  if (_ytModal) {
+    _ytModal.addEventListener('click', function(e) { if (e.target === _ytModal) _closeYtModal(); });
+    var _ytClose = document.getElementById('yt-modal-close');
+    if (_ytClose) _ytClose.addEventListener('click', _closeYtModal);
+    document.addEventListener('keydown', function(e) { if (e.key === 'Escape') _closeYtModal(); });
+  }
+
   // ─── Groups ────────────────────────────────────────────────────────────────
   var _btnGroupNew = document.getElementById("btn-group-new");
   if (_btnGroupNew) _btnGroupNew.addEventListener("click", function() { openGroupDialog(null); });
@@ -9993,23 +10003,16 @@ function _closeYtModal() {
   document.body.style.overflow = '';
 }
 
-(function() {
-  var modal = document.getElementById('yt-modal');
-  if (!modal) return;
-  modal.addEventListener('click', function(e) { if (e.target === modal) _closeYtModal(); });
-  var closeBtn = document.getElementById('yt-modal-close');
-  if (closeBtn) closeBtn.addEventListener('click', _closeYtModal);
-  document.addEventListener('keydown', function(e) { if (e.key === 'Escape') _closeYtModal(); });
-})();
-
 document.addEventListener("DOMContentLoaded", init);
 </script>
 
 <!-- YouTube video modal -->
 <div id="yt-modal">
-  <div id="yt-modal-inner">
+  <div id="yt-modal-box">
     <button id="yt-modal-close" aria-label="Fechar">✕</button>
-    <iframe id="yt-modal-iframe" src="" allowfullscreen allow="autoplay; encrypted-media"></iframe>
+    <div id="yt-modal-inner">
+      <iframe id="yt-modal-iframe" src="" allowfullscreen allow="autoplay; encrypted-media"></iframe>
+    </div>
   </div>
 </div>
 </body>
