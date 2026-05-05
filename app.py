@@ -2896,20 +2896,35 @@ _TRENDING_FILE = Path(__file__).parent / "_trending.json"
 _TRENDING_MAX_AGE = 86400  # 24 horas
 
 _YOUTUBE_QUERIES = [
-    "músicas católicas mais tocadas",
-    "adoração católica",
-    "louvor jovem católico",
-    "worship católico",
-    "músicas marianas",
+    "louvor católico padre",
+    "música litúrgica católica missa",
+    "música mariana nossa senhora católica",
+    "padre marcelo rossi música",
+    "grupo louvor católico brasil",
+    "jovens católicos música",
 ]
+
+# Canais/artistas evangélicos conhecidos para ignorar
+_YOUTUBE_BLOCKED_CHANNELS = {
+    "gabriela rocha", "aline barros", "fernandinho", "diante do trono",
+    "hillsong", "bethel", "elevation worship", "ana paula valadão",
+    "eyshila", "isadora pompeo", "ministério zoe", "ministério alive",
+    "cancao nova evangelica", "davi sacer", "midian lima", "bruna karla",
+    "anderson freire", "kemuel", "thalles roberto",
+}
 
 
 def _fetch_youtube_trending():
     import requests as rq
+    from datetime import timezone, datetime as dt
     api_key = os.environ.get("YOUTUBE_API_KEY", "")
     if not api_key:
         log.warning("[trending] YOUTUBE_API_KEY não definida")
         return []
+
+    # Últimos 30 dias → tendência recente, não ranking histórico
+    published_after = (dt.now(timezone.utc).replace(day=1) - __import__("datetime").timedelta(days=30)).strftime("%Y-%m-%dT%H:%M:%SZ")
+
     seen = {}
     for query in _YOUTUBE_QUERIES:
         try:
@@ -2919,8 +2934,10 @@ def _fetch_youtube_trending():
                     "part": "snippet",
                     "q": query,
                     "type": "video",
+                    "videoCategoryId": "10",   # Music
                     "maxResults": 5,
                     "order": "viewCount",
+                    "publishedAfter": published_after,
                     "regionCode": "BR",
                     "relevanceLanguage": "pt",
                     "key": api_key,
@@ -2930,16 +2947,20 @@ def _fetch_youtube_trending():
             r.raise_for_status()
             for item in r.json().get("items", []):
                 vid_id = item["id"]["videoId"]
-                if vid_id not in seen:
-                    snip = item["snippet"]
-                    thumbs = snip.get("thumbnails", {})
-                    thumb = (thumbs.get("medium") or thumbs.get("high") or thumbs.get("default") or {}).get("url", "")
-                    seen[vid_id] = {
-                        "videoId": vid_id,
-                        "title": snip.get("title", ""),
-                        "channel": snip.get("channelTitle", ""),
-                        "thumbnail": thumb,
-                    }
+                if vid_id in seen:
+                    continue
+                snip = item["snippet"]
+                channel = snip.get("channelTitle", "")
+                if channel.lower().strip() in _YOUTUBE_BLOCKED_CHANNELS:
+                    continue
+                thumbs = snip.get("thumbnails", {})
+                thumb = (thumbs.get("medium") or thumbs.get("high") or thumbs.get("default") or {}).get("url", "")
+                seen[vid_id] = {
+                    "videoId": vid_id,
+                    "title": snip.get("title", ""),
+                    "channel": channel,
+                    "thumbnail": thumb,
+                }
         except Exception as e:
             log.error("[trending] erro buscando '%s': %s", query, e)
     return list(seen.values())[:10]
