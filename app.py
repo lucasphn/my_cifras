@@ -2909,6 +2909,7 @@ _CATHOLIC_ARTISTS_BR = [
     "Anjos de Resgate",
     "Adriana Arydes",
     "Padre Marcelo Rossi",
+    "Thiago Brado",
     "Livres Oficial",
     "Eliana Ribeiro",
     "Walmir Alencar",
@@ -2916,6 +2917,15 @@ _CATHOLIC_ARTISTS_BR = [
     "Voz da Verdade",
     "Frei Zezinho",
 ]
+
+# Canais/artistas evangélicos que podem aparecer nos resultados — ignorar
+_BLOCKED_CHANNELS = {
+    "thiago brito", "gabriela rocha", "aline barros", "fernandinho",
+    "diante do trono", "hillsong", "bethel", "elevation worship",
+    "ana paula valadão", "eyshila", "isadora pompeo",
+    "davi sacer", "midian lima", "bruna karla",
+    "anderson freire", "kemuel", "thalles roberto",
+}
 
 _TITLE_BLOCK = {
     # Rezas e devoções — não são músicas
@@ -3080,6 +3090,8 @@ def _fetch_youtube_trending():
     results = []
     for vid_id, candidate in candidates.items():
         if candidate.get("channelId") in non_br_channels:
+            continue
+        if candidate.get("channel", "").lower().strip() in _BLOCKED_CHANNELS:
             continue
         detail = detailed.get(vid_id)
         if not detail or not _is_music_video(detail):
