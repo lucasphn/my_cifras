@@ -2960,7 +2960,12 @@ def _refresh_youtube_trending():
         log.error("[trending] falha no refresh: %s", e)
 
 
-threading.Thread(target=_refresh_youtube_trending, daemon=True).start()
+def _trending_worker():
+    while True:
+        _refresh_youtube_trending()
+        time.sleep(3600)  # verifica a cada hora; busca só se cache > 24h
+
+threading.Thread(target=_trending_worker, daemon=True).start()
 
 
 @app.route("/api/trending")
