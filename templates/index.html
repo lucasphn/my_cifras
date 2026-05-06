@@ -1221,10 +1221,10 @@ button, a, .song-card, .home-card, .home-top-card, .sidebar-cat,
 /* Draft card */
 #rep-header {
   background: var(--surface);
-  border: 1.5px solid var(--primary);
+  border: 1.5px solid rgba(91,75,138,.2);
   border-radius: 14px;
   padding: 10px;
-  box-shadow: 0 4px 16px rgba(91,75,138,.12);
+  box-shadow: 0 2px 12px rgba(91,75,138,.08);
   display: flex;
   flex-direction: column;
   gap: 0;
@@ -3680,7 +3680,6 @@ html.pwa-standalone #modal-footer {
 
 /* ── YouTube Trending ───────────────────────────────────────────────────── */
 :root {
-  --yt-thumb-radius: 6px;
   --yt-rank-gold: #d4af37;
   --yt-overlay-bg: rgba(0,0,0,.78);
   --yt-play-bg: rgba(255,255,255,.96);
@@ -3696,76 +3695,74 @@ html.pwa-standalone #modal-footer {
 }
 .yt-trending-icon { width: 14px; height: 14px; color: var(--primary); flex-shrink: 0; }
 .yt-trending-sub { font-size: 11px; color: var(--text-muted); padding-left: 21px; }
-/* List */
-.yt-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; }
-/* Row */
-.yt-row {
-  display: grid; grid-template-columns: 32px 80px 1fr auto;
-  align-items: center; gap: 14px; padding: 10px 4px;
-  border-top: 1px solid var(--border); cursor: pointer;
-  background: transparent; transition: background .12s;
+.yt-see-all {
+  font-size: 12px; font-weight: 700; color: var(--primary);
+  text-decoration: none; white-space: nowrap; flex-shrink: 0;
+  display: flex; align-items: center; gap: 3px; margin-bottom: 2px;
 }
-.yt-row:first-child { border-top: none; }
-.yt-row:hover { background: rgba(91,75,138,.07); }
-/* Rank */
-.yt-rank {
-  font-size: 22px; font-weight: 800; color: var(--text-muted);
-  letter-spacing: -1px; font-variant-numeric: tabular-nums; text-align: center;
+.yt-see-all:hover { opacity: .75; }
+/* Scroll container */
+.yt-scroll-wrap {
+  overflow-x: auto; padding-bottom: 6px;
+  scrollbar-width: thin; scrollbar-color: var(--border) transparent;
 }
-.yt-row:first-child .yt-rank { color: var(--yt-rank-gold); }
-/* Thumb */
-.yt-thumb {
-  position: relative; width: 80px; aspect-ratio: 16/9;
-  border-radius: var(--yt-thumb-radius); overflow: hidden; background: var(--surface2);
-  flex-shrink: 0;
+.yt-scroll-wrap::-webkit-scrollbar { height: 4px; }
+.yt-scroll-wrap::-webkit-scrollbar-thumb { background: var(--border); border-radius: 99px; }
+/* Cards */
+.yt-cards { list-style: none; padding: 4px 2px 8px; margin: 0; display: flex; gap: 14px; width: max-content; }
+.yt-card {
+  width: 192px; background: var(--surface); border-radius: 12px;
+  border: 1px solid var(--border); box-shadow: 0 2px 8px rgba(0,0,0,.06);
+  cursor: pointer; overflow: hidden; flex-shrink: 0;
+  transition: transform .18s, box-shadow .18s;
 }
-.yt-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.yt-thumb-duration {
-  position: absolute; right: 4px; bottom: 4px; padding: 1px 5px;
-  border-radius: 3px; background: var(--yt-overlay-bg); color: #fff;
-  font-size: 9.5px; font-weight: 700; font-variant-numeric: tabular-nums;
+.yt-card:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(91,75,138,.16); }
+/* Thumbnail */
+.yt-card-thumb {
+  position: relative; width: 100%; aspect-ratio: 16/9;
+  background: var(--surface2); overflow: hidden;
 }
-.yt-thumb-play {
-  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
-  background: rgba(0,0,0,.18); opacity: 0; transition: opacity .18s;
+.yt-card-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .22s; }
+.yt-card:hover .yt-card-thumb img { transform: scale(1.04); }
+/* Rank badge */
+.yt-card-rank {
+  position: absolute; top: 7px; left: 7px;
+  background: var(--primary); color: #fff;
+  font-size: 10px; font-weight: 800; line-height: 1; padding: 3px 8px; border-radius: 99px;
 }
-.yt-thumb-play svg {
-  width: 14px; height: 14px; color: #0f1419;
-  background: var(--yt-play-bg); border-radius: 99px; padding: 6px;
-  box-shadow: 0 2px 8px rgba(0,0,0,.32);
+.yt-cards li:first-child .yt-card-rank { background: var(--yt-rank-gold); }
+/* Duration badge */
+.yt-card-duration {
+  position: absolute; right: 5px; bottom: 5px;
+  background: rgba(0,0,0,.75); color: #fff;
+  font-size: 10px; font-weight: 700; padding: 1px 5px; border-radius: 3px;
 }
-.yt-row:hover .yt-thumb-play { opacity: 1; }
-/* Meta */
-.yt-meta { min-width: 0; }
-.yt-row-title {
-  font-size: 13.5px; font-weight: 700; color: var(--text); letter-spacing: -0.1px;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 2px;
+/* Play overlay */
+.yt-card-overlay {
+  position: absolute; inset: 0;
+  background: linear-gradient(to bottom, rgba(0,0,0,.04), rgba(0,0,0,.28));
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0; transition: opacity .18s;
 }
-.yt-row-sub {
-  display: flex; align-items: center; gap: 6px;
-  font-size: 11.5px; color: var(--text-muted);
+.yt-card-overlay svg {
+  width: 40px; height: 40px; padding: 11px;
+  background: var(--yt-play-bg); border-radius: 50%; color: var(--primary);
+  box-shadow: 0 2px 12px rgba(0,0,0,.3);
 }
-.yt-channel { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 200px; }
-.yt-dot { color: var(--border); }
-.yt-views { display: flex; align-items: center; gap: 3px; white-space: nowrap; }
-.yt-views svg { width: 11px; height: 11px; flex-shrink: 0; }
-/* Play button */
-.yt-play-btn {
-  width: 32px; height: 32px; border-radius: 99px;
-  background: rgba(91,75,138,.09); border: none; color: var(--primary);
-  cursor: pointer; display: flex; align-items: center; justify-content: center;
-  flex-shrink: 0; transition: background .12s, transform .08s;
+.yt-card:hover .yt-card-overlay { opacity: 1; }
+/* Card body */
+.yt-card-body { padding: 10px 12px 12px; }
+.yt-card-title {
+  font-size: 12.5px; font-weight: 700; color: var(--text); line-height: 1.35;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  overflow: hidden; min-height: 34px; margin-bottom: 4px;
 }
-.yt-play-btn:hover { background: var(--primary); color: #fff; }
-.yt-play-btn:active { transform: scale(.94); }
-.yt-play-btn svg { width: 12px; height: 12px; }
-/* More / Less button */
-.yt-more-btn {
-  margin-top: 8px; display: flex; align-items: center; gap: 6px;
-  padding: 8px 4px; background: transparent; border: none;
-  color: var(--primary); font-size: 12px; font-weight: 700; cursor: pointer;
+.yt-card-channel {
+  font-size: 11px; color: var(--text-muted);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 3px;
 }
-.yt-more-btn svg { width: 11px; height: 11px; }
+.yt-card-views { font-size: 10.5px; color: var(--text-muted); display: flex; align-items: center; gap: 3px; }
+.yt-card-views svg { width: 10px; height: 10px; }
 /* Info "?" button + tooltip */
 .yt-info-btn {
   display: inline-flex; align-items: center; justify-content: center;
@@ -3792,33 +3789,15 @@ html.pwa-standalone #modal-footer {
 .yt-info-btn:hover .yt-tooltip,
 .yt-info-btn.active .yt-tooltip { display: block; }
 /* Skeleton */
-.yt-row.is-skeleton { pointer-events: none; }
-.yt-row.is-skeleton .yt-rank,
-.yt-row.is-skeleton .yt-thumb,
-.yt-row.is-skeleton .yt-row-title,
-.yt-row.is-skeleton .yt-row-sub,
-.yt-row.is-skeleton .yt-play-btn {
-  background: var(--border); color: transparent; border-radius: 4px;
-}
-.yt-row.is-skeleton .yt-row-title { width: 80%; height: 12px; }
-.yt-row.is-skeleton .yt-row-sub  { width: 50%; height: 10px; margin-top: 6px; }
 @keyframes yt-pulse { 50% { opacity: .5; } }
-.yt-row.is-skeleton { animation: yt-pulse 1.4s ease-in-out infinite; }
-/* Mobile */
-@media (max-width: 600px) {
-  .yt-list {
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: 14px; overflow: hidden;
-  }
-  .yt-row {
-    grid-template-columns: 24px 70px 1fr auto; gap: 11px; padding: 10px 12px;
-  }
-  .yt-rank { font-size: 18px; }
-  .yt-thumb { width: 70px; border-radius: 5px; }
-  .yt-row-title { font-size: 12.5px; }
-  .yt-row-sub { font-size: 10.5px; }
-  .yt-play-btn { width: 30px; height: 30px; }
-}
+.yt-card.is-skeleton { pointer-events: none; animation: yt-pulse 1.4s ease-in-out infinite; }
+.yt-card.is-skeleton .yt-card-thumb { background: var(--border); }
+.yt-card.is-skeleton .yt-card-title,
+.yt-card.is-skeleton .yt-card-channel,
+.yt-card.is-skeleton .yt-card-views { background: var(--border); color: transparent; border-radius: 4px; }
+.yt-card.is-skeleton .yt-card-title { height: 28px; }
+.yt-card.is-skeleton .yt-card-channel { height: 11px; width: 70%; }
+.yt-card.is-skeleton .yt-card-views { height: 10px; width: 40%; }
 /* Modal */
 .yt-modal {
   position: fixed; inset: 0; background: rgba(0,0,0,.78);
@@ -4151,14 +4130,13 @@ html.pwa-standalone #modal-footer {
                 Em alta · Louvor Católico
                 <button class="yt-info-btn" id="yt-info-btn" aria-label="Sobre esta seção" type="button">?<span class="yt-tooltip">Músicas católicas mais vistas no YouTube nos últimos 30 dias, filtradas por artistas e ministérios selecionados.</span></button>
               </h3>
-              <div class="yt-trending-sub" id="yt-trending-sub">Top 10 do YouTube</div>
+              <div class="yt-trending-sub" id="yt-trending-sub">Top do YouTube</div>
             </div>
+            <a class="yt-see-all" href="#" onclick="return false">Ver todos →</a>
           </div>
-          <ol class="yt-list" id="yt-list"></ol>
-          <button class="yt-more-btn" id="yt-more-btn" style="display:none" aria-expanded="false">
-            Ver mais 5
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-          </button>
+          <div class="yt-scroll-wrap">
+            <ol class="yt-cards" id="yt-list"></ol>
+          </div>
         </section>
 
       </div>
@@ -10112,81 +10090,43 @@ function _ytSkeleton(n) {
   list.innerHTML = '';
   for (var i = 0; i < n; i++) {
     var li = document.createElement('li');
-    li.className = 'yt-row is-skeleton';
+    li.className = 'yt-card is-skeleton';
     li.innerHTML =
-      '<span class="yt-rank">' + (i + 1) + '</span>' +
-      '<div class="yt-thumb"></div>' +
-      '<div class="yt-meta"><div class="yt-row-title">&nbsp;</div><div class="yt-row-sub">&nbsp;</div></div>' +
-      '<button class="yt-play-btn" disabled></button>';
+      '<div class="yt-card-thumb"></div>' +
+      '<div class="yt-card-body">' +
+        '<div class="yt-card-title">&nbsp;</div>' +
+        '<div class="yt-card-channel">&nbsp;</div>' +
+        '<div class="yt-card-views">&nbsp;</div>' +
+      '</div>';
     list.appendChild(li);
   }
 }
 
 function _ytMakeRow(v, i) {
   var li = document.createElement('li');
-  li.className = 'yt-row';
+  li.className = 'yt-card';
   var thumb = 'https://i.ytimg.com/vi/' + v.videoId + '/hqdefault.jpg';
   li.innerHTML =
-    '<span class="yt-rank">' + (i + 1) + '</span>' +
-    '<div class="yt-thumb">' +
+    '<div class="yt-card-thumb">' +
       '<img src="' + escHtml(thumb) + '" alt="" loading="lazy">' +
-      (v.duration ? '<span class="yt-thumb-duration">' + escHtml(v.duration) + '</span>' : '') +
-      '<span class="yt-thumb-play"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></span>' +
+      '<span class="yt-card-rank">#' + (i + 1) + '</span>' +
+      (v.duration ? '<span class="yt-card-duration">' + escHtml(v.duration) + '</span>' : '') +
+      '<span class="yt-card-overlay"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></span>' +
     '</div>' +
-    '<div class="yt-meta">' +
-      '<div class="yt-row-title">' + escHtml(v.title) + '</div>' +
-      '<div class="yt-row-sub">' +
-        '<span class="yt-channel">' + escHtml(v.channel) + '</span>' +
-        (v.views ? '<span class="yt-dot">·</span><span class="yt-views"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>' + escHtml(v.views) + '</span>' : '') +
-      '</div>' +
-    '</div>' +
-    '<button class="yt-play-btn" aria-label="Reproduzir"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></button>';
-  function play(e) { e.stopPropagation(); _ytOpenModal(v); }
-  li.addEventListener('click', play);
-  li.querySelector('.yt-play-btn').addEventListener('click', play);
+    '<div class="yt-card-body">' +
+      '<div class="yt-card-title">' + escHtml(v.title) + '</div>' +
+      '<div class="yt-card-channel">' + escHtml(v.channel) + '</div>' +
+      (v.views ? '<div class="yt-card-views"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>' + escHtml(v.views) + '</div>' : '') +
+    '</div>';
+  li.addEventListener('click', function(e) { e.stopPropagation(); _ytOpenModal(v); });
   return li;
-}
-
-function _ytSetMoreBtn(btn, expanded, extraCount) {
-  btn.dataset.ytExpanded = expanded ? '1' : '0';
-  if (expanded) {
-    btn.innerHTML = 'Ver menos <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 19l-7-7 7-7"/></svg>';
-  } else {
-    btn.innerHTML = 'Ver mais ' + extraCount + ' <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>';
-  }
 }
 
 function _ytPopulate(videos) {
   var list = document.getElementById('yt-list');
-  var moreBtn = document.getElementById('yt-more-btn');
   if (!list) return;
   list.innerHTML = '';
-  videos.slice(0, 5).forEach(function(v, i) { list.appendChild(_ytMakeRow(v, i)); });
-  var rest = videos.slice(5);
-  rest.forEach(function(v, i) {
-    var row = _ytMakeRow(v, i + 5);
-    row.style.display = 'none';
-    list.appendChild(row);
-  });
-  if (moreBtn) {
-    if (rest.length) {
-      moreBtn.style.display = 'flex';
-      _ytSetMoreBtn(moreBtn, false, rest.length);
-      moreBtn.onclick = function() {
-        var expanded = moreBtn.dataset.ytExpanded === '1';
-        var items = list.querySelectorAll('li');
-        if (!expanded) {
-          items.forEach(function(el) { el.style.display = ''; });
-          _ytSetMoreBtn(moreBtn, true, rest.length);
-        } else {
-          items.forEach(function(el, idx) { if (idx >= 5) el.style.display = 'none'; });
-          _ytSetMoreBtn(moreBtn, false, rest.length);
-        }
-      };
-    } else {
-      moreBtn.style.display = 'none';
-    }
-  }
+  videos.forEach(function(v, i) { list.appendChild(_ytMakeRow(v, i)); });
 }
 
 // Tooltip do "?" — toggle no mobile, hover no desktop
