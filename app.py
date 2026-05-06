@@ -2924,6 +2924,7 @@ _TITLE_BLOCK = {
     # Conteúdo não-musical
     "vlog", "reflexão", "meditação", "reel", "ep.", "podcast",
     "entrevista", "depoimento", "pregação", "homilia",
+    "making of", "bastidores", "making-of",
     # Compilações
     "1 hora", "2 horas", "3 horas", "4 horas", "5 horas",
     "coletânea", "compilado", "as melhores", "mix",
@@ -2969,12 +2970,17 @@ def _fmt_views(n: int) -> str:
 def _is_music_video(item: dict) -> bool:
     snippet = item.get("snippet", {})
     content = item.get("contentDetails", {})
-    title = snippet.get("title", "").lower()
+    raw_title = snippet.get("title", "").strip()
+    title = raw_title.lower()
     category = snippet.get("categoryId", "")
     tags = {t.lower() for t in (snippet.get("tags") or [])}
     duration_s = _parse_duration_seconds(content.get("duration", ""))
 
     if duration_s < 120 or duration_s > _MAX_DURATION_S:
+        return False
+    # Títulos que começam com emoji ou símbolo especial são conteúdo não-musical (vlogs, posts, etc.)
+    first_char = raw_title[:1]
+    if first_char and unicodedata.category(first_char)[0] not in ("L", "N"):
         return False
     if any(w in title for w in _TITLE_BLOCK):
         return False

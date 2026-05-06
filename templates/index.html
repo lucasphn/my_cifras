@@ -3759,13 +3759,38 @@ html.pwa-standalone #modal-footer {
 .yt-play-btn:hover { background: var(--primary); color: #fff; }
 .yt-play-btn:active { transform: scale(.94); }
 .yt-play-btn svg { width: 12px; height: 12px; }
-/* More button */
+/* More / Less button */
 .yt-more-btn {
   margin-top: 8px; display: flex; align-items: center; gap: 6px;
   padding: 8px 4px; background: transparent; border: none;
   color: var(--primary); font-size: 12px; font-weight: 700; cursor: pointer;
 }
 .yt-more-btn svg { width: 11px; height: 11px; }
+/* Info "?" button + tooltip */
+.yt-info-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 15px; height: 15px; border-radius: 50%;
+  border: 1.5px solid var(--text-muted); background: transparent;
+  color: var(--text-muted); font-size: 9px; font-weight: 800;
+  cursor: pointer; position: relative; flex-shrink: 0;
+  line-height: 1; padding: 0;
+}
+.yt-info-btn:hover, .yt-info-btn.active { border-color: var(--primary); color: var(--primary); }
+.yt-tooltip {
+  display: none; position: absolute; bottom: calc(100% + 7px); left: 50%;
+  transform: translateX(-50%); width: 210px;
+  background: var(--surface); color: var(--text);
+  font-size: 11px; font-weight: 400; line-height: 1.5;
+  padding: 8px 10px; border-radius: 8px;
+  border: 1px solid var(--border); box-shadow: 0 4px 16px rgba(0,0,0,.12);
+  white-space: normal; text-align: left; pointer-events: none; z-index: 99;
+}
+.yt-tooltip::after {
+  content: ''; position: absolute; top: 100%; left: 50%; transform: translateX(-50%);
+  border: 5px solid transparent; border-top-color: var(--border);
+}
+.yt-info-btn:hover .yt-tooltip,
+.yt-info-btn.active .yt-tooltip { display: block; }
 /* Skeleton */
 .yt-row.is-skeleton { pointer-events: none; }
 .yt-row.is-skeleton .yt-rank,
@@ -4124,6 +4149,7 @@ html.pwa-standalone #modal-footer {
               <h3 class="yt-trending-title">
                 <svg class="yt-trending-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 7-8.5 8.5-5-5L2 17"/><path d="M16 7h6v6"/></svg>
                 Em alta · Louvor Católico
+                <button class="yt-info-btn" id="yt-info-btn" aria-label="Sobre esta seção" type="button">?<span class="yt-tooltip">Músicas católicas mais vistas no YouTube nos últimos 30 dias, filtradas por artistas e ministérios selecionados.</span></button>
               </h3>
               <div class="yt-trending-sub" id="yt-trending-sub">Top 10 do YouTube</div>
             </div>
@@ -10121,6 +10147,15 @@ function _ytMakeRow(v, i) {
   return li;
 }
 
+function _ytSetMoreBtn(btn, expanded, extraCount) {
+  btn.dataset.ytExpanded = expanded ? '1' : '0';
+  if (expanded) {
+    btn.innerHTML = 'Ver menos <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 19l-7-7 7-7"/></svg>';
+  } else {
+    btn.innerHTML = 'Ver mais ' + extraCount + ' <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>';
+  }
+}
+
 function _ytPopulate(videos) {
   var list = document.getElementById('yt-list');
   var moreBtn = document.getElementById('yt-more-btn');
@@ -10131,25 +10166,39 @@ function _ytPopulate(videos) {
   rest.forEach(function(v, i) {
     var row = _ytMakeRow(v, i + 5);
     row.style.display = 'none';
-    row.dataset.ytHidden = '1';
     list.appendChild(row);
   });
   if (moreBtn) {
     if (rest.length) {
       moreBtn.style.display = 'flex';
-      moreBtn.innerHTML = 'Ver mais ' + rest.length + ' <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>';
-      moreBtn.addEventListener('click', function() {
-        list.querySelectorAll('[data-yt-hidden]').forEach(function(el) {
-          el.style.display = '';
-          delete el.dataset.ytHidden;
-        });
-        moreBtn.style.display = 'none';
-      }, { once: true });
+      _ytSetMoreBtn(moreBtn, false, rest.length);
+      moreBtn.onclick = function() {
+        var expanded = moreBtn.dataset.ytExpanded === '1';
+        var items = list.querySelectorAll('li');
+        if (!expanded) {
+          items.forEach(function(el) { el.style.display = ''; });
+          _ytSetMoreBtn(moreBtn, true, rest.length);
+        } else {
+          items.forEach(function(el, idx) { if (idx >= 5) el.style.display = 'none'; });
+          _ytSetMoreBtn(moreBtn, false, rest.length);
+        }
+      };
     } else {
       moreBtn.style.display = 'none';
     }
   }
 }
+
+// Tooltip do "?" — toggle no mobile, hover no desktop
+(function() {
+  var btn = document.getElementById('yt-info-btn');
+  if (!btn) return;
+  btn.addEventListener('click', function(e) {
+    e.stopPropagation();
+    btn.classList.toggle('active');
+  });
+  document.addEventListener('click', function() { btn.classList.remove('active'); });
+})();
 
 async function loadYoutubeTrending() {
   var section = document.getElementById('yt-trending-section');
