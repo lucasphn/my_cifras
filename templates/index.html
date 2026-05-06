@@ -366,22 +366,43 @@ button, a, .song-card, .home-card, .home-top-card, .sidebar-cat,
 
 /* Sub-categories (3-level: section > category > subcategory) */
 .sidebar-cat-group { }
-.sidebar-subcats { overflow: hidden; }
+.sidebar-cat-group-header {
+  font-weight: 500;
+}
+.sidebar-cat-group-header .sidebar-icon {
+  transition: transform .22s cubic-bezier(.4,0,.2,1);
+  color: var(--primary);
+  opacity: .65;
+  font-size: .65em;
+  font-style: normal;
+}
+.sidebar-cat-group-header.collapsed .sidebar-icon { transform: rotate(-90deg); }
+.sidebar-cat-group-header > span:not(.sidebar-icon):not(.count) {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+.sidebar-subcats {
+  overflow: hidden;
+  border-left: 2px solid var(--border);
+  margin: 1px 0 3px 21px;
+}
 .sidebar-subcats.collapsed { display: none; }
 .sidebar-subcat {
-  padding-left: 30px;
-  font-size: 0.84em;
+  padding: 7px 12px 7px 11px;
+  font-size: 0.845em;
   font-weight: 400;
+  border-left: none !important;
+  border-radius: 0 8px 8px 0;
+  margin: 1px 10px 1px 0;
 }
-.sidebar-cat-group-header { font-weight: 600; }
-.sidebar-group-arrow {
-  font-size: 0.72em;
-  color: var(--text-muted);
-  transition: transform .2s;
-  flex-shrink: 0;
-  margin-left: auto;
+.sidebar-subcat.active {
+  color: var(--primary);
+  font-weight: 600;
+  background: var(--primary-light);
 }
-.sidebar-cat-group-header.collapsed .sidebar-group-arrow { transform: rotate(-90deg); }
+.sidebar-subcat .count { font-size: 0.75em; }
 
 /* Folder management */
 .sidebar-section-title { position: relative; }
@@ -5549,10 +5570,10 @@ function renderSidebar() {
 
         var header = document.createElement("div");
         header.className = "sidebar-cat sidebar-cat-group-header";
+        // Arrow on the left (replaces the ◦ bullet); text must not wrap
         header.innerHTML =
-          iconHtml +
-          '<span>' + escHtml(displayName) + '</span>' +
-          '<span class="sidebar-group-arrow">▾</span>';
+          '<span class="sidebar-icon">▾</span>' +
+          '<span>' + escHtml(displayName) + '</span>';
         group.appendChild(header);
 
         var subList = document.createElement("div");
