@@ -21,13 +21,25 @@ load_dotenv()
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 
 
+# Pronomes e possessivos equivalentes → forma canônica (tu-forms → você-forms).
+# Aplicado em query E conteúdo, então "tua" na letra bate com "sua" na busca.
+_SEARCH_SYNONYMS = {
+    "tua": "sua", "tuas": "suas",
+    "teu": "seu", "teus": "seus",
+    "tu":  "voce",
+    "te":  "se",
+}
+
+
 def _normalize_search(s: str) -> str:
-    """Normaliza string para busca: remove acentos, pontuação e caixa."""
+    """Normaliza string para busca: remove acentos, pontuação, caixa e equipara pronomes tu/você."""
     s = unicodedata.normalize("NFD", s)
     s = "".join(c for c in s if unicodedata.category(c) != "Mn")
     s = s.lower()
     s = re.sub(r"[^a-z0-9 ]", " ", s)
-    return re.sub(r"\s+", " ", s).strip()
+    s = re.sub(r"\s+", " ", s).strip()
+    words = [_SEARCH_SYNONYMS.get(w, w) for w in s.split()]
+    return " ".join(words)
 
 
 from datetime import timedelta
@@ -2895,36 +2907,14 @@ def api_fix_keys():
 _TRENDING_FILE = Path(__file__).parent / "_trending.json"
 _TRENDING_MAX_AGE = 86400  # 24 horas
 
-_CATHOLIC_ARTISTS_BR = [
-    "Frei Gilson",
-    "GBA Music",
-    "Flavio Vitor Jr",
-    "Ramon e Rafael",
-    "Juninho Casimiro",
-    "Rosa de Saron",
-    "Colo de Deus",
-    "Fraternidade São João Paulo II",
-    "Missionário Shalom",
-    "Comunidade Católica Shalom",
-    "Anjos de Resgate",
-    "Adriana Arydes",
-    "Padre Marcelo Rossi",
-    "Thiago Brado",
-    "Livres Oficial",
-    "Eliana Ribeiro",
-    "Walmir Alencar",
-    "Vida Reluz",
-    "Voz da Verdade",
-    "Frei Zezinho",
-]
 
 # Canais/artistas evangélicos que podem aparecer nos resultados — ignorar
 _BLOCKED_CHANNELS = {
     "thiago brito", "gabriela rocha", "aline barros", "fernandinho",
     "diante do trono", "hillsong", "bethel", "elevation worship",
     "ana paula valadão", "eyshila", "isadora pompeo",
-    "davi sacer", "midian lima", "bruna karla",
-    "anderson freire", "kemuel", "thalles roberto",
+    "davi sacer", "midian lima", "bruna karla", "kemuel", "thalles roberto",
+    "anderson freire", "kemuel", "thalles roberto", 'mauro henrique', 'monique kessous', 'moradança', 'palavra da graça', 'pregador louco', 'priscilla alcantara',
 }
 
 _TITLE_BLOCK = {
@@ -2984,7 +2974,7 @@ def _is_music_video(item: dict) -> bool:
     tags = {t.lower() for t in (snippet.get("tags") or [])}
     duration_s = _parse_duration_seconds(content.get("duration", ""))
 
-    if duration_s <= 60 or duration_s > _MAX_DURATION_S:
+    if duration_s < 120 or duration_s > _MAX_DURATION_S:
         return False
     if any(w in title for w in _TITLE_BLOCK):
         return False
@@ -2993,106 +2983,107 @@ def _is_music_video(item: dict) -> bool:
     return category == "10" or bool(tags & _TAGS_ALLOW) or any(w in title for w in _TITLE_ALLOW)
 
 
-def _fetch_youtube_trending():
+# Mapa artista → channelId do YouTube.
+# Gerado uma vez via: python discover_channels.py
+# Cole o dict gerado aqui para que o app não dependa de arquivo em runtime
+# (evita perda do mapeamento a cada deploy no Render).
+_CHANNEL_MAP: dict = {}
+
+_CHANNEL_IDS_FILE = Path(__file__).parent / "_channel_ids.json"
+
+
+def _load_channel_map() -> dict:
+    """Retorna o mapa de channel IDs: prioriza _CHANNEL_MAP hardcoded, depois arquivo local."""
+    if _CHANNEL_MAP:
+        return _CHANNEL_MAP
+    if _CHANNEL_IDS_FILE.exists():
+        try:
+            return json.loads(_CHANNEL_IDS_FILE.read_text(encoding="utf-8"))
+        except Exception:
+            pass
+    return {}
+
+
+def _fetch_rss_candidates(channel_map: dict) -> dict:
+    """Coleta vídeos recentes via RSS do YouTube — zero quota."""
     import requests as rq
+    import xml.etree.ElementTree as ET
     from datetime import timezone, datetime as dt, timedelta
-    api_key = os.environ.get("YOUTUBE_API_KEY", "")
-    if not api_key:
-        log.warning("[trending] YOUTUBE_API_KEY não definida")
-        return []
-
-    published_after = (dt.now(timezone.utc) - timedelta(days=30)).strftime("%Y-%m-%dT%H:%M:%SZ")
-
-    # Passo 1: coleta candidatos via search.list por artista (armazena channelId)
+    NS_ATOM = "http://www.w3.org/2005/Atom"
+    NS_YT   = "http://www.youtube.com/xml/schemas/2015"
+    cutoff = (dt.now(timezone.utc) - timedelta(days=30)).date().isoformat()
     candidates = {}
-    for artist in _CATHOLIC_ARTISTS_BR:
-        if len(candidates) >= 60:
-            break
+    for artist, channel_id in channel_map.items():
+        if artist.lower().strip() in _BLOCKED_CHANNELS:
+            continue
         try:
             r = rq.get(
-                "https://www.googleapis.com/youtube/v3/search",
-                params={
-                    "part": "snippet",
-                    "q": artist,
-                    "type": "video",
-                    "maxResults": 5,
-                    "order": "viewCount",
-                    "publishedAfter": published_after,
-                    "regionCode": "BR",
-                    "relevanceLanguage": "pt",
-                    "key": api_key,
-                },
+                f"https://www.youtube.com/feeds/videos.xml?channel_id={channel_id}",
                 timeout=10,
             )
-            r.raise_for_status()
-            for item in r.json().get("items", []):
-                vid_id = item["id"]["videoId"]
+            if r.status_code != 200:
+                continue
+            root = ET.fromstring(r.text)
+            for entry in root.findall(f"{{{NS_ATOM}}}entry")[:5]:
+                vid_el = entry.find(f"{{{NS_YT}}}videoId")
+                pub_el = entry.find(f"{{{NS_ATOM}}}published")
+                title_el = entry.find(f"{{{NS_ATOM}}}title")
+                if vid_el is None:
+                    continue
+                published = (pub_el.text or "")[:10] if pub_el is not None else ""
+                if published and published < cutoff:
+                    continue
+                vid_id = vid_el.text
                 if vid_id in candidates:
                     continue
-                snip = item["snippet"]
-                thumbs = snip.get("thumbnails", {})
-                thumb = (thumbs.get("medium") or thumbs.get("high") or thumbs.get("default") or {}).get("url", "")
+                title = title_el.text if title_el is not None else ""
                 candidates[vid_id] = {
                     "videoId": vid_id,
-                    "title": snip.get("title", ""),
-                    "channel": snip.get("channelTitle", ""),
-                    "channelId": snip.get("channelId", ""),
-                    "thumbnail": thumb,
+                    "title": title,
+                    "channel": artist,
+                    "channelId": channel_id,
+                    "thumbnail": f"https://img.youtube.com/vi/{vid_id}/mqdefault.jpg",
                 }
         except Exception as e:
-            log.error("[trending] erro buscando '%s': %s", artist, e)
+            log.error("[trending] erro RSS '%s': %s", artist, e)
+    return candidates
 
+
+def _fetch_youtube_trending():
+    import requests as rq
+    api_key = os.environ.get("YOUTUBE_API_KEY", "")
+
+    channel_map = _load_channel_map()
+
+    if not channel_map:
+        log.warning("[trending] nenhum channelId disponível ainda")
+        return []
+
+    # Coleta candidatos via RSS — zero quota
+    candidates = _fetch_rss_candidates(channel_map)
     if not candidates:
         return []
 
-    # Passo 2a: verifica país dos canais — exclui canais com país explicitamente não-BR
-    channel_ids = list({v["channelId"] for v in candidates.values() if v.get("channelId")})
-    non_br_channels = set()
-    for i in range(0, len(channel_ids), 50):
-        batch = channel_ids[i:i + 50]
-        try:
-            r = rq.get(
-                "https://www.googleapis.com/youtube/v3/channels",
-                params={"part": "snippet", "id": ",".join(batch), "key": api_key},
-                timeout=10,
-            )
-            r.raise_for_status()
-            for ch in r.json().get("items", []):
-                country = ch.get("snippet", {}).get("country", "").upper()
-                if country and country != "BR":
-                    non_br_channels.add(ch["id"])
-        except Exception as e:
-            log.error("[trending] erro em channels.list: %s", e)
-
-    # Passo 2b: busca detalhes em batch (snippet + contentDetails + statistics)
+    # Enriquece com detalhes via videos.list em batch — custo: 1 unidade por 50 vídeos
     detailed = {}
-    vid_ids = list(candidates.keys())
-    for i in range(0, len(vid_ids), 50):
-        batch = vid_ids[i:i + 50]
-        try:
-            r = rq.get(
-                "https://www.googleapis.com/youtube/v3/videos",
-                params={
-                    "part": "snippet,contentDetails,statistics",
-                    "id": ",".join(batch),
-                    "key": api_key,
-                },
-                timeout=10,
-            )
-            r.raise_for_status()
-            for item in r.json().get("items", []):
-                detailed[item["id"]] = item
-        except Exception as e:
-            log.error("[trending] erro em videos.list: %s", e)
+    if api_key:
+        for i in range(0, len(candidates), 50):
+            batch = list(candidates.keys())[i:i + 50]
+            try:
+                r = rq.get(
+                    "https://www.googleapis.com/youtube/v3/videos",
+                    params={"part": "snippet,contentDetails,statistics", "id": ",".join(batch), "key": api_key},
+                    timeout=10,
+                )
+                r.raise_for_status()
+                for item in r.json().get("items", []):
+                    detailed[item["id"]] = item
+            except Exception as e:
+                log.error("[trending] erro em videos.list: %s", e)
 
-    # Passo 3 e 4: filtra, limita por canal e ordena por views
     channel_counts: dict = {}
     results = []
     for vid_id, candidate in candidates.items():
-        if candidate.get("channelId") in non_br_channels:
-            continue
-        if candidate.get("channel", "").lower().strip() in _BLOCKED_CHANNELS:
-            continue
         detail = detailed.get(vid_id)
         if not detail or not _is_music_video(detail):
             continue
