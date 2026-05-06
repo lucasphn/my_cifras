@@ -364,6 +364,25 @@ button, a, .song-card, .home-card, .home-top-card, .sidebar-cat,
 }
 .sidebar-cat.active .count { background: rgba(91,75,138,.15); color: var(--primary); }
 
+/* Sub-categories (3-level: section > category > subcategory) */
+.sidebar-cat-group { }
+.sidebar-subcats { overflow: hidden; }
+.sidebar-subcats.collapsed { display: none; }
+.sidebar-subcat {
+  padding-left: 30px;
+  font-size: 0.84em;
+  font-weight: 400;
+}
+.sidebar-cat-group-header { font-weight: 600; }
+.sidebar-group-arrow {
+  font-size: 0.72em;
+  color: var(--text-muted);
+  transition: transform .2s;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+.sidebar-cat-group-header.collapsed .sidebar-group-arrow { transform: rotate(-90deg); }
+
 /* Folder management */
 .sidebar-section-title { position: relative; }
 .btn-folder-add {
@@ -4556,6 +4575,10 @@ html.pwa-standalone #modal-footer {
             <label>Categoria</label>
             <select id="import-category"><option value="">Selecione...</option></select>
           </div>
+          <div class="import-field" id="import-subcategory-field" style="display:none">
+            <label>Momento</label>
+            <select id="import-subcategory"><option value="">Selecione...</option></select>
+          </div>
         </div>
         <!-- Preview da cifra -->
         <div id="import-preview-wrap">
@@ -5473,9 +5496,22 @@ function renderSidebar() {
 
     // ── Categorias ──
     var categories = library[section];
-    Object.keys(categories).forEach(function(cat) {
+    var allCatKeys = Object.keys(categories);
+
+    // Map parent category → list of sub-category names for compound keys
+    var parentSubs = {};
+    allCatKeys.forEach(function(k) {
+      if (k.indexOf(" > ") !== -1) {
+        var sep = k.indexOf(" > ");
+        var parent = k.slice(0, sep);
+        var sub = k.slice(sep + 3);
+        if (!parentSubs[parent]) parentSubs[parent] = [];
+        parentSubs[parent].push(sub);
+      }
+    });
+
+    allCatKeys.forEach(function(cat) {
       if (cat === "_raiz") {
-        // Categoria raiz não é gerenciável como pasta
         var item = document.createElement("div");
         item.className = "sidebar-cat";
         item.innerHTML = '<span class="sidebar-icon">🗂️</span><span>Geral</span><span class="count">' + categories[cat].length + '</span>';
@@ -5486,23 +5522,64 @@ function renderSidebar() {
         return;
       }
 
+      // Compound keys are rendered as children of their parent group
+      if (cat.indexOf(" > ") !== -1) return;
+
       var displayName = cleanLabel(cat);
       var icon = categoryIcon(displayName);
       var iconHtml = icon ? '<span class="sidebar-icon">' + icon + '</span>' : '';
-      var item = document.createElement("div");
-      item.className = "sidebar-cat";
-      item.innerHTML =
-        iconHtml +
-        '<span>' + escHtml(displayName) + '</span>' +
-        '<span class="count">' + categories[cat].length + '</span>';
-      item.dataset.section = section;
-      item.dataset.cat = cat;
+      var subs = parentSubs[cat];
 
-      item.addEventListener("click", function(e) {
-        selectCategory(section, cat);
-      });
+      if (!subs || subs.length === 0) {
+        // Simple flat category
+        var item = document.createElement("div");
+        item.className = "sidebar-cat";
+        item.innerHTML =
+          iconHtml +
+          '<span>' + escHtml(displayName) + '</span>' +
+          '<span class="count">' + categories[cat].length + '</span>';
+        item.dataset.section = section;
+        item.dataset.cat = cat;
+        item.addEventListener("click", function() { selectCategory(section, cat); });
+        cats.appendChild(item);
+      } else {
+        // Category with sub-categories: collapsible group
+        var group = document.createElement("div");
+        group.className = "sidebar-cat-group";
 
-      cats.appendChild(item);
+        var header = document.createElement("div");
+        header.className = "sidebar-cat sidebar-cat-group-header";
+        header.innerHTML =
+          iconHtml +
+          '<span>' + escHtml(displayName) + '</span>' +
+          '<span class="sidebar-group-arrow">▾</span>';
+        group.appendChild(header);
+
+        var subList = document.createElement("div");
+        subList.className = "sidebar-subcats";
+
+        subs.forEach(function(sub) {
+          var subKey = cat + " > " + sub;
+          var subItem = document.createElement("div");
+          subItem.className = "sidebar-cat sidebar-subcat";
+          subItem.innerHTML =
+            '<span>' + escHtml(cleanLabel(sub)) + '</span>' +
+            '<span class="count">' + (categories[subKey] || []).length + '</span>';
+          subItem.dataset.section = section;
+          subItem.dataset.cat = subKey;
+          subItem.addEventListener("click", function() { selectCategory(section, subKey); });
+          subList.appendChild(subItem);
+        });
+
+        group.appendChild(subList);
+
+        header.addEventListener("click", function() {
+          subList.classList.toggle("collapsed");
+          header.classList.toggle("collapsed");
+        });
+
+        cats.appendChild(group);
+      }
     });
 
     title.addEventListener("click", function(e) {
@@ -9780,13 +9857,41 @@ function onImportSectionChange(presetCat) {
   var section = document.getElementById("import-section").value;
   var catSel = document.getElementById("import-category");
   catSel.innerHTML = '<option value="_raiz">Geral</option>';
-  var cats = (importSections[section] || []).filter(function(c) { return c !== "_raiz"; });
+  // Only show base category names (exclude compound keys like "Cat > Sub")
+  var cats = (importSections[section] || []).filter(function(c) {
+    return c !== "_raiz" && c.indexOf(" > ") === -1;
+  });
   cats.forEach(function(c) {
     var opt = document.createElement("option");
     opt.value = c; opt.textContent = c;
     catSel.appendChild(opt);
   });
   if (presetCat) catSel.value = presetCat;
+  onImportCategoryChange();
+}
+
+function onImportCategoryChange() {
+  var section = document.getElementById("import-section").value;
+  var cat = document.getElementById("import-category").value;
+  var subField = document.getElementById("import-subcategory-field");
+  var subSel = document.getElementById("import-subcategory");
+  var prefix = cat + " > ";
+  var subs = (importSections[section] || [])
+    .filter(function(c) { return c.indexOf(prefix) === 0; })
+    .map(function(c) { return c.slice(prefix.length); });
+
+  if (cat && subs.length > 0) {
+    subSel.innerHTML = '<option value="">Selecione...</option>';
+    subs.forEach(function(s) {
+      var opt = document.createElement("option");
+      opt.value = s; opt.textContent = s;
+      subSel.appendChild(opt);
+    });
+    subField.style.display = "";
+  } else {
+    subField.style.display = "none";
+    subSel.innerHTML = '<option value="">Selecione...</option>';
+  }
 }
 
 function showImportResult(data) {
@@ -9845,7 +9950,12 @@ function previewImportText() {
 async function saveImport() {
   var title    = document.getElementById("import-title").value.trim();
   var section  = document.getElementById("import-section").value;
-  var category = document.getElementById("import-category").value || "_raiz";
+  var baseCat  = document.getElementById("import-category").value || "_raiz";
+  var subField = document.getElementById("import-subcategory-field");
+  var subCat   = (subField.style.display !== "none")
+    ? document.getElementById("import-subcategory").value
+    : "";
+  var category = subCat ? baseCat + " > " + subCat : baseCat;
   if (!title)   { document.getElementById("import-error").textContent = "Informe o título."; return; }
   if (!section) { document.getElementById("import-error").textContent = "Selecione a seção."; return; }
 
@@ -9946,6 +10056,7 @@ function initImportModal() {
   document.getElementById("btn-import-preview-text").addEventListener("click", previewImportText);
   document.getElementById("btn-import-save").addEventListener("click", saveImport);
   document.getElementById("import-section").addEventListener("change", onImportSectionChange);
+  document.getElementById("import-category").addEventListener("change", onImportCategoryChange);
 }
 
 if (/android/i.test(navigator.userAgent)) {

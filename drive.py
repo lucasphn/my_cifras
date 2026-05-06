@@ -444,10 +444,15 @@ def resolve_folder(service, section, category, root_folder_id):
     """
     Retorna folder_id correto para seção + categoria.
     Cria as pastas se não existirem.
+    Suporta categoria composta "Cat > SubCat" para estrutura de 3 níveis.
     """
     section_id = get_or_create_folder(service, section, root_folder_id)
     if not category or category == "_raiz":
         return section_id
+    if " > " in category:
+        cat_name, subcat_name = category.split(" > ", 1)
+        cat_id = get_or_create_folder(service, cat_name, section_id)
+        return get_or_create_folder(service, subcat_name, cat_id)
     return get_or_create_folder(service, category, section_id)
 
 
@@ -544,7 +549,13 @@ def _collect_songs(service, folder_id, section, category):
 
 
 def scan_library(service, root_folder_id):
-    """Escaneia a estrutura de pastas no Drive e retorna a biblioteca."""
+    """Escaneia a estrutura de pastas no Drive e retorna a biblioteca.
+
+    Suporta até 3 níveis: seção → categoria → subcategoria.
+    Quando uma categoria contém sub-pastas, as chaves do dict usam o separador
+    ' > ', ex: 'Tempo Comum > Entrada'. Músicas diretamente na pasta da categoria
+    ficam sob a chave simples 'Tempo Comum'.
+    """
     library = {}
     for section in list_folder(service, root_folder_id):
         if section["mimeType"] != FOLDER_MIME:
@@ -553,8 +564,18 @@ def scan_library(service, root_folder_id):
         library[sname] = {}
         for item in list_folder(service, section["id"]):
             if item["mimeType"] == FOLDER_MIME:
-                songs = _collect_songs(service, item["id"], sname, item["name"])
-                library[sname][item["name"]] = songs  # inclui pastas vazias
+                cat_name = item["name"]
+                cat_items = list_folder(service, item["id"])
+                direct_songs = [
+                    _resolve_file_entry(f, sname, cat_name)
+                    for f in cat_items
+                    if f["mimeType"] != FOLDER_MIME and _is_supported(f)
+                ]
+                sub_folders = [f for f in cat_items if f["mimeType"] == FOLDER_MIME]
+                library[sname][cat_name] = direct_songs
+                for sub in sub_folders:
+                    sub_key = cat_name + " > " + sub["name"]
+                    library[sname][sub_key] = _collect_songs(service, sub["id"], sname, sub_key)
             elif _is_supported(item):
                 library[sname].setdefault("_raiz", [])
                 library[sname]["_raiz"].append(_resolve_file_entry(item, sname, "_raiz"))
