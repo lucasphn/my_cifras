@@ -10,9 +10,14 @@ Configuração necessária no .env:
 
 import io
 import os
+import re
 from pathlib import Path
 
 FOLDER_MIME    = "application/vnd.google-apps.folder"
+
+def _natural_key(item):
+    """Chave para natural sort: '10 Comunhão' vem depois de '9 Santo', não antes de '2 Ato'."""
+    return [int(c) if c.isdigit() else c.lower() for c in re.split(r"(\d+)", item["name"])]
 SHORTCUT_MIME  = "application/vnd.google-apps.shortcut"
 _USERDATA_FOLDER = "_mycifras_data"
 GDOCS_MIME = "application/vnd.google-apps.document"
@@ -571,7 +576,10 @@ def scan_library(service, root_folder_id):
                     for f in cat_items
                     if f["mimeType"] != FOLDER_MIME and _is_supported(f)
                 ]
-                sub_folders = [f for f in cat_items if f["mimeType"] == FOLDER_MIME]
+                sub_folders = sorted(
+                    [f for f in cat_items if f["mimeType"] == FOLDER_MIME],
+                    key=_natural_key,
+                )
                 library[sname][cat_name] = direct_songs
                 for sub in sub_folders:
                     sub_key = cat_name + " > " + sub["name"]
