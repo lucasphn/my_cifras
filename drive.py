@@ -40,7 +40,7 @@ def list_folder(service, folder_id):
                 q=f"'{folder_id}' in parents and trashed=false",
                 fields="nextPageToken, files(id, name, mimeType, modifiedTime, shortcutDetails)",
                 pageToken=page_token,
-                orderBy="name",
+                orderBy="folder,name_natural",
             )
             .execute()
         )
