@@ -3724,120 +3724,113 @@ html.pwa-standalone #modal-footer {
   --yt-overlay-bg: rgba(0,0,0,.78);
   --yt-play-bg: rgba(255,255,255,.96);
 }
-.yt-trending { margin-bottom: 28px; }
-.yt-trending-header {
-  display: flex; align-items: flex-end; justify-content: space-between;
-  margin-bottom: 14px; gap: 16px;
+/* ─── Em Alta: collapsible ─────────────────────────────────────────────── */
+.yt-trending {
+  margin-bottom: 20px;
+  border: 0.5px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  overflow: hidden;
 }
+/* Header */
+.yt-header {
+  display: flex; align-items: center; gap: 10px;
+  padding: 12px 14px; cursor: pointer; user-select: none;
+  transition: background .12s;
+}
+.yt-header:hover { background: var(--primary-light); }
+.yt-header-left { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; }
+.yt-trending-icon { width: 15px; height: 15px; color: var(--primary); flex-shrink: 0; }
+.yt-header-text { flex: 1; min-width: 0; }
 .yt-trending-title {
-  margin: 0 0 3px; display: flex; align-items: center; gap: 7px;
-  font-size: 15px; font-weight: 800; letter-spacing: -0.3px; color: var(--text);
+  font-size: 13px; font-weight: 700; color: var(--text); letter-spacing: -0.2px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-.yt-trending-icon { width: 14px; height: 14px; color: var(--primary); flex-shrink: 0; }
-.yt-trending-sub { font-size: 11px; color: var(--text-muted); padding-left: 21px; }
-.yt-see-all {
-  font-size: 12px; font-weight: 700; color: var(--primary);
-  text-decoration: none; white-space: nowrap; flex-shrink: 0;
-  display: flex; align-items: center; gap: 3px; margin-bottom: 2px;
+.yt-trending-sub { font-size: 11px; color: var(--text-muted); margin-top: 1px; }
+.yt-header-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.yt-count-pill {
+  font-size: 11px; font-weight: 600; color: var(--text-muted);
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 99px; padding: 2px 9px; white-space: nowrap;
 }
-.yt-see-all:hover { opacity: .75; }
-/* Scroll container */
-.yt-scroll-wrap {
-  overflow-x: auto; padding-bottom: 6px;
-  scrollbar-width: thin; scrollbar-color: var(--border) transparent;
+.yt-chevron {
+  width: 14px; height: 14px; color: var(--text-muted);
+  transition: transform .2s; flex-shrink: 0;
 }
-.yt-scroll-wrap::-webkit-scrollbar { height: 4px; }
-.yt-scroll-wrap::-webkit-scrollbar-thumb { background: var(--border); border-radius: 99px; }
-/* Cards */
-.yt-cards { list-style: none; padding: 4px 2px 8px; margin: 0; display: flex; gap: 14px; width: max-content; }
-.yt-card {
-  width: 192px; background: var(--surface); border-radius: 12px;
-  border: 1px solid var(--border); box-shadow: 0 2px 8px rgba(0,0,0,.06);
-  cursor: pointer; overflow: hidden; flex-shrink: 0;
-  transition: transform .18s, box-shadow .18s;
+.yt-trending.is-open .yt-chevron { transform: rotate(180deg); }
+/* Hint row — collapsed only */
+.yt-hint {
+  display: flex; align-items: center; gap: 8px;
+  padding: 0 14px 11px;
 }
-.yt-card:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(91,75,138,.16); }
-/* Thumbnail */
-.yt-card-thumb {
-  position: relative; width: 100%; aspect-ratio: 16/9;
-  background: var(--surface2); overflow: hidden;
+.yt-trending.is-open .yt-hint { display: none; }
+.yt-hint-thumbs { display: flex; gap: 3px; flex-shrink: 0; }
+.yt-hint-thumb {
+  width: 22px; height: 22px; border-radius: 4px;
+  background: var(--surface2); border: 0.5px solid var(--border);
 }
-.yt-card-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .22s; }
-.yt-card:hover .yt-card-thumb img { transform: scale(1.04); }
-/* Rank badge */
-.yt-card-rank {
-  position: absolute; top: 7px; left: 7px;
-  background: var(--primary); color: #fff;
-  font-size: 10px; font-weight: 800; line-height: 1; padding: 3px 8px; border-radius: 99px;
-}
-.yt-cards li:first-child .yt-card-rank { background: var(--yt-rank-gold); }
-/* Duration badge */
-.yt-card-duration {
-  position: absolute; right: 5px; bottom: 5px;
-  background: rgba(0,0,0,.75); color: #fff;
-  font-size: 10px; font-weight: 700; padding: 1px 5px; border-radius: 3px;
-}
-/* Play overlay */
-.yt-card-overlay {
-  position: absolute; inset: 0;
-  background: linear-gradient(to bottom, rgba(0,0,0,.04), rgba(0,0,0,.28));
-  display: flex; align-items: center; justify-content: center;
-  opacity: 0; transition: opacity .18s;
-}
-.yt-card-overlay svg {
-  width: 40px; height: 40px; padding: 11px;
-  background: var(--yt-play-bg); border-radius: 50%; color: var(--primary);
-  box-shadow: 0 2px 12px rgba(0,0,0,.3);
-}
-.yt-card:hover .yt-card-overlay { opacity: 1; }
-/* Card body */
-.yt-card-body { padding: 10px 12px 12px; }
-.yt-card-title {
-  font-size: 12.5px; font-weight: 700; color: var(--text); line-height: 1.35;
-  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
-  overflow: hidden; min-height: 34px; margin-bottom: 4px;
-}
-.yt-card-channel {
+.yt-hint-text {
   font-size: 11px; color: var(--text-muted);
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 3px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
-.yt-card-views { font-size: 10.5px; color: var(--text-muted); display: flex; align-items: center; gap: 3px; }
-.yt-card-views svg { width: 10px; height: 10px; }
-/* Info "?" button + tooltip */
-.yt-info-btn {
-  display: inline-flex; align-items: center; justify-content: center;
-  width: 15px; height: 15px; border-radius: 50%;
-  border: 1.5px solid var(--text-muted); background: transparent;
-  color: var(--text-muted); font-size: 9px; font-weight: 800;
-  cursor: pointer; position: relative; flex-shrink: 0;
-  line-height: 1; padding: 0;
+/* Track list — expanded only */
+.yt-tracklist { display: none; list-style: none; margin: 0; padding: 0; }
+.yt-trending.is-open .yt-tracklist { display: block; }
+.yt-track {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 14px;
+  border-top: 0.5px solid var(--border);
+  cursor: pointer; transition: background .12s;
 }
-.yt-info-btn:hover, .yt-info-btn.active { border-color: var(--primary); color: var(--primary); }
-.yt-tooltip {
-  display: none; position: absolute; bottom: calc(100% + 7px); left: 50%;
-  transform: translateX(-50%); width: 210px;
-  background: var(--surface); color: var(--text);
-  font-size: 11px; font-weight: 400; line-height: 1.5;
-  padding: 8px 10px; border-radius: 8px;
-  border: 1px solid var(--border); box-shadow: 0 4px 16px rgba(0,0,0,.12);
-  white-space: normal; text-align: left; pointer-events: none; z-index: 99;
+.yt-track:hover { background: var(--surface2); }
+.yt-track-rank {
+  font-size: 11px; color: var(--text-muted);
+  min-width: 16px; text-align: right; flex-shrink: 0;
 }
-.yt-tooltip::after {
-  content: ''; position: absolute; top: 100%; left: 50%; transform: translateX(-50%);
-  border: 5px solid transparent; border-top-color: var(--border);
+.yt-track-thumb {
+  width: 36px; height: 36px; border-radius: 6px;
+  background: var(--surface2); border: 0.5px solid var(--border);
+  flex-shrink: 0;
 }
-.yt-info-btn:hover .yt-tooltip,
-.yt-info-btn.active .yt-tooltip { display: block; }
+.yt-track-info { flex: 1; min-width: 0; }
+.yt-track-title {
+  font-size: 13px; font-weight: 500; color: var(--text);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.yt-track-artist {
+  font-size: 11px; color: var(--text-muted);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  margin-top: 1px;
+}
+.yt-track-meta {
+  display: flex; flex-direction: column; align-items: flex-end;
+  gap: 1px; flex-shrink: 0;
+}
+.yt-track-views, .yt-track-dur { font-size: 11px; color: var(--text-muted); white-space: nowrap; }
+.yt-track-link {
+  color: var(--text-muted); opacity: .35; flex-shrink: 0;
+  display: flex; align-items: center; padding: 4px;
+  border-radius: 4px; transition: opacity .15s;
+}
+.yt-track-link:hover { opacity: .8; }
+.yt-track-link svg { width: 13px; height: 13px; }
+/* Footer — expanded only */
+.yt-footer { display: none; padding: 10px 14px; border-top: 0.5px solid var(--border); }
+.yt-trending.is-open .yt-footer { display: block; }
+.yt-see-all {
+  font-size: 12px; color: var(--text-muted); text-decoration: none;
+  display: inline-flex; align-items: center; gap: 4px;
+}
+.yt-see-all:hover { color: var(--primary); }
+.yt-see-all svg { width: 12px; height: 12px; }
 /* Skeleton */
-@keyframes yt-pulse { 50% { opacity: .5; } }
-.yt-card.is-skeleton { pointer-events: none; animation: yt-pulse 1.4s ease-in-out infinite; }
-.yt-card.is-skeleton .yt-card-thumb { background: var(--border); }
-.yt-card.is-skeleton .yt-card-title,
-.yt-card.is-skeleton .yt-card-channel,
-.yt-card.is-skeleton .yt-card-views { background: var(--border); color: transparent; border-radius: 4px; }
-.yt-card.is-skeleton .yt-card-title { height: 28px; }
-.yt-card.is-skeleton .yt-card-channel { height: 11px; width: 70%; }
-.yt-card.is-skeleton .yt-card-views { height: 10px; width: 40%; }
+@keyframes yt-pulse { 50% { opacity: .45; } }
+.yt-track.is-skeleton { pointer-events: none; animation: yt-pulse 1.4s ease-in-out infinite; }
+.yt-track.is-skeleton .yt-track-thumb { background: var(--border); border-color: transparent; }
+.yt-track.is-skeleton .yt-track-title,
+.yt-track.is-skeleton .yt-track-artist { background: var(--border); color: transparent; border-radius: 3px; }
+.yt-track.is-skeleton .yt-track-title { width: 55%; height: 13px; }
+.yt-track.is-skeleton .yt-track-artist { width: 35%; height: 11px; margin-top: 3px; }
 /* Modal */
 .yt-modal {
   position: fixed; inset: 0; background: rgba(0,0,0,.78);
@@ -4163,19 +4156,33 @@ html.pwa-standalone #modal-footer {
 
         <!-- YouTube Trending -->
         <section class="yt-trending" id="yt-trending-section" style="display:none">
-          <div class="yt-trending-header">
-            <div>
-              <h3 class="yt-trending-title">
-                <svg class="yt-trending-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 7-8.5 8.5-5-5L2 17"/><path d="M16 7h6v6"/></svg>
-                Em alta · Louvor Católico
-                <button class="yt-info-btn" id="yt-info-btn" aria-label="Sobre esta seção" type="button">?<span class="yt-tooltip">Músicas católicas mais vistas no YouTube nos últimos 30 dias, filtradas por artistas e ministérios selecionados.</span></button>
-              </h3>
-              <div class="yt-trending-sub" id="yt-trending-sub">Top do YouTube</div>
+          <div class="yt-header" id="yt-header">
+            <div class="yt-header-left">
+              <svg class="yt-trending-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+              <div class="yt-header-text">
+                <div class="yt-trending-title">Em alta · Louvor Católico</div>
+                <div class="yt-trending-sub" id="yt-trending-sub">Top do YouTube · atualizado hoje</div>
+              </div>
             </div>
-            <a class="yt-see-all" href="#" onclick="return false">Ver todos →</a>
+            <div class="yt-header-right">
+              <span class="yt-count-pill" id="yt-count-pill"></span>
+              <svg class="yt-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+            </div>
           </div>
-          <div class="yt-scroll-wrap">
-            <ol class="yt-cards" id="yt-list"></ol>
+          <div class="yt-hint" id="yt-hint">
+            <div class="yt-hint-thumbs">
+              <div class="yt-hint-thumb"></div>
+              <div class="yt-hint-thumb"></div>
+              <div class="yt-hint-thumb"></div>
+            </div>
+            <span class="yt-hint-text" id="yt-hint-text">Carregando…</span>
+          </div>
+          <ol class="yt-tracklist" id="yt-list"></ol>
+          <div class="yt-footer">
+            <a class="yt-see-all" href="https://www.youtube.com/results?search_query=louvor+cat%C3%B3lico" target="_blank" rel="noopener noreferrer">
+              Ver todas no YouTube
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+            </a>
           </div>
         </section>
 
@@ -10245,13 +10252,13 @@ function _ytSkeleton(n) {
   list.innerHTML = '';
   for (var i = 0; i < n; i++) {
     var li = document.createElement('li');
-    li.className = 'yt-card is-skeleton';
+    li.className = 'yt-track is-skeleton';
     li.innerHTML =
-      '<div class="yt-card-thumb"></div>' +
-      '<div class="yt-card-body">' +
-        '<div class="yt-card-title">&nbsp;</div>' +
-        '<div class="yt-card-channel">&nbsp;</div>' +
-        '<div class="yt-card-views">&nbsp;</div>' +
+      '<span class="yt-track-rank">' + (i + 1) + '</span>' +
+      '<div class="yt-track-thumb"></div>' +
+      '<div class="yt-track-info">' +
+        '<div class="yt-track-title">&nbsp;</div>' +
+        '<div class="yt-track-artist">&nbsp;</div>' +
       '</div>';
     list.appendChild(li);
   }
@@ -10259,21 +10266,23 @@ function _ytSkeleton(n) {
 
 function _ytMakeRow(v, i) {
   var li = document.createElement('li');
-  li.className = 'yt-card';
-  var thumb = 'https://i.ytimg.com/vi/' + v.videoId + '/hqdefault.jpg';
+  li.className = 'yt-track';
+  var ytUrl = 'https://www.youtube.com/watch?v=' + encodeURIComponent(v.videoId);
+  var extIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>';
   li.innerHTML =
-    '<div class="yt-card-thumb">' +
-      '<img src="' + escHtml(thumb) + '" alt="" loading="lazy">' +
-      '<span class="yt-card-rank">#' + (i + 1) + '</span>' +
-      (v.duration ? '<span class="yt-card-duration">' + escHtml(v.duration) + '</span>' : '') +
-      '<span class="yt-card-overlay"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></span>' +
+    '<span class="yt-track-rank">' + (i + 1) + '</span>' +
+    '<div class="yt-track-thumb"></div>' +
+    '<div class="yt-track-info">' +
+      '<div class="yt-track-title">' + escHtml(v.title) + '</div>' +
+      '<div class="yt-track-artist">' + escHtml(v.channel) + '</div>' +
     '</div>' +
-    '<div class="yt-card-body">' +
-      '<div class="yt-card-title">' + escHtml(v.title) + '</div>' +
-      '<div class="yt-card-channel">' + escHtml(v.channel) + '</div>' +
-      (v.views ? '<div class="yt-card-views"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>' + escHtml(v.views) + '</div>' : '') +
-    '</div>';
-  li.addEventListener('click', function(e) { e.stopPropagation(); _ytOpenModal(v); });
+    ((v.views || v.duration) ?
+      '<div class="yt-track-meta">' +
+        (v.views   ? '<span class="yt-track-views">' + escHtml(v.views)    + '</span>' : '') +
+        (v.duration ? '<span class="yt-track-dur">'  + escHtml(v.duration) + '</span>' : '') +
+      '</div>' : '') +
+    '<a class="yt-track-link" href="' + escHtml(ytUrl) + '" target="_blank" rel="noopener noreferrer" title="Abrir no YouTube" onclick="event.stopPropagation()">' + extIcon + '</a>';
+  li.addEventListener('click', function() { window.open(ytUrl, '_blank', 'noopener,noreferrer'); });
   return li;
 }
 
@@ -10282,17 +10291,23 @@ function _ytPopulate(videos) {
   if (!list) return;
   list.innerHTML = '';
   videos.forEach(function(v, i) { list.appendChild(_ytMakeRow(v, i)); });
+  var pill = document.getElementById('yt-count-pill');
+  if (pill) pill.textContent = videos.length + ' músicas';
+  var hint = document.getElementById('yt-hint-text');
+  if (hint) {
+    var artists = videos.slice(0, 3).map(function(v) { return v.channel; }).filter(Boolean);
+    hint.textContent = artists.join(', ') + (videos.length > 3 ? '…' : '');
+  }
 }
 
-// Tooltip do "?" — toggle no mobile, hover no desktop
+// Header toggle (collapsed ↔ expanded)
 (function() {
-  var btn = document.getElementById('yt-info-btn');
-  if (!btn) return;
-  btn.addEventListener('click', function(e) {
-    e.stopPropagation();
-    btn.classList.toggle('active');
+  var header = document.getElementById('yt-header');
+  if (!header) return;
+  header.addEventListener('click', function() {
+    var section = document.getElementById('yt-trending-section');
+    if (section) section.classList.toggle('is-open');
   });
-  document.addEventListener('click', function() { btn.classList.remove('active'); });
 })();
 
 async function loadYoutubeTrending() {
@@ -10310,7 +10325,7 @@ async function loadYoutubeTrending() {
     _ytSetCached(videos);
     _ytPopulate(videos);
     var sub = document.getElementById('yt-trending-sub');
-    if (sub) sub.textContent = 'Atualizado agora · Top 10 do YouTube';
+    if (sub) sub.textContent = 'Top do YouTube · atualizado hoje';
   } catch(e) {
     console.warn('[trending]', e);
     section.style.display = 'none';
