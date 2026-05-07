@@ -7679,6 +7679,9 @@ async function _loadSongsForExport() {
     if (_exportAborted) throw new DOMException("Cancelado", "AbortError");
     var s = repertorio[i];
     setExportProgress(Math.round((i / total) * 80), "Carregando " + (i + 1) + " de " + total + "...");
+    var _prefs = (s.fileId && _myTones[s.fileId]) || {};
+    var _key  = _prefs.my_key || s.key || "";
+    var _capo = _prefs.my_capo != null ? _prefs.my_capo : (s.capo || "");
     var text = s.text || "";
     if (!text) {
       try {
@@ -7690,14 +7693,25 @@ async function _loadSongsForExport() {
         );
         var d = await r.json();
         text = d.text || "";
+        // Transpõe para o tom do usuário se diferente do tom original
+        if (text && _key) {
+          var _bn = detectBaseNote(text);
+          if (_bn) {
+            var _bi = NOTES.indexOf(normalizeNote(_bn));
+            var _km = _key.match(/^([A-G][b#]?)/);
+            var _kr = _km ? (normalizeNote(_km[1]) || _km[1]) : _key;
+            var _ti = NOTES.indexOf(_kr);
+            if (_bi !== -1 && _ti !== -1) {
+              var _df = ((_ti - _bi) + 12) % 12;
+              if (_df !== 0) text = transposeText(text, _df);
+            }
+          }
+        }
       } catch(e) {
         if (e.name === "AbortError") throw e;
         text = "[Erro ao carregar]";
       }
     }
-    var _prefs = (s.fileId && _myTones[s.fileId]) || {};
-    var _key  = _prefs.my_key  || s.key  || "";
-    var _capo = _prefs.my_capo != null ? _prefs.my_capo : (s.capo || "");
     songs.push({ name: s.name, artist: s.artist || "", text: text,
                  note: s.note || "", capo: _capo, key: _key });
   }
