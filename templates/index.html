@@ -306,26 +306,89 @@ button, a, .song-card, .home-card, .home-top-card, .sidebar-cat,
 }
 ::-webkit-scrollbar-thumb { background: #ccc8e0; border-radius: 99px; }
 ::-webkit-scrollbar-thumb:hover { background: #b0a8d0; }
-.sidebar-section { padding: 4px 0; }
-.sidebar-section-title {
-  padding: 10px 16px 7px;
-  font-size: 0.68em;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.13em;
-  color: #a090c0;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  user-select: none;
-  transition: color .15s;
+/* ─── Sidebar: 3-level nav ──────────────────────────────────────────────── */
+.sb-section { padding: 2px 0 6px; }
+.sb-section + .sb-section { border-top: 1px solid var(--border); margin-top: 4px; padding-top: 6px; }
+
+/* Level 0 — group header */
+.sb-l0 {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 8px 12px 5px;
+  font-size: 10.5px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.08em;
+  color: var(--text-muted);
+  cursor: pointer; user-select: none; touch-action: manipulation;
+  border-radius: 6px; margin: 0 6px;
+  transition: background var(--transition);
 }
-.sidebar-section-title:hover { color: var(--primary); }
-.sidebar-section-title .arrow { transition: transform .22s cubic-bezier(.4,0,.2,1); font-size: 0.8em; }
-.sidebar-section-title.collapsed .arrow { transform: rotate(-90deg); }
-.sidebar-cats { overflow: hidden; }
-.sidebar-cats.collapsed { display: none; }
+.sb-l0:hover { background: var(--surface2); }
+.sb-l0-label { flex: 1; min-width: 0; }
+.sb-l0 .sb-chevron {
+  width: 12px; height: 12px; flex-shrink: 0;
+  color: var(--text-muted); transition: transform 0.18s ease;
+}
+.sb-l0.is-collapsed .sb-chevron { transform: rotate(180deg); }
+.sb-l0-body { padding: 2px 0 4px; }
+.sb-l0-body.is-collapsed { display: none; }
+
+/* Level 1 — nav item */
+.sb-l1 {
+  display: flex; align-items: center; gap: 7px;
+  padding: 7px 10px 7px 16px;
+  font-size: 13px; font-weight: 500;
+  color: var(--text);
+  cursor: pointer; user-select: none; touch-action: manipulation;
+  border-left: 2px solid transparent;
+  border-radius: 0 6px 6px 0;
+  margin: 1px 8px 1px 0;
+  transition: background var(--transition), color var(--transition),
+              border-left-color var(--transition);
+}
+.sb-l1:hover { background: var(--surface2); }
+.sb-l1 > .sb-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sb-l1.active {
+  background: var(--primary-light);
+  border-left-color: var(--primary);
+  color: var(--primary); font-weight: 600;
+}
+
+/* Level 1 — collapsible group header chevron */
+.sb-l1-head .sb-chevron {
+  width: 12px; height: 12px; flex-shrink: 0;
+  color: var(--text-muted); transition: transform 0.18s ease;
+}
+.sb-l1-head.is-collapsed .sb-chevron { transform: rotate(-90deg); }
+
+/* Level 1 — collapsible body + tree line */
+.sb-l1-body {
+  display: block;
+  margin-left: 22px;
+  border-left: 1px solid var(--border);
+  padding-bottom: 2px;
+}
+.sb-l1-body.is-collapsed { display: none; }
+
+/* Level 2 — sub-item */
+.sb-l2 {
+  padding: 6px 10px 6px 14px;
+  font-size: 12px; font-weight: 400;
+  color: var(--text-muted);
+  border-left: none !important;
+  border-radius: 0 6px 6px 0;
+  margin: 1px 8px 1px 0;
+  transition: background var(--transition), color var(--transition);
+}
+.sb-l2:hover { background: var(--surface2); color: var(--text); }
+.sb-l2.active { background: var(--primary-light); color: var(--primary); font-weight: 600; }
+
+/* Badge */
+.sb-badge {
+  font-size: 11px; font-weight: 600;
+  background: var(--surface2); color: var(--text-muted);
+  border-radius: 99px; padding: 1px 7px;
+  flex-shrink: 0; transition: background var(--transition), color var(--transition);
+}
+.sb-badge[data-zero] { opacity: 0.3; }
 .sidebar-icon {
   font-size: .85em;
   line-height: 1;
@@ -335,74 +398,6 @@ button, a, .song-card, .home-card, .home-top-card, .sidebar-cat,
   color: inherit;
   font-style: normal;
 }
-.sidebar-cat {
-  padding: 8px 12px 8px 14px;
-  font-size: 0.875em;
-  font-weight: 500;
-  color: var(--text-muted);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  justify-content: space-between;
-  transition: color .15s, background .15s;
-  border-left: 3px solid transparent;
-  margin: 2px 10px 2px 0;
-  border-radius: 0 10px 10px 0;
-}
-.sidebar-cat > span:not(.sidebar-icon):not(.count) { flex: 1; }
-.sidebar-cat:hover { color: var(--text); background: rgba(91,75,138,.06); }
-.sidebar-cat.active {
-  color: var(--primary); font-weight: 700;
-  background: var(--primary-light);
-  border-left-color: var(--primary);
-}
-.sidebar-cat .count {
-  font-size: 0.72em; color: var(--text-muted);
-  background: rgba(91,75,138,.08); border-radius: 99px;
-  padding: 2px 8px; font-weight: 600; flex-shrink: 0;
-}
-.sidebar-cat.active .count { background: rgba(91,75,138,.15); color: var(--primary); }
-
-/* Sub-categories (3-level: section > category > subcategory) */
-.sidebar-cat-group { }
-.sidebar-cat-group-header {
-  font-weight: 500;
-}
-.sidebar-cat-group-header .sidebar-icon {
-  transition: transform .22s cubic-bezier(.4,0,.2,1);
-  color: var(--primary);
-  opacity: .65;
-  font-size: .65em;
-  font-style: normal;
-}
-.sidebar-cat-group-header.collapsed .sidebar-icon { transform: rotate(-90deg); }
-.sidebar-cat-group-header > span:not(.sidebar-icon):not(.count) {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  min-width: 0;
-}
-.sidebar-subcats {
-  overflow: hidden;
-  border-left: 2px solid var(--border);
-  margin: 1px 0 3px 21px;
-}
-.sidebar-subcats.collapsed { display: none; }
-.sidebar-subcat {
-  padding: 7px 12px 7px 11px;
-  font-size: 0.845em;
-  font-weight: 400;
-  border-left: none !important;
-  border-radius: 0 8px 8px 0;
-  margin: 1px 10px 1px 0;
-}
-.sidebar-subcat.active {
-  color: var(--primary);
-  font-weight: 600;
-  background: var(--primary-light);
-}
-.sidebar-subcat .count { font-size: 0.75em; }
 
 /* Folder management */
 .sidebar-section-title { position: relative; }
@@ -3258,19 +3253,7 @@ html.pwa-standalone #modal-footer {
 .btn:active { transform: scale(.97); box-shadow: none; }
 .btn-accent:active { transform: scale(.97); }
 
-/* ── Sidebar: mais leve, hover fluido ─────────────────────────────────────── */
 #sidebar { border-right-color: var(--border-subtle); }
-.sidebar-cat {
-  transition: color var(--transition), background var(--transition),
-              transform var(--transition), border-left-color var(--transition);
-  padding-left: 18px;
-}
-.sidebar-cat:hover {
-  transform: translateX(2px);
-  background: rgba(91,75,138,.06);
-}
-.sidebar-cat.active { transform: translateX(2px); }
-.sidebar-cat .count { border: none; }
 
 /* ── Song cards: premium hover ────────────────────────────────────────────── */
 .song-card {
@@ -3758,21 +3741,6 @@ html.pwa-standalone #modal-footer {
   transition: transform .2s; flex-shrink: 0;
 }
 .yt-trending.is-open .yt-chevron { transform: rotate(180deg); }
-/* Hint row — collapsed only */
-.yt-hint {
-  display: flex; align-items: center; gap: 8px;
-  padding: 0 14px 11px;
-}
-.yt-trending.is-open .yt-hint { display: none; }
-.yt-hint-thumbs { display: flex; gap: 3px; flex-shrink: 0; }
-.yt-hint-thumb {
-  width: 22px; height: 22px; border-radius: 4px;
-  background: var(--surface2); border: 0.5px solid var(--border);
-}
-.yt-hint-text {
-  font-size: 11px; color: var(--text-muted);
-  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-}
 /* Track list — expanded only */
 .yt-tracklist { display: none; list-style: none; margin: 0; padding: 0; }
 .yt-trending.is-open .yt-tracklist { display: block; }
@@ -3783,14 +3751,14 @@ html.pwa-standalone #modal-footer {
   cursor: pointer; transition: background .12s;
 }
 .yt-track:hover { background: var(--surface2); }
-.yt-track-rank {
-  font-size: 11px; color: var(--text-muted);
-  min-width: 16px; text-align: right; flex-shrink: 0;
-}
 .yt-track-thumb {
   width: 36px; height: 36px; border-radius: 6px;
   background: var(--surface2); border: 0.5px solid var(--border);
   flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+}
+.yt-track-rank {
+  font-size: 13px; font-weight: 500; color: var(--text-muted);
 }
 .yt-track-info { flex: 1; min-width: 0; }
 .yt-track-title {
@@ -3814,19 +3782,28 @@ html.pwa-standalone #modal-footer {
 }
 .yt-track-link:hover { opacity: .8; }
 .yt-track-link svg { width: 13px; height: 13px; }
-/* Footer — expanded only */
-.yt-footer { display: none; padding: 10px 14px; border-top: 0.5px solid var(--border); }
-.yt-trending.is-open .yt-footer { display: block; }
-.yt-see-all {
-  font-size: 12px; color: var(--text-muted); text-decoration: none;
-  display: inline-flex; align-items: center; gap: 4px;
+/* Info button */
+.yt-info-btn {
+  width: 18px; height: 18px; border-radius: 50%;
+  border: 1px solid var(--border); background: transparent;
+  color: var(--text-muted); font-size: 11px; font-weight: 700;
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; position: relative; padding: 0;
 }
-.yt-see-all:hover { color: var(--primary); }
-.yt-see-all svg { width: 12px; height: 12px; }
+.yt-info-btn:hover { border-color: var(--primary); color: var(--primary); }
+.yt-tooltip {
+  display: none; position: fixed;
+  background: var(--surface); border: 0.5px solid var(--border);
+  border-radius: var(--radius); padding: 8px 10px;
+  font-size: 11px; color: var(--text-muted); line-height: 1.5;
+  width: 200px; z-index: 9999; box-shadow: 0 4px 12px rgba(0,0,0,.2);
+  white-space: normal; pointer-events: none;
+}
 /* Skeleton */
 @keyframes yt-pulse { 50% { opacity: .45; } }
 .yt-track.is-skeleton { pointer-events: none; animation: yt-pulse 1.4s ease-in-out infinite; }
 .yt-track.is-skeleton .yt-track-thumb { background: var(--border); border-color: transparent; }
+.yt-track.is-skeleton .yt-track-rank { color: transparent; }
 .yt-track.is-skeleton .yt-track-title,
 .yt-track.is-skeleton .yt-track-artist { background: var(--border); color: transparent; border-radius: 3px; }
 .yt-track.is-skeleton .yt-track-title { width: 55%; height: 13px; }
@@ -4160,30 +4137,17 @@ html.pwa-standalone #modal-footer {
             <div class="yt-header-left">
               <svg class="yt-trending-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
               <div class="yt-header-text">
-                <div class="yt-trending-title">Em alta · Louvor Católico</div>
-                <div class="yt-trending-sub" id="yt-trending-sub">Top do YouTube · atualizado hoje</div>
+                <div class="yt-trending-title">Em alta</div>
+                <div class="yt-trending-sub" id="yt-trending-sub">Louvor Católico</div>
               </div>
             </div>
             <div class="yt-header-right">
               <span class="yt-count-pill" id="yt-count-pill"></span>
+              <button class="yt-info-btn" id="yt-info-btn" onclick="event.stopPropagation()">?<div class="yt-tooltip" id="yt-tooltip">Vídeos mais assistidos nos últimos 30 dias nos canais de louvor católico monitorados.</div></button>
               <svg class="yt-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
             </div>
           </div>
-          <div class="yt-hint" id="yt-hint">
-            <div class="yt-hint-thumbs">
-              <div class="yt-hint-thumb"></div>
-              <div class="yt-hint-thumb"></div>
-              <div class="yt-hint-thumb"></div>
-            </div>
-            <span class="yt-hint-text" id="yt-hint-text">Carregando…</span>
-          </div>
           <ol class="yt-tracklist" id="yt-list"></ol>
-          <div class="yt-footer">
-            <a class="yt-see-all" href="https://www.youtube.com/results?search_query=louvor+cat%C3%B3lico" target="_blank" rel="noopener noreferrer">
-              Ver todas no YouTube
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-            </a>
-          </div>
         </section>
 
       </div>
@@ -5491,11 +5455,17 @@ document.addEventListener("click", function(e) {
   if (_openSongMenu && !_openSongMenu.contains(e.target)) closeOpenSongMenu();
 });
 
+var _SB_CHEVRON = '<svg class="sb-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>';
+
+function _sbBadge(count) {
+  return '<span class="sb-badge"' + (count === 0 ? ' data-zero' : '') + '>' + count + '</span>';
+}
+
 function renderSidebar() {
   var sb = document.getElementById("sidebar");
   sb.innerHTML = "";
 
-  // ── Item "Início" no topo da sidebar ──
+  // ── Home item ──
   var homeItem = document.createElement("div");
   homeItem.id = "sidebar-home-item";
   homeItem.innerHTML = '<span class="sidebar-icon">&#8962;</span><span>Início</span>';
@@ -5517,25 +5487,26 @@ function renderSidebar() {
 
   Object.keys(library).forEach(function(section) {
     var sec = document.createElement("div");
-    sec.className = "sidebar-section";
+    sec.className = "sb-section";
 
-    // ── Section title + botão "+" ──
-    var title = document.createElement("div");
-    title.className = "sidebar-section-title";
-    var secLabel = cleanLabel(section);
-    title.innerHTML =
-      '<span class="arrow">&#9660;</span>' +
-      escHtml(secLabel);
-    sec.appendChild(title);
+    // Level 0: group header
+    var l0 = document.createElement("div");
+    l0.className = "sb-l0";
+    l0.innerHTML = '<span class="sb-l0-label">' + escHtml(cleanLabel(section)) + '</span>' + _SB_CHEVRON;
+    sec.appendChild(l0);
 
-    var cats = document.createElement("div");
-    cats.className = "sidebar-cats";
+    var l0body = document.createElement("div");
+    l0body.className = "sb-l0-body";
 
-    // ── Categorias ──
+    l0.addEventListener("click", function() {
+      l0.classList.toggle("is-collapsed");
+      l0body.classList.toggle("is-collapsed");
+    });
+
     var categories = library[section];
     var allCatKeys = Object.keys(categories);
 
-    // Map parent category → list of sub-category names for compound keys
+    // Build parent → subs map for compound keys
     var parentSubs = {};
     allCatKeys.forEach(function(k) {
       if (k.indexOf(" > ") !== -1) {
@@ -5548,83 +5519,64 @@ function renderSidebar() {
     });
 
     allCatKeys.forEach(function(cat) {
-      if (cat === "_raiz") {
-        var item = document.createElement("div");
-        item.className = "sidebar-cat";
-        item.innerHTML = '<span class="sidebar-icon">🗂️</span><span>Geral</span><span class="count">' + categories[cat].length + '</span>';
-        item.addEventListener("click", function() { selectCategory(section, cat); });
-        item.dataset.section = section;
-        item.dataset.cat = cat;
-        cats.appendChild(item);
-        return;
-      }
-
-      // Compound keys are rendered as children of their parent group
       if (cat.indexOf(" > ") !== -1) return;
 
-      var displayName = cleanLabel(cat);
-      var icon = categoryIcon(displayName);
-      var iconHtml = icon ? '<span class="sidebar-icon">' + icon + '</span>' : '';
-      var subs = parentSubs[cat];
+      var displayName = cat === "_raiz" ? "Geral" : cleanLabel(cat);
+      var subs = cat === "_raiz" ? null : parentSubs[cat];
 
       if (!subs || subs.length === 0) {
-        // Simple flat category
+        // Level 1: flat item
         var item = document.createElement("div");
-        item.className = "sidebar-cat";
-        item.innerHTML =
-          iconHtml +
-          '<span>' + escHtml(displayName) + '</span>' +
-          '<span class="count">' + categories[cat].length + '</span>';
+        item.className = "sidebar-cat sb-l1";
         item.dataset.section = section;
         item.dataset.cat = cat;
+        item.innerHTML =
+          '<span class="sb-label">' + escHtml(displayName) + '</span>' +
+          _sbBadge((categories[cat] || []).length);
         item.addEventListener("click", function() { selectCategory(section, cat); });
-        cats.appendChild(item);
+        l0body.appendChild(item);
       } else {
-        // Category with sub-categories: collapsible group
+        // Level 1: collapsible group
         var group = document.createElement("div");
-        group.className = "sidebar-cat-group";
+        var totalCount = subs.reduce(function(a, s) {
+          return a + (categories[cat + " > " + s] || []).length;
+        }, 0);
 
-        var header = document.createElement("div");
-        header.className = "sidebar-cat sidebar-cat-group-header";
-        // Arrow on the left (replaces the ◦ bullet); text must not wrap
-        header.innerHTML =
-          '<span class="sidebar-icon">▾</span>' +
-          '<span>' + escHtml(displayName) + '</span>';
-        group.appendChild(header);
+        var head = document.createElement("div");
+        head.className = "sidebar-cat sb-l1 sb-l1-head";
+        head.innerHTML =
+          '<span class="sb-label">' + escHtml(displayName) + '</span>' +
+          _sbBadge(totalCount) +
+          _SB_CHEVRON;
 
-        var subList = document.createElement("div");
-        subList.className = "sidebar-subcats";
+        var body = document.createElement("div");
+        body.className = "sb-l1-body";
 
         subs.forEach(function(sub) {
           var subKey = cat + " > " + sub;
+          var subCount = (categories[subKey] || []).length;
           var subItem = document.createElement("div");
-          subItem.className = "sidebar-cat sidebar-subcat";
-          subItem.innerHTML =
-            '<span>' + escHtml(cleanLabel(sub)) + '</span>' +
-            '<span class="count">' + (categories[subKey] || []).length + '</span>';
+          subItem.className = "sidebar-cat sb-l2";
           subItem.dataset.section = section;
           subItem.dataset.cat = subKey;
+          subItem.innerHTML =
+            '<span class="sb-label">' + escHtml(cleanLabel(sub)) + '</span>';
           subItem.addEventListener("click", function() { selectCategory(section, subKey); });
-          subList.appendChild(subItem);
+          body.appendChild(subItem);
         });
 
-        group.appendChild(subList);
-
-        header.addEventListener("click", function() {
-          subList.classList.toggle("collapsed");
-          header.classList.toggle("collapsed");
+        head.addEventListener("click", function() {
+          head.classList.toggle("is-collapsed");
+          body.classList.toggle("is-collapsed");
         });
 
-        cats.appendChild(group);
+        group.appendChild(head);
+        group.appendChild(body);
+        l0body.appendChild(group);
       }
     });
 
-    title.addEventListener("click", function(e) {
-      title.classList.toggle("collapsed");
-      cats.classList.toggle("collapsed");
-    });
-
-    sec.appendChild(cats);
+    sec.appendChild(l0body);
     sb.appendChild(sec);
   });
 }
@@ -10254,8 +10206,7 @@ function _ytSkeleton(n) {
     var li = document.createElement('li');
     li.className = 'yt-track is-skeleton';
     li.innerHTML =
-      '<span class="yt-track-rank">' + (i + 1) + '</span>' +
-      '<div class="yt-track-thumb"></div>' +
+      '<div class="yt-track-thumb"><span class="yt-track-rank">' + (i + 1) + '</span></div>' +
       '<div class="yt-track-info">' +
         '<div class="yt-track-title">&nbsp;</div>' +
         '<div class="yt-track-artist">&nbsp;</div>' +
@@ -10270,8 +10221,7 @@ function _ytMakeRow(v, i) {
   var ytUrl = 'https://www.youtube.com/watch?v=' + encodeURIComponent(v.videoId);
   var extIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>';
   li.innerHTML =
-    '<span class="yt-track-rank">' + (i + 1) + '</span>' +
-    '<div class="yt-track-thumb"></div>' +
+    '<div class="yt-track-thumb"><span class="yt-track-rank">' + (i + 1) + '</span></div>' +
     '<div class="yt-track-info">' +
       '<div class="yt-track-title">' + escHtml(v.title) + '</div>' +
       '<div class="yt-track-artist">' + escHtml(v.channel) + '</div>' +
@@ -10282,7 +10232,7 @@ function _ytMakeRow(v, i) {
         (v.duration ? '<span class="yt-track-dur">'  + escHtml(v.duration) + '</span>' : '') +
       '</div>' : '') +
     '<a class="yt-track-link" href="' + escHtml(ytUrl) + '" target="_blank" rel="noopener noreferrer" title="Abrir no YouTube" onclick="event.stopPropagation()">' + extIcon + '</a>';
-  li.addEventListener('click', function() { window.open(ytUrl, '_blank', 'noopener,noreferrer'); });
+  li.addEventListener('click', function() { _ytOpenModal(v); });
   return li;
 }
 
@@ -10293,11 +10243,6 @@ function _ytPopulate(videos) {
   videos.forEach(function(v, i) { list.appendChild(_ytMakeRow(v, i)); });
   var pill = document.getElementById('yt-count-pill');
   if (pill) pill.textContent = videos.length + ' músicas';
-  var hint = document.getElementById('yt-hint-text');
-  if (hint) {
-    var artists = videos.slice(0, 3).map(function(v) { return v.channel; }).filter(Boolean);
-    hint.textContent = artists.join(', ') + (videos.length > 3 ? '…' : '');
-  }
 }
 
 // Header toggle (collapsed ↔ expanded)
@@ -10308,6 +10253,26 @@ function _ytPopulate(videos) {
     var section = document.getElementById('yt-trending-section');
     if (section) section.classList.toggle('is-open');
   });
+})();
+
+// Info tooltip — hover show/hide via fixed positioning (escapes overflow:hidden)
+(function() {
+  var btn = document.getElementById('yt-info-btn');
+  var tip = document.getElementById('yt-tooltip');
+  if (!btn || !tip) return;
+  btn.addEventListener('mouseenter', function() {
+    tip.style.display = 'block';
+    var r = btn.getBoundingClientRect();
+    var tipH = tip.offsetHeight;
+    var tipW = tip.offsetWidth;
+    var top = r.top - tipH - 6;
+    var left = r.right - tipW;
+    if (top < 4) top = r.bottom + 6;
+    if (left < 4) left = 4;
+    tip.style.top = top + 'px';
+    tip.style.left = left + 'px';
+  });
+  btn.addEventListener('mouseleave', function() { tip.style.display = 'none'; });
 })();
 
 async function loadYoutubeTrending() {

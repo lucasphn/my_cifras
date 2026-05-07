@@ -3129,7 +3129,12 @@ threading.Thread(target=_trending_worker, daemon=True).start()
 @login_required
 def api_trending():
     if _TRENDING_FILE.exists():
-        return Response(_TRENDING_FILE.read_text(encoding="utf-8"), mimetype="application/json")
+        try:
+            data = json.loads(_TRENDING_FILE.read_text(encoding="utf-8"))
+            filtered = [v for v in data if not any(w in v.get("title", "").lower() for w in _TITLE_BLOCK)]
+            return jsonify(filtered)
+        except Exception:
+            pass
     return jsonify([])
 
 
