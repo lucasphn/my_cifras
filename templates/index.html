@@ -7681,7 +7681,7 @@ async function _loadSongsForExport() {
     setExportProgress(Math.round((i / total) * 80), "Carregando " + (i + 1) + " de " + total + "...");
     var _prefs = (s.fileId && _myTones[s.fileId]) || {};
     var _key  = _prefs.my_key || s.key || "";
-    var _capo = _prefs.my_capo || "";
+    var _capo = s.capo || "";
     var text = s.text || "";
     if (!text) {
       try {
