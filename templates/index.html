@@ -5126,7 +5126,12 @@ function detectBaseNote(text) {
 }
 
 // ─── Utilitários ───────────────────────────────────────────────────────────
-function cleanLabel(str) { return str.replace(/^\d+[\s.]+/, '').replace(/^[-.\s]+|[-.\s]+$/g, ''); }
+function cleanLabel(str) {
+  return str
+    .replace(/^[a-z]{1,3}\.\s*/i, '')   // "a. " "ab. " etc.
+    .replace(/^\d+[\s.]+/, '')           // "01 " "1. "
+    .replace(/^[-.\s]+|[-.\s]+$/g, ''); // trim separators
+}
 
 // Ícones por seção e categoria (chave = label limpo, lowercase)
 var SECTION_ICONS = {
@@ -9865,7 +9870,7 @@ function populateImportSection() {
   sel.innerHTML = '<option value="">Selecione...</option>';
   Object.keys(importSections).forEach(function(s) {
     var opt = document.createElement("option");
-    opt.value = s; opt.textContent = s;
+    opt.value = s; opt.textContent = cleanLabel(s);
     sel.appendChild(opt);
   });
   if (_importPresetSection) {
@@ -9884,7 +9889,7 @@ function onImportSectionChange(presetCat) {
   });
   cats.forEach(function(c) {
     var opt = document.createElement("option");
-    opt.value = c; opt.textContent = c;
+    opt.value = c; opt.textContent = cleanLabel(c);
     catSel.appendChild(opt);
   });
   if (presetCat) catSel.value = presetCat;
@@ -9905,7 +9910,7 @@ function onImportCategoryChange() {
     subSel.innerHTML = '<option value="">Selecione...</option>';
     subs.forEach(function(s) {
       var opt = document.createElement("option");
-      opt.value = s; opt.textContent = s;
+      opt.value = s; opt.textContent = cleanLabel(s);
       subSel.appendChild(opt);
     });
     subField.style.display = "";
