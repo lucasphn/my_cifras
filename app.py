@@ -2537,11 +2537,7 @@ def api_search_content():
 @app.route("/api/sections")
 @login_required
 def api_sections():
-    if _use_drive():
-        import drive
-        library = drive.scan_library(get_service(), CIFRAS_FOLDER_ID)
-    else:
-        library = scan_library_local()
+    library = _get_library()
     return jsonify({sec: list(cats.keys()) for sec, cats in library.items()})
 
 
