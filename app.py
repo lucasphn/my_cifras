@@ -1807,13 +1807,10 @@ def _build_export_html(songs, title, auto_print=False):
         num     = idx + 1
         name    = _esc(s.get("name", ""))
         note    = _esc((s.get("note") or "").strip())
-        key     = s.get("key", "")
         capo    = int(s.get("capo") or 0)
         meta_parts = []
         if note:
             meta_parts.append(f'<span class="badge badge-note">{note}</span>')
-        if key:
-            meta_parts.append(f'<span class="badge badge-key">Tom: {_esc(key)}</span>')
         if capo > 0:
             meta_parts.append(f'<span class="badge badge-capo">Capotraste na {capo}ª casa</span>')
         meta_row = f'<div class="song-meta">{" ".join(meta_parts)}</div>' if meta_parts else ""
@@ -2244,11 +2241,9 @@ def api_export_docx():
 
         # Metadados numa linha só (nota | Tom: X | Capotraste na Xª)
         note = (song.get("note") or "").strip()
-        key  = (song.get("key")  or "").strip()
         capo = int(song.get("capo") or 0)
         meta_parts = []
         if note: meta_parts.append(note)
-        if key:  meta_parts.append(f"Tom: {key}")
         if capo > 0: meta_parts.append(f"Capotraste na {capo}ª casa")
         if meta_parts:
             mp = doc.add_paragraph()
