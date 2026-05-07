@@ -5543,14 +5543,14 @@ function renderSidebar() {
         }, 0);
 
         var head = document.createElement("div");
-        head.className = "sidebar-cat sb-l1 sb-l1-head";
+        head.className = "sidebar-cat sb-l1 sb-l1-head is-collapsed";
         head.innerHTML =
           '<span class="sb-label">' + escHtml(displayName) + '</span>' +
           _sbBadge(totalCount) +
           _SB_CHEVRON;
 
         var body = document.createElement("div");
-        body.className = "sb-l1-body";
+        body.className = "sb-l1-body is-collapsed";
 
         subs.forEach(function(sub) {
           var subKey = cat + " > " + sub;
