@@ -5132,6 +5132,10 @@ function cleanLabel(str) {
     .replace(/^\d+[\s.]+/, '')           // "01 " "1. "
     .replace(/^[-.\s]+|[-.\s]+$/g, ''); // trim separators
 }
+function cleanCatLabel(cat, section) {
+  var raw = (!cat || cat === "_raiz") ? (section || "") : (cat || section || "");
+  return raw.split(" > ").map(cleanLabel).join(" > ");
+}
 
 // Ícones por seção e categoria (chave = label limpo, lowercase)
 var SECTION_ICONS = {
@@ -5195,7 +5199,7 @@ function showToast(msg, duration) {
 // ─── Tabela Home ────────────────────────────────────────────────────────────
 function _makeHomeCard(song, cls) {
   var inRep = repertorio.some(function(r) { return (r.fileId || r.path) === (song.fileId || song.path); });
-  var catLabel = cleanLabel(song.category === "_raiz" ? song.section : (song.category || song.section));
+  var catLabel = cleanCatLabel(song.category, song.section);
   var views = song.views || 0;
   var tags = Array.isArray(song.tags) ? song.tags.slice(0, 2) : [];
 
@@ -5246,7 +5250,7 @@ function _makeHomeCard(song, cls) {
 // Card no estilo de referência (ícone + nome + tags + botão rep) para seção "Explorar por categoria"
 function _makeCatExploreCard(song) {
   var inRep = repertorio.some(function(r) { return (r.fileId || r.path) === (song.fileId || song.path); });
-  var catLabel = cleanLabel(song.category === "_raiz" ? song.section : (song.category || song.section));
+  var catLabel = cleanCatLabel(song.category, song.section);
   var keyDisplay = (song.fileId && _myTones[song.fileId] && _myTones[song.fileId].my_key) || song.key || "";
 
   var card = document.createElement("div");
@@ -5315,7 +5319,7 @@ function renderHomeTable(songs) {
 
   topSongs.forEach(function(song, i) {
     var enriched = _songWithViews(song);
-    var catLabel = cleanLabel(song.category === "_raiz" ? song.section : (song.category || song.section));
+    var catLabel = cleanCatLabel(song.category, song.section);
     var keyDisplay = (song.fileId && _myTones[song.fileId] && _myTones[song.fileId].my_key) || song.key || "";
     var card = document.createElement("div");
     card.className = "home-top-card-wrap";
@@ -5976,7 +5980,7 @@ function _updateCatHeader(songs) {
   header.classList.add("show");
 
   var secLabel = cleanLabel(currentCategory.section || "");
-  var catLabel = cleanLabel(currentCategory.cat || "");
+  var catLabel = (currentCategory.cat || "").split(" > ").map(cleanLabel).join(" > ");
   var crumbSection = document.getElementById("crumb-section");
   var crumbCat = document.getElementById("crumb-cat");
   var crumbSepCat = header.querySelector(".crumb-sep-cat");
@@ -6017,7 +6021,7 @@ function _makeTableRow(song, rank) {
     '<span class="song-table-rank">' + String(rank).padStart(2, "0") + '</span>' +
     '<div class="song-table-name">' + escHtml(song.name) + (song.isShortcut && _isOwner ? ' <span style="font-size:9px;font-weight:700;color:var(--text-muted);background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:1px 5px;vertical-align:middle;letter-spacing:.4px">↗ ATALHO</span>' : '') + '</div>' +
     '<div class="song-table-artist">' + escHtml(artistDisplay) + '</div>' +
-    '<div class="song-table-cat">' + escHtml(cleanLabel(song.category === "_raiz" ? (song.section || "") : (song.category || song.section || ""))) + '</div>' +
+    '<div class="song-table-cat">' + escHtml(cleanCatLabel(song.category, song.section)) + '</div>' +
     '<div>' + (keyDisplay ? '<span class="song-table-key">' + escHtml(keyDisplay) + '</span>' : '') + '</div>' +
     '<div class="song-table-yt">' +
       (song.youtube ? '<a class="song-table-yt-link" href="' + escHtml(song.youtube) + '" target="_blank" rel="noopener noreferrer" title="Ouvir no YouTube" onclick="event.stopPropagation()">' +
