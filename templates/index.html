@@ -3547,6 +3547,12 @@ html.pwa-standalone #modal-footer {
 .song-table-yt-link:hover { opacity: 1; }
 .hc-yt-link { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; opacity: 0.75; flex-shrink: 0; transition: opacity .15s; }
 .hc-yt-link:hover { opacity: 1; }
+.home-card[data-offline]::after {
+  content: ''; position: absolute; top: 8px; right: 8px;
+  width: 7px; height: 7px; border-radius: 50%;
+  background: #22c55e; box-shadow: 0 0 0 2px var(--surface);
+  pointer-events: none;
+}
 .song-table-views { display: flex; align-items: center; gap: 4px; color: var(--text-muted); font-size: 11px; }
 /* Category column — hidden by default, shown only in search mode */
 .song-table-cat { display: none; font-size: 11px; font-weight: 700; color: var(--accent); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -4820,6 +4826,17 @@ function _idbCount() {
   });
 }
 
+function _idbGetAllKeys() {
+  return _idbOpen().then(function(db) {
+    return new Promise(function(resolve) {
+      var tx  = db.transaction(_IDB_STORE, 'readonly');
+      var req = tx.objectStore(_IDB_STORE).getAllKeys();
+      req.onsuccess = function() { resolve(req.result || []); };
+      req.onerror   = function() { resolve([]); };
+    });
+  });
+}
+
 function _idbDelete(fileId) {
   return _idbOpen().then(function(db) {
     return new Promise(function(resolve) {
@@ -4841,6 +4858,32 @@ function _idbBulkPut(entries) {
       tx.onerror    = function() { reject(tx.error); };
     });
   });
+}
+
+// ─── Marcação offline nos cards ──────────────────────────────────────────────
+var _offlineFileIds = new Set();
+
+function _markOfflineCard(fileId) {
+  if (!fileId) return;
+  _offlineFileIds.add(fileId);
+  document.querySelectorAll('[data-song-file-id="' + fileId + '"]').forEach(function(card) {
+    card.setAttribute('data-offline', '1');
+  });
+}
+
+function _applyOfflineMarks() {
+  if (!_offlineFileIds.size) return;
+  _offlineFileIds.forEach(function(fid) {
+    document.querySelectorAll('[data-song-file-id="' + fid + '"]').forEach(function(card) {
+      card.setAttribute('data-offline', '1');
+    });
+  });
+}
+
+function _scanAndMarkOfflineCards() {
+  _idbGetAllKeys().then(function(keys) {
+    keys.forEach(function(fid) { _markOfflineCard(fid); });
+  }).catch(function(){});
 }
 
 // ─── Sync pill ───────────────────────────────────────────────────────────────
@@ -4897,7 +4940,6 @@ async function _bundleSync() {
   }
   if (!needsSync) return;
   _bundleSyncing = true;
-  _showSyncPill('Salvando cifras offline…');
   try {
     var storedEtag = localStorage.getItem(_LS_BUNDLE_ETAG) || '';
     var headers    = storedEtag ? { 'If-None-Match': storedEtag } : {};
@@ -4915,19 +4957,17 @@ async function _bundleSync() {
         return;
       }
       localStorage.setItem(_LS_BUNDLE_SYNC_TS, String(Date.now()));
-      _hideSyncPill();
       return;
     }
-    if (!resp.ok) { _hideSyncPill(); return; }
+    if (!resp.ok) return;
     var data = await resp.json();
-    if (!data || !data.songs) { _hideSyncPill(); return; }
+    if (!data || !data.songs) return;
     var ts      = Date.now();
     var entries = Object.keys(data.songs).map(function(fid) {
       return Object.assign({ fileId: fid, ts: ts }, data.songs[fid]);
     });
     if (entries.length) await _idbBulkPut(entries);
-    _showSyncPill(entries.length + ' cifras salvas offline ✓');
-    _syncPillTimer = setTimeout(_hideSyncPill, 4000);
+    entries.forEach(function(entry) { _markOfflineCard(entry.fileId); });
 
     // Popula _metaStore e atualiza allSongs em memória com os metadados do bundle
     entries.forEach(function(entry) {
@@ -4970,7 +5010,7 @@ async function _bundleSync() {
     if (data.etag) localStorage.setItem(_LS_BUNDLE_ETAG, data.etag);
     localStorage.setItem(_LS_BUNDLE_SYNC_TS, String(Date.now()));
   } catch (e) {
-    _hideSyncPill();
+    // silent
   } finally {
     _bundleSyncing = false;
   }
@@ -5354,6 +5394,7 @@ function renderHomeTable(songs) {
   if (statsRow) statsRow.style.display = "none";
 
   wrap.style.display = "block";
+  _applyOfflineMarks();
 }
 
 // Atualiza os cards visíveis na tela (home + song-grid) sem re-render completo
@@ -6292,6 +6333,7 @@ function openModal(song) {
       });
       if (song.fileId && data.text) {
         _idbPut(song.fileId, { text: data.text, name: song.name, ts: Date.now() }).catch(function(){});
+        _markOfflineCard(song.fileId);
       }
     }
 
@@ -9373,10 +9415,12 @@ function init() {
           });
           allSongs = _metaStore.enrich(allSongs);
           renderHomeTable(allSongs);
+          _scanAndMarkOfflineCards();
           // Inicia sync offline após enriquecer metadados
           setTimeout(_bundleSync, 4000);
         }).catch(function(){
           // Mesmo sem metadados, inicia sync com o que tiver
+          _scanAndMarkOfflineCards();
           setTimeout(_bundleSync, 4000);
         });
     })
@@ -9385,6 +9429,7 @@ function init() {
       console.error("Erro ao carregar biblioteca:", err);
       if (_libraryFromCache()) {
         renderHomeTable(allSongs);
+        _scanAndMarkOfflineCards();
         showHomeTable();
         hideSplash();
         _showOfflineBanner();
