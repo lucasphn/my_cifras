@@ -3813,7 +3813,11 @@ html.pwa-standalone #modal-footer {
         <span class="search-wrap-icon">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
         </span>
-        <input type="text" id="search-box" placeholder="Buscar por nome, artista ou letra..." autocomplete="off">
+        <input type="text" id="search-box" placeholder="Buscar por nome ou artista..." autocomplete="off">
+        <div id="search-mode-toggle">
+          <button data-mode="name" class="active">Nome</button>
+          <button data-mode="content">Letra</button>
+        </div>
         <button id="btn-search-clear" title="Limpar busca">&#215;</button>
       </div>
       <div id="search-content-spinner"></div>
@@ -4166,9 +4170,9 @@ html.pwa-standalone #modal-footer {
       <span class="mt-toggle-text" id="mt-toggle-text">Meu Tom</span>
       <button class="mt-save-btn" id="btn-save-my-tone" style="display:none">&#9733; Salvar como Meu Tom</button>
       <span style="flex:1"></span>
-      <a id="mt-yt-link" href="#" target="_blank" rel="noopener noreferrer" title="Ouvir no YouTube" style="display:none;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;color:#ff0000;opacity:.8;transition:opacity .15s;flex-shrink:0" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=.8">
+      <button id="mt-yt-link" title="Assistir no YouTube" style="display:none;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;background:none;border:none;color:#ff0000;opacity:.8;transition:opacity .15s;flex-shrink:0;cursor:pointer;" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=.8">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M23.5 6.2a3 3 0 0 0-2.1-2.1C19.5 3.6 12 3.6 12 3.6s-7.5 0-9.4.5a3 3 0 0 0-2.1 2.1C0 8.1 0 12 0 12s0 3.9.5 5.8a3 3 0 0 0 2.1 2.1c1.9.5 9.4.5 9.4.5s7.5 0 9.4-.5a3 3 0 0 0 2.1-2.1C24 15.9 24 12 24 12s0-3.9-.5-5.8zM9.7 15.5V8.5l6.3 3.5-6.3 3.5z"/></svg>
-      </a>
+      </button>
       <span id="mt-capo-wrap" style="display:none;align-items:center;gap:5px;">
         <span class="mt-label">Meu Capo:</span>
         <div class="mt-capo-stepper">
@@ -5784,7 +5788,7 @@ function _songWithViews(song) {
 function _updateCatHeader(songs) {
   var header = document.getElementById("cat-header");
   if (!header) return;
-  if (!currentCategory) { header.classList.remove("show"); return; }
+  if (!currentCategory || searchActive) { header.classList.remove("show"); return; }
   header.classList.add("show");
 
   var secLabel = cleanLabel(currentCategory.section || "");
@@ -6017,6 +6021,8 @@ function renderSongGrid(songs) {
 
 // ─── Modal ──────────────────────────────────────────────────────────────────
 function openModal(song) {
+  clearTimeout(_contentSearchTimer);
+  document.getElementById("search-content-spinner").classList.remove("active");
   currentModal = song;
   currentSemitone = 0;
   rawCifraText = "";
@@ -6204,16 +6210,27 @@ function _extractYtId(url) {
   var m = url.match(/(?:v=|youtu\.be\/|embed\/)([A-Za-z0-9_-]{11})/);
   return m ? m[1] : null;
 }
+function _ytVideoId(url) {
+  if (!url) return null;
+  var m = url.match(/[?&]v=([^&#]+)/) || url.match(/youtu\.be\/([^?&#]+)/);
+  return m ? m[1] : null;
+}
 function _showYtPlayer(ytUrl) {
-  var mtLink = document.getElementById("mt-yt-link");
-  if (mtLink) {
-    if (ytUrl) { mtLink.href = ytUrl; mtLink.style.display = "inline-flex"; }
-    else { mtLink.style.display = "none"; mtLink.href = "#"; }
-  }
+  var btn = document.getElementById("mt-yt-link");
+  if (!btn) return;
+  if (!ytUrl) { btn.style.display = "none"; btn._ytUrl = ""; return; }
+  btn._ytUrl = ytUrl;
+  btn.style.display = "inline-flex";
+  btn.onclick = function() {
+    var vid = _ytVideoId(btn._ytUrl);
+    if (vid && currentModal) {
+      _ytOpenModal({ videoId: vid, title: currentModal.name || "", channel: currentModal.artist || "" });
+    }
+  };
 }
 function _hideYtPlayer() {
-  var mtLink = document.getElementById("mt-yt-link");
-  if (mtLink) { mtLink.style.display = "none"; mtLink.href = "#"; }
+  var btn = document.getElementById("mt-yt-link");
+  if (btn) { btn.style.display = "none"; btn._ytUrl = ""; btn.onclick = null; }
 }
 function closeModal() {
   _confirmLeaveEdit(function() {
@@ -8617,6 +8634,7 @@ function modalToggleFullscreen() { modalToggleFocusMode(); }
 
 // ─── Busca ──────────────────────────────────────────────────────────────────
 var _contentSearchTimer = null;
+var _searchMode = "name"; // "name" | "content"
 
 function _highlightExcerpt(excerpt, q) {
   if (!excerpt) return "";
@@ -8658,6 +8676,9 @@ function doSearch(q) {
   searchActive = true;
   hideHomeTable();
   document.getElementById("sidebar-home-item") && document.getElementById("sidebar-home-item").classList.remove("active");
+  // Esconde o header de categoria durante a busca (preserva currentCategory para restaurar ao limpar)
+  var _searchCatHeader = document.getElementById("cat-header");
+  if (_searchCatHeader) _searchCatHeader.classList.remove("show");
 
   // Nome + artista — sempre, funciona offline
   var qn = _normalize(q);
@@ -8671,12 +8692,12 @@ function doSearch(q) {
     if (grid) grid.scrollIntoView({ behavior: "smooth", block: "start" });
   }, 100);
 
-  // Busca na letra — só online, debounced 1s, appenda resultados extras
-  if (navigator.onLine && q.length >= 3) {
+  // Busca na letra — só no modo "content", online e com ≥3 chars
+  if (_searchMode === "content" && navigator.onLine && q.length >= 3) {
     document.getElementById("search-content-spinner").classList.add("active");
     _contentSearchTimer = setTimeout(function() {
       _doContentSearchAppend(q, nameResults);
-    }, 1000);
+    }, 800);
   }
 }
 
@@ -8993,6 +9014,22 @@ function init() {
       searchClearBtn.classList.remove("visible");
     }
   }
+
+  // Toggle Nome | Letra
+  var _searchModeBtns = document.querySelectorAll("#search-mode-toggle button");
+  _searchModeBtns.forEach(function(btn) {
+    btn.addEventListener("click", function() {
+      _searchMode = btn.dataset.mode;
+      _searchModeBtns.forEach(function(b) { b.classList.remove("active"); });
+      btn.classList.add("active");
+      searchBox.placeholder = _searchMode === "content"
+        ? "Buscar na letra da música..."
+        : "Buscar por nome ou artista...";
+      // re-dispara a busca no modo novo
+      var q = searchBox.value.trim();
+      if (q) doSearch(q);
+    });
+  });
 
   searchBox.addEventListener("input", function() {
     _updateSearchClear();

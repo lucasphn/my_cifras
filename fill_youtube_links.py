@@ -229,8 +229,8 @@ def _build_query(song: dict, meta: dict) -> str:
     name   = song.get("name", "")
     artist = meta.get("artist") or song.get("artist") or ""
     if artist:
-        return f"{name} {artist} letra"
-    return f"{name} música católica cifra"
+        return f"{name} {artist}"
+    return f"{name}"
 
 
 # ─── Main ─────────────────────────────────────────────────────────────────────

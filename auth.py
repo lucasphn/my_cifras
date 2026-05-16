@@ -40,7 +40,6 @@ SCOPES = [
     "https://www.googleapis.com/auth/userinfo.email",
     "https://www.googleapis.com/auth/userinfo.profile",
     "https://www.googleapis.com/auth/drive",
-    "https://www.googleapis.com/auth/calendar.events",
 ]
 
 
@@ -118,10 +117,6 @@ def get_service():
     """Retorna Google Drive service autenticado com o usuário da sessão atual."""
     return build("drive", "v3", credentials=_get_creds_refreshed(), cache_discovery=False)
 
-
-def get_calendar_service():
-    """Retorna Google Calendar service autenticado com o usuário da sessão atual."""
-    return build("calendar", "v3", credentials=_get_creds_refreshed(), cache_discovery=False)
 
 
 def current_user():
