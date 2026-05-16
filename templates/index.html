@@ -1614,15 +1614,36 @@ button, a, .song-card, .home-card, .home-top-card, .sidebar-cat,
 }
 /* ── Dark mode do modal de cifra ────────────────────────────────────────── */
 #modal[data-dark="1"] {
-  --surface:      #0f0e17;
-  --surface2:     #161426;
-  --text:         #e8e4f5;
-  --text-muted:   #8b7faa;
-  --border:       #2d2a3e;
-  --chord-color:  #b39ddb;
+  --surface:       #0f0e17;
+  --surface2:      #1a1830;
+  --text:          #e8e4f5;
+  --text-muted:    #9d90c0;
+  --border:        #2d2a3e;
+  --chord-color:   #b39ddb;
   --primary-light: rgba(179,157,219,.12);
   background: var(--surface);
   border-color: var(--border);
+}
+/* Header e toolbars: fundo ligeiramente mais claro que o corpo */
+#modal[data-dark="1"] #modal-header {
+  background: var(--surface2);
+  border-bottom-color: var(--border);
+  color: var(--text);
+}
+#modal[data-dark="1"] #transpose-toolbar,
+#modal[data-dark="1"] #my-tones-bar {
+  background: var(--surface2);
+  border-bottom-color: var(--border);
+}
+/* Botões de controle (A- A+ colunas lua fullscreen): mais visíveis no escuro */
+#modal[data-dark="1"] .modal-vctrl {
+  border-color: rgba(255,255,255,.18);
+  color: var(--text-muted);
+}
+#modal[data-dark="1"] .modal-vctrl:hover {
+  border-color: #b39ddb;
+  color: #b39ddb;
+  background: rgba(179,157,219,.12);
 }
 #btn-modal-dark { color: var(--text-muted); padding: 4px 6px; border-radius: 5px; display: inline-flex; align-items: center; justify-content: center; }
 #btn-modal-dark:hover { color: var(--text); background: var(--surface2); }
