@@ -59,3 +59,7 @@ logs/
 views.json
 _shares.json
 _trending.json
+
+# ─── Credenciais OAuth (scripts locais) ───────────────────────────────────────
+client_secrets.json
+_script_token.json
