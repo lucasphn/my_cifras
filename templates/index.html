@@ -4845,8 +4845,18 @@ function _idbBulkPut(entries) {
 
 // ─── Sync pill ───────────────────────────────────────────────────────────────
 var _syncPillTimer = null;
-function _showSyncPill(done, total) {}
-function _hideSyncPill() {}
+function _showSyncPill(msg) {
+  var el = document.getElementById('sync-pill');
+  if (!el) return;
+  el.textContent = msg || 'Salvando cifras offline…';
+  el.classList.add('visible');
+}
+function _hideSyncPill() {
+  var el = document.getElementById('sync-pill');
+  if (!el) return;
+  clearTimeout(_syncPillTimer);
+  el.classList.remove('visible');
+}
 function _hideOfflineBanner() {
   var el = document.getElementById('offline-banner');
   if (!el) return;
@@ -4880,24 +4890,44 @@ function _shouldRunBundleSync() {
 
 async function _bundleSync() {
   if (_bundleSyncing || !navigator.onLine) return;
-  if (!_shouldRunBundleSync()) return;
+  var needsSync = _shouldRunBundleSync();
+  if (!needsSync) {
+    // Força re-sync se IDB estiver vazio (iOS apaga storage após 7 dias sem visita)
+    try { if ((await _idbCount()) === 0) needsSync = true; } catch(e) { needsSync = true; }
+  }
+  if (!needsSync) return;
   _bundleSyncing = true;
+  _showSyncPill('Salvando cifras offline…');
   try {
     var storedEtag = localStorage.getItem(_LS_BUNDLE_ETAG) || '';
     var headers    = storedEtag ? { 'If-None-Match': storedEtag } : {};
     var resp = await fetch('/api/cifras/bundle', { headers: headers });
     if (resp.status === 304) {
+      // Mesmo sem mudanças no servidor, verifica se IDB ficou vazio e recarrega se necessário
+      var cnt = 0;
+      try { cnt = await _idbCount(); } catch(e) {}
+      if (cnt === 0) {
+        // Etag existe mas IDB vazio → limpa etag e re-dispara em 1s
+        localStorage.removeItem(_LS_BUNDLE_ETAG);
+        localStorage.removeItem(_LS_BUNDLE_SYNC_TS);
+        _hideSyncPill();
+        setTimeout(_bundleSync, 1000);
+        return;
+      }
       localStorage.setItem(_LS_BUNDLE_SYNC_TS, String(Date.now()));
+      _hideSyncPill();
       return;
     }
-    if (!resp.ok) return;
+    if (!resp.ok) { _hideSyncPill(); return; }
     var data = await resp.json();
-    if (!data || !data.songs) return;
+    if (!data || !data.songs) { _hideSyncPill(); return; }
     var ts      = Date.now();
     var entries = Object.keys(data.songs).map(function(fid) {
       return Object.assign({ fileId: fid, ts: ts }, data.songs[fid]);
     });
     if (entries.length) await _idbBulkPut(entries);
+    _showSyncPill(entries.length + ' cifras salvas offline ✓');
+    _syncPillTimer = setTimeout(_hideSyncPill, 4000);
 
     // Popula _metaStore e atualiza allSongs em memória com os metadados do bundle
     entries.forEach(function(entry) {
@@ -4940,7 +4970,7 @@ async function _bundleSync() {
     if (data.etag) localStorage.setItem(_LS_BUNDLE_ETAG, data.etag);
     localStorage.setItem(_LS_BUNDLE_SYNC_TS, String(Date.now()));
   } catch (e) {
-    // silent
+    _hideSyncPill();
   } finally {
     _bundleSyncing = false;
   }
@@ -9271,6 +9301,11 @@ function hideSplash() {
 
 // ─── Inicialização ───────────────────────────────────────────────────────────
 function init() {
+  // Solicita ao browser que não limpe o storage desta origem (crucial no iOS)
+  if (navigator.storage && navigator.storage.persist) {
+    navigator.storage.persist().catch(function(){});
+  }
+
   buildNoteButtons();
   initImportModal();
 
