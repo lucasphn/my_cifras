@@ -1612,6 +1612,21 @@ button, a, .song-card, .home-card, .home-top-card, .sidebar-cat,
   from { opacity: 0; transform: scale(.96) translateY(8px); }
   to   { opacity: 1; transform: scale(1) translateY(0); }
 }
+/* ── Dark mode do modal de cifra ────────────────────────────────────────── */
+#modal[data-dark="1"] {
+  --surface:      #0f0e17;
+  --surface2:     #161426;
+  --text:         #e8e4f5;
+  --text-muted:   #8b7faa;
+  --border:       #2d2a3e;
+  --chord-color:  #b39ddb;
+  --primary-light: rgba(179,157,219,.12);
+  background: var(--surface);
+  border-color: var(--border);
+}
+#btn-modal-dark { color: var(--text-muted); padding: 4px 6px; border-radius: 5px; display: inline-flex; align-items: center; justify-content: center; }
+#btn-modal-dark:hover { color: var(--text); background: var(--surface2); }
+
 #modal-header {
   padding: 14px 18px;
   border-bottom: 1px solid var(--border);
@@ -4339,6 +4354,10 @@ html.pwa-standalone #modal-footer {
             <rect x="0" y="0" width="6" height="11" rx="1.5"/>
             <rect x="8" y="0" width="6" height="11" rx="1.5"/>
           </svg>
+        </button>
+        <button class="modal-vctrl" id="btn-modal-dark" title="Modo escuro">
+          <svg id="modal-dark-moon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+          <svg id="modal-dark-sun" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
         </button>
         <button class="modal-vctrl" id="btn-modal-fullscreen" title="Modo foco (F)">&#11035;</button>
       </div>
@@ -9661,6 +9680,29 @@ function init() {
   document.getElementById("btn-modal-zoom-out").addEventListener("click", function() { modalZoomChange(-0.15); });
   document.getElementById("btn-modal-zoom-in").addEventListener("click", function() { modalZoomChange(0.15); });
   document.getElementById("btn-modal-fullscreen").addEventListener("click", function() { modalToggleFocusMode(); });
+
+  // ── Dark mode do modal ──────────────────────────────────────────────────────
+  document.getElementById("btn-modal-dark").addEventListener("click", function() {
+    var modal  = document.getElementById("modal");
+    var isDark = modal.hasAttribute("data-dark");
+    if (isDark) {
+      modal.removeAttribute("data-dark");
+      document.getElementById("modal-dark-moon").style.display = "";
+      document.getElementById("modal-dark-sun").style.display  = "none";
+      localStorage.setItem("mycifras:modal-theme", "light");
+    } else {
+      modal.setAttribute("data-dark", "1");
+      document.getElementById("modal-dark-moon").style.display = "none";
+      document.getElementById("modal-dark-sun").style.display  = "";
+      localStorage.setItem("mycifras:modal-theme", "dark");
+    }
+  });
+  // Restaura preferência ao carregar
+  if (localStorage.getItem("mycifras:modal-theme") === "dark") {
+    document.getElementById("modal").setAttribute("data-dark", "1");
+    document.getElementById("modal-dark-moon").style.display = "none";
+    document.getElementById("modal-dark-sun").style.display  = "";
+  }
   document.getElementById("focus-exit-btn").addEventListener("click", function() { modalToggleFocusMode(true); });
   document.getElementById("focus-titlebar-close").addEventListener("click", function() { modalToggleFocusMode(true); });
 
