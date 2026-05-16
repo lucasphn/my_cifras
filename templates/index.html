@@ -230,6 +230,16 @@ button, a, .song-card, .home-card, .home-top-card, .sidebar-cat,
   background: var(--primary);
   color: #fff;
 }
+/* ── Separador de seção na busca unificada ── */
+.search-section-sep {
+  grid-column: 1 / -1;
+  font-size: 11px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.08em;
+  color: var(--text-muted);
+  padding: 14px 0 6px;
+  border-top: 1px solid var(--border);
+  margin-top: 4px;
+}
 /* ── Excerpt nos resultados ── */
 .song-excerpt {
   font-size: 0.75em;
@@ -2968,7 +2978,6 @@ body.android #presenter-cifra .chord-line {
   .mbn-btn, .btn, .btn-sm, .btn-accent,
   .btn-hc-add, .btn-song-ops, .btn-cat-menu, .btn-folder-add,
   #btn-home, #btn-menu-toggle, #search-box,
-  #btn-search-name, #btn-search-content,
   #btn-meta-toggle, #btn-save-meta {
     cursor: pointer;
   }
@@ -3953,12 +3962,8 @@ html.pwa-standalone #modal-footer {
         <span class="search-wrap-icon">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
         </span>
-        <input type="text" id="search-box" placeholder="Buscar música, artista ou trecho da letra..." autocomplete="off">
+        <input type="text" id="search-box" placeholder="Buscar por nome, artista ou letra..." autocomplete="off">
         <button id="btn-search-clear" title="Limpar busca">&#215;</button>
-        <div id="search-mode-toggle">
-          <button id="btn-search-name" class="active" title="Buscar por nome">Nome</button>
-          <button id="btn-search-content" title="Buscar na letra">Letra</button>
-        </div>
       </div>
       <div id="search-content-spinner"></div>
     </div>
@@ -4526,7 +4531,7 @@ html.pwa-standalone #modal-footer {
       <!-- Painel URL -->
       <div class="import-panel active" id="import-panel-url">
         <div class="import-url-row">
-          <input type="url" id="import-url-input" placeholder="https://www.cifraclub.com.br/...">
+          <input type="url" id="import-url-input" placeholder="https://www.cifras.com.br/... ou bananacifras.com.br/...">
           <button class="btn btn-accent" id="btn-import-fetch">Buscar</button>
         </div>
       </div>
@@ -6125,7 +6130,7 @@ function renderSongGrid(songs) {
     empty.style.display = "flex";
     document.getElementById("empty-msg").textContent = searchActive
       ? "Nenhuma música encontrada."
-      : "Nenhuma música nesta categoria.";
+      : "Em breve, músicas serão adicionadas aqui.";
     return;
   }
 
@@ -9025,19 +9030,7 @@ function _detachFocusSwipe() {
 function modalToggleFullscreen() { modalToggleFocusMode(); }
 
 // ─── Busca ──────────────────────────────────────────────────────────────────
-var searchMode = "name"; // "name" | "content"
 var _contentSearchTimer = null;
-
-function _setSearchMode(mode) {
-  searchMode = mode;
-  document.getElementById("btn-search-name").classList.toggle("active", mode === "name");
-  document.getElementById("btn-search-content").classList.toggle("active", mode === "content");
-  document.getElementById("search-box").placeholder =
-    mode === "name" ? "Buscar música..." : "Buscar na letra ou artista...";
-  // Re-run search with new mode if there's already a query
-  var q = document.getElementById("search-box").value.trim();
-  if (q) doSearch(q);
-}
 
 function _highlightExcerpt(excerpt, q) {
   if (!excerpt) return "";
@@ -9059,9 +9052,11 @@ function _normalize(s) {
 }
 
 function doSearch(q) {
+  clearTimeout(_contentSearchTimer);
+  document.getElementById("search-content-spinner").classList.remove("active");
+
   if (!q) {
     searchActive = false;
-    document.getElementById("search-content-spinner").classList.remove("active");
     if (currentCategory) {
       hideHomeTable();
       var songs = (library[currentCategory.section] || {})[currentCategory.cat] || [];
@@ -9074,47 +9069,70 @@ function doSearch(q) {
     return;
   }
 
-  if (searchMode === "content") {
-    doContentSearch(q);
-    return;
-  }
-
   searchActive = true;
   hideHomeTable();
   document.getElementById("sidebar-home-item") && document.getElementById("sidebar-home-item").classList.remove("active");
+
+  // Nome + artista — sempre, funciona offline
   var qn = _normalize(q);
-  var results = allSongs.filter(function(s) {
+  var nameResults = allSongs.filter(function(s) {
     return _normalize(s.name).includes(qn) ||
            _normalize(s.artist || "").includes(qn);
   });
-  renderSongGrid(results);
+  renderSongGrid(nameResults);
   setTimeout(function() {
     var grid = document.getElementById("song-grid");
     if (grid) grid.scrollIntoView({ behavior: "smooth", block: "start" });
   }, 100);
+
+  // Busca na letra — só online, debounced 1s, appenda resultados extras
+  if (navigator.onLine && q.length >= 3) {
+    document.getElementById("search-content-spinner").classList.add("active");
+    _contentSearchTimer = setTimeout(function() {
+      _doContentSearchAppend(q, nameResults);
+    }, 1000);
+  }
 }
 
-function doContentSearch(q) {
-  searchActive = true;
-  hideHomeTable();
-  document.getElementById("sidebar-home-item") && document.getElementById("sidebar-home-item").classList.remove("active");
-  document.getElementById("search-content-spinner").classList.add("active");
+function _doContentSearchAppend(q, nameResults) {
+  var nameKeys = {};
+  nameResults.forEach(function(s) { nameKeys[s.fileId || s.path || ""] = true; });
 
   fetch("/api/search/content?q=" + encodeURIComponent(q))
     .then(function(r) { return r.json(); })
     .then(function(data) {
       document.getElementById("search-content-spinner").classList.remove("active");
-      if (data.error) {
-        showToast("Busca: " + data.error);
-        renderSongGrid([]);
+      if (!data || data.error || !data.length) return;
+
+      var extras = data.filter(function(s) {
+        return !nameKeys[s.fileId || s.path || ""];
+      });
+      if (!extras.length) return;
+
+      var grid = document.getElementById("song-grid");
+      if (!grid || grid.style.display === "none") {
+        renderSongGridWithExcerpts(data, q);
         return;
       }
-      // Render results with excerpt
-      renderSongGridWithExcerpts(data, q);
-      setTimeout(function() {
-        var grid = document.getElementById("song-grid");
-        if (grid) grid.scrollIntoView({ behavior: "smooth", block: "start" });
-      }, 100);
+
+      var sep = document.createElement("div");
+      sep.className = "search-section-sep";
+      sep.textContent = "Encontrado na letra";
+      grid.appendChild(sep);
+
+      extras.forEach(function(song) {
+        var enriched = _songWithViews(song);
+        var card = _makeHomeCard(enriched, "home-card");
+        if (song.excerpt) {
+          var exc = document.createElement("div");
+          exc.className = "song-excerpt";
+          exc.innerHTML = _highlightExcerpt(song.excerpt, q);
+          var actionsEl = card.querySelector(".home-card-actions");
+          if (actionsEl) card.insertBefore(exc, actionsEl);
+          else card.appendChild(exc);
+        }
+        grid.appendChild(card);
+      });
     })
     .catch(function() {
       document.getElementById("search-content-spinner").classList.remove("active");
@@ -9385,8 +9403,7 @@ function init() {
   searchBox.addEventListener("input", function() {
     _updateSearchClear();
     clearTimeout(searchTimer);
-    var delay = searchMode === "content" ? 900 : 500;
-    searchTimer = setTimeout(function() { doSearch(searchBox.value.trim()); }, delay);
+    searchTimer = setTimeout(function() { doSearch(searchBox.value.trim()); }, 300);
   });
   searchBox.addEventListener("keydown", function(e) {
     if (e.key === "Escape") { searchBox.value = ""; _updateSearchClear(); doSearch(""); }
@@ -9397,10 +9414,6 @@ function init() {
     doSearch("");
     searchBox.focus();
   });
-
-  // Busca: toggle Nome / Letra
-  document.getElementById("btn-search-name").addEventListener("click", function() { _setSearchMode("name"); });
-  document.getElementById("btn-search-content").addEventListener("click", function() { _setSearchMode("content"); });
 
   // Modal close
   document.getElementById("modal-close").addEventListener("click", closeModal);

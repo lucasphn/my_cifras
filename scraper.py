@@ -25,16 +25,19 @@ def fetch_cifra(url):
     Retorna dict: { title, artist, key, text }
     Lança requests.HTTPError ou ValueError em caso de falha.
     """
+    domain = urlparse(url).netloc.lower()
+
+    if "cifraclub" in domain:
+        raise ValueError(
+            "CifraClub não é suportado no momento (bloqueio 403). "
+            "Use Cifras.com.br ou BananaCifras."
+        )
+
     resp = requests.get(url, headers=HEADERS, timeout=TIMEOUT)
     resp.raise_for_status()
 
     from bs4 import BeautifulSoup
     soup = BeautifulSoup(resp.text, "html.parser")
-
-    domain = urlparse(url).netloc.lower()
-
-    if "cifraclub" in domain:
-        return _parse_cifraclub(soup)
     if "bananacifras" in domain:
         return _parse_bananacifras(soup, url)
     if "cifras.com.br" in domain:
