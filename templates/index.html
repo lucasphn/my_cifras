@@ -14,7 +14,6 @@
 <meta name="apple-mobile-web-app-title" content="My Cifras">
 <!-- Detecção iOS standalone — deve rodar ANTES do CSS ser aplicado -->
 <script>if(navigator.standalone===true||('matchMedia'in window&&window.matchMedia('(display-mode:standalone)').matches))document.documentElement.classList.add('pwa-standalone');</script>
-<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Roboto+Mono:wght@400;700&display=swap" rel="stylesheet">
@@ -118,19 +117,20 @@ button, a, .song-card, .home-card, .home-top-card, .sidebar-cat,
 #sidebar-home-item {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 9px;
   padding: 11px 16px;
   font-size: 0.9em;
-  font-weight: 700;
-  color: var(--text);
+  font-weight: 800;
+  color: var(--primary);
+  background: var(--primary-light);
   cursor: pointer;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid rgba(91,75,138,.16);
   margin-bottom: 4px;
   transition: background .15s, color .15s;
 }
-#sidebar-home-item:hover { background: rgba(91,75,138,.06); color: var(--primary); }
-#sidebar-home-item.active { color: var(--primary); background: var(--primary-light); }
-#sidebar-home-item .sidebar-icon { font-size: 1.1em; }
+#sidebar-home-item:hover { background: var(--primary-light2); }
+#sidebar-home-item.active { background: var(--primary-light2); }
+#sidebar-home-item .home-sidebar-icon { display: flex; align-items: center; flex-shrink: 0; }
 
 #btn-home {
   font-size: 1.45em;
@@ -154,7 +154,7 @@ button, a, .song-card, .home-card, .home-top-card, .sidebar-cat,
 }
 #search-wrap {
   flex: 1;
-  max-width: 640px;
+  max-width: 720px;
   margin: 0 auto;
   position: relative;
   display: flex;
@@ -168,8 +168,8 @@ button, a, .song-card, .home-card, .home-top-card, .sidebar-cat,
   transition: border-color .18s, box-shadow .18s;
 }
 #search-wrap:focus-within {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(74,108,247,.10);
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(91,75,138,.15);
 }
 .search-wrap-icon {
   color: var(--text-muted);
@@ -589,7 +589,6 @@ button, a, .song-card, .home-card, .home-top-card, .sidebar-cat,
 
 /* Main area */
 #main { flex: 1; overflow-y: auto; padding: 20px; background: var(--bg); display: flex; flex-direction: column; }
-#agenda-view { flex: 1; }
 
 /* Song grid */
 #song-grid {
@@ -684,32 +683,39 @@ button, a, .song-card, .home-card, .home-top-card, .sidebar-cat,
   margin-bottom: 1rem;
 }
 .lit-title {
-  font-size: .95rem; font-weight: 700; color: var(--text);
+  font-size: 1.625rem; font-weight: 800; color: var(--text);
   display: flex; align-items: center; gap: .4rem;
-  padding: 1.1rem 0;
+  padding: 1.1rem 0 .75rem;
+  letter-spacing: -0.5px; line-height: 1.1;
 }
 .lit-controls {
   display: flex; align-items: center; gap: .5rem; width: 100%;
 }
 .lit-shortcuts {
-  display: flex; gap: .35rem; flex: 1;
+  display: flex; gap: 3px; flex: 1;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 99px;
+  padding: 3px;
 }
 .lit-shortcut-btn {
   flex: 1;
   text-align: center;
-  background: var(--surface2);
-  border: 1px solid var(--border);
-  border-radius: 20px;
+  background: transparent;
+  border: none;
+  border-radius: 99px;
   color: var(--text-muted);
   font-size: .75rem; font-weight: 600;
-  padding: .3rem .75rem;
+  padding: .3rem .5rem;
   cursor: pointer;
-  transition: background 140ms, color 140ms, border-color 140ms;
+  transition: background 140ms, color 140ms;
 }
-.lit-shortcut-btn:hover, .lit-shortcut-btn.active {
-  background: var(--primary);
-  border-color: var(--primary);
-  color: #fff;
+.lit-shortcut-btn:hover { color: var(--text); background: rgba(91,75,138,.06); }
+.lit-shortcut-btn.active {
+  background: var(--surface);
+  color: var(--primary);
+  font-weight: 700;
+  box-shadow: 0 1px 4px rgba(91,75,138,.14);
 }
 .lit-nav {
   margin-left: auto;
@@ -2734,149 +2740,6 @@ body.android #presenter-cifra .chord-line {
 #sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(30,20,60,.4); z-index: 49; }
 #sidebar-overlay.show { display: block; }
 
-/* ─── Widget Google Calendar (home — lista compacta) ────────────────────── */
-#calendar-widget {
-  margin-bottom: 2rem;
-}
-.cal-open-btn {
-  background: none; border: 1px solid var(--border); border-radius: 7px;
-  color: var(--text-muted); font-size: .73rem; font-weight: 600;
-  padding: 3px 10px; cursor: pointer;
-  transition: border-color .15s, color .15s;
-}
-.cal-open-btn:hover { border-color: var(--primary); color: var(--primary); }
-
-/* ─── View completa de Agenda (FullCalendar) ─────────────────────────────── */
-#agenda-view {
-  display: none;
-  flex-direction: column;
-  height: 100%;
-  padding: 0;
-}
-#agenda-view.active { display: flex; }
-#agenda-toolbar {
-  display: flex; align-items: center; gap: 8px;
-  padding: 0 0 16px 0; flex-shrink: 0; flex-wrap: wrap;
-}
-#agenda-toolbar .btn { font-size: .8rem; }
-#agenda-back { display: flex; align-items: center; gap: 5px; }
-#fc-wrap {
-  flex: 1; min-height: 0;
-  background: var(--surface); border-radius: 12px;
-  border: 1.5px solid var(--border);
-  overflow: hidden; padding: 12px;
-}
-/* FullCalendar overrides — adapta ao dark theme do app */
-#fc-wrap .fc { height: 100%; }
-#fc-wrap .fc-theme-standard td,
-#fc-wrap .fc-theme-standard th,
-#fc-wrap .fc-theme-standard .fc-scrollgrid { border-color: var(--border); }
-#fc-wrap .fc-col-header-cell-cushion,
-#fc-wrap .fc-daygrid-day-number,
-#fc-wrap .fc-list-event-title a { color: var(--text); text-decoration: none; }
-#fc-wrap .fc-button-primary {
-  background: var(--surface2) !important; border-color: var(--border) !important;
-  color: var(--text) !important; font-size: .78rem !important;
-}
-#fc-wrap .fc-button-primary:hover {
-  background: var(--primary) !important; border-color: var(--primary) !important;
-  color: #fff !important;
-}
-#fc-wrap .fc-button-active,
-#fc-wrap .fc-button-primary:not(:disabled).fc-button-active {
-  background: var(--primary) !important; border-color: var(--primary) !important;
-  color: #fff !important;
-}
-#fc-wrap .fc-toolbar-title { font-size: .95rem !important; font-weight: 700; color: var(--text); }
-#fc-wrap .fc-daygrid-day.fc-day-today,
-#fc-wrap .fc-timegrid-col.fc-day-today { background: rgba(91,75,138,.07) !important; }
-#fc-wrap .fc-event {
-  background: var(--primary) !important; border-color: var(--primary) !important;
-  font-size: .73rem; border-radius: 4px;
-}
-#fc-wrap .fc-list-event:hover td { background: rgba(91,75,138,.08) !important; }
-#fc-wrap .fc-list-day-cushion { background: var(--surface2) !important; }
-#fc-wrap .fc-list-day-text,
-#fc-wrap .fc-list-day-side-text { color: var(--text-muted) !important; font-size: .75rem !important; }
-#fc-wrap .fc-daygrid-day-frame { background: var(--surface); }
-#fc-wrap .fc-scrollgrid-section > * { background: var(--surface); }
-#fc-wrap .fc-col-header { background: var(--surface2); }
-#fc-wrap .fc-timegrid-slot-label { color: var(--text-muted); font-size: .72rem; }
-#fc-wrap .fc-non-business { background: rgba(0,0,0,.06); }
-
-/* ─── Modal de evento (criar / editar) ───────────────────────────────────── */
-#event-modal-overlay {
-  display: none; position: fixed; inset: 0;
-  background: rgba(0,0,0,.55); z-index: 3000;
-  align-items: center; justify-content: center;
-}
-#event-modal-overlay.open { display: flex; }
-#event-modal {
-  background: var(--surface);
-  border: 1.5px solid var(--border);
-  border-radius: 16px;
-  padding: 24px;
-  width: 100%; max-width: 440px;
-  box-shadow: 0 20px 60px rgba(0,0,0,.4);
-  display: flex; flex-direction: column; gap: 14px;
-}
-#event-modal h3 { font-size: 1rem; font-weight: 700; color: var(--text); margin: 0; }
-.ev-field { display: flex; flex-direction: column; gap: 4px; }
-.ev-field label { font-size: .73rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: .3px; }
-.ev-field input, .ev-field textarea {
-  background: var(--surface2); border: 1.5px solid var(--border);
-  border-radius: 8px; color: var(--text);
-  padding: 8px 12px; font-size: .85rem; outline: none;
-  transition: border-color .15s;
-  font-family: inherit;
-}
-.ev-field input:focus, .ev-field textarea:focus { border-color: var(--primary); }
-.ev-field textarea { resize: vertical; min-height: 60px; }
-.ev-row { display: flex; gap: 10px; }
-.ev-row .ev-field { flex: 1; }
-.ev-allday-row { display: flex; align-items: center; gap: 8px; font-size: .83rem; color: var(--text-muted); }
-.ev-allday-row input[type=checkbox] { width: 15px; height: 15px; accent-color: var(--primary); cursor: pointer; }
-#event-modal-footer { display: flex; gap: 8px; justify-content: flex-end; margin-top: 4px; }
-#btn-ev-delete { margin-right: auto; color: #f87171; border-color: #f87171; }
-#btn-ev-delete:hover { background: #f87171; color: #fff; }
-.cal-header {
-  display: flex; align-items: center; justify-content: space-between;
-  margin-bottom: .85rem;
-}
-.cal-title {
-  font-size: .95rem; font-weight: 700; color: var(--text);
-  display: flex; align-items: center; gap: .4rem;
-}
-.cal-empty {
-  font-size: .82rem; color: var(--text-muted);
-  padding: .75rem 0;
-}
-.cal-empty-cta {
-  display: flex; align-items: center; gap: .85rem;
-  width: 100%; padding: .85rem 1rem;
-  border: 1.5px dashed var(--border);
-  border-radius: var(--radius);
-  background: var(--surface2);
-  color: var(--text-muted);
-  font-size: .82rem; text-align: left; line-height: 1.45;
-  cursor: pointer;
-  transition: border-color .15s, background .15s, color .15s;
-}
-.cal-empty-cta:hover {
-  border-color: var(--primary);
-  background: var(--primary-light);
-  color: var(--primary);
-}
-.cal-empty-cta strong { color: var(--primary); }
-.cal-empty-icon { font-size: 1.5rem; flex-shrink: 0; }
-.cal-empty-hint {
-  margin-top: .35rem;
-  font-size: .75rem;
-  color: var(--text-muted);
-  font-style: italic;
-  word-break: break-word;
-  overflow-wrap: anywhere;
-}
 
 /* ─── Batch fix de tonalidades ───────────────────────────────────────────── */
 .fix-keys-card {
@@ -2896,46 +2759,6 @@ body.android #presenter-cifra .chord-line {
   border-radius: var(--radius); background: var(--surface2);
   border: 1px solid var(--border); color: var(--text);
 }
-.cal-list {
-  display: flex; flex-direction: column; gap: 6px;
-}
-.cal-event {
-  display: flex; align-items: flex-start; gap: 10px;
-  background: var(--surface);
-  border: 1.5px solid var(--border);
-  border-radius: 9px;
-  padding: 9px 13px;
-  text-decoration: none;
-  transition: border-color .15s, box-shadow .15s;
-  cursor: pointer;
-}
-.cal-event:hover { border-color: rgba(91,75,138,.35); box-shadow: 0 3px 10px rgba(0,0,0,.12); }
-.cal-date-block {
-  display: flex; flex-direction: column; align-items: center;
-  min-width: 36px; flex-shrink: 0;
-  background: var(--primary-light);
-  border-radius: 7px;
-  padding: 4px 6px;
-}
-.cal-date-day {
-  font-size: 1.1rem; font-weight: 800; color: var(--primary); line-height: 1;
-}
-.cal-date-month {
-  font-size: .6rem; font-weight: 700; text-transform: uppercase;
-  color: var(--primary); letter-spacing: .3px; margin-top: 1px;
-}
-.cal-event-info { flex: 1; min-width: 0; }
-.cal-event-title {
-  font-size: .83rem; font-weight: 600; color: var(--text);
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-}
-.cal-event-meta {
-  font-size: .72rem; color: var(--text-muted); margin-top: 2px;
-  display: flex; align-items: center; gap: .4rem; flex-wrap: wrap;
-}
-.cal-event-time { display: flex; align-items: center; gap: 3px; }
-.cal-event-loc  { display: flex; align-items: center; gap: 3px;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 180px; }
 
 /* ─── Bottom nav bar (mobile only) ─────────────────────────────────────── */
 #mobile-bottom-nav {
@@ -3675,6 +3498,7 @@ html.pwa-standalone #modal-footer {
   background: var(--surface); border: 1.5px solid var(--border);
   border-radius: 18px; padding: 18px 20px; margin: 0;
   display: flex; flex-direction: column;
+  transition: background .4s;
 }
 #home-2col #liturgia-widget .lit-header {
   border-bottom: none; padding: 0 0 12px; margin-bottom: 12px; border-bottom: 1px solid var(--border);
@@ -3683,37 +3507,6 @@ html.pwa-standalone #modal-footer {
 #home-2col #liturgia-widget #lit-content { flex: 1; overflow: hidden; }
 #home-2col #liturgia-widget .lit-card { height: 100%; display: flex; flex-direction: column; }
 
-/* Restyle calendar inside 2col */
-#home-2col #calendar-widget {
-  flex: 1; min-width: 0; margin: 0;
-  background: var(--surface); border: 1.5px solid var(--border);
-  border-radius: 18px; padding: 18px 20px;
-  display: flex; flex-direction: column;
-}
-#home-2col #calendar-widget .cal-header {
-  border-bottom: 1px solid var(--border); padding: 0 0 12px; margin-bottom: 12px; flex-shrink: 0;
-}
-#home-2col #calendar-widget .cal-list { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; }
-.cal-header-label {
-  font-size: 10.5px; font-weight: 800; letter-spacing: 1.2px;
-  text-transform: uppercase; color: var(--text-muted);
-}
-.cal-new-btn {
-  background: none; border: 1px solid var(--border); border-radius: 99px;
-  color: var(--text-muted); font-size: 11px; font-weight: 700;
-  padding: 3px 10px; cursor: pointer;
-  transition: border-color .15s, color .15s, background .15s;
-}
-.cal-new-btn:hover { border-color: var(--primary); color: var(--primary); background: var(--primary-light); }
-.cal-event-type-label {
-  font-size: 9px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase;
-  color: var(--text-muted); margin-bottom: 1px; display: flex; align-items: center; gap: 4px;
-}
-.cal-event-type-dot {
-  width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0;
-}
-.cal-event { border-radius: 10px; padding: 9px 12px; }
-.cal-event-title { font-size: .82rem; font-weight: 700; }
 
 /* Continue de onde parou */
 #home-top-section { margin-bottom: 22px; }
@@ -4141,30 +3934,6 @@ html.pwa-standalone #modal-footer {
               <div class="lit-loading">Carregando liturgia...</div>
             </div>
           </div>
-
-          <!-- Widget Google Calendar (lista compacta) -->
-          <div id="calendar-widget" style="display:none">
-            <div class="cal-header" style="display:flex;align-items:center;justify-content:space-between">
-              <span class="cal-header-label">Próximos Eventos</span>
-              <div style="display:flex;gap:6px;align-items:center">
-                <button class="cal-new-btn" id="btn-cal-new">+ Novo</button>
-                <button class="cal-open-btn" id="btn-open-agenda" style="border:none;padding:0;font-size:11px;font-weight:700;color:var(--primary);background:none;cursor:pointer">Ver tudo →</button>
-              </div>
-            </div>
-            <div id="cal-list" class="cal-list"></div>
-            <div id="cal-empty-state" style="display:none">
-              <button class="cal-empty-cta" id="btn-cal-empty">
-                <span class="cal-empty-icon">📅</span>
-                <div>
-                  <div>Nenhum ensaio ou compromisso agendado.</div>
-                  <strong>Clique para adicionar um evento.</strong>
-                  {% if cal_keywords %}
-                  <div class="cal-empty-hint">Eventos aparecem aqui se o título contiver: <em>{{ cal_keywords }}</em></div>
-                  {% endif %}
-                </div>
-              </button>
-            </div>
-          </div>
         </div>
 
         <!-- Stats row (hidden on desktop, kept for JS) -->
@@ -4215,14 +3984,7 @@ html.pwa-standalone #modal-footer {
 
       </div>
 
-      <!-- View completa de Agenda -->
-      <div id="agenda-view">
-        <div id="agenda-toolbar">
-          <button class="btn" id="btn-agenda-back">← Voltar</button>
-          <button class="btn btn-accent" id="btn-ev-new">+ Novo evento</button>
-        </div>
-        <div id="fc-wrap"></div>
-      </div>
+
       <div id="view-toggle-wrap" style="display:none">
         <button class="btn-view-toggle active" id="btn-view-grid" title="Grade">
           <svg width="13" height="13" viewBox="0 0 13 13" fill="currentColor"><rect x="0" y="0" width="5.5" height="5.5" rx="1.2"/><rect x="7.5" y="0" width="5.5" height="5.5" rx="1.2"/><rect x="0" y="7.5" width="5.5" height="5.5" rx="1.2"/><rect x="7.5" y="7.5" width="5.5" height="5.5" rx="1.2"/></svg>
@@ -4718,55 +4480,6 @@ html.pwa-standalone #modal-footer {
   <div>Solte o arquivo aqui</div>
 </div>
 
-<!-- Modal de evento (criar / editar) -->
-<div id="event-modal-overlay">
-  <div id="event-modal">
-    <h3 id="event-modal-title">Novo Evento</h3>
-    <div class="ev-field">
-      <label>Título</label>
-      <input type="text" id="ev-title" placeholder="Nome do evento" maxlength="200">
-    </div>
-    <div class="ev-allday-row">
-      <input type="checkbox" id="ev-allday">
-      <label for="ev-allday">Dia inteiro</label>
-    </div>
-    <div class="ev-row">
-      <div class="ev-field">
-        <label>Início</label>
-        <input type="datetime-local" id="ev-start">
-      </div>
-      <div class="ev-field">
-        <label>Fim</label>
-        <input type="datetime-local" id="ev-end">
-      </div>
-    </div>
-    <div class="ev-field" id="ev-allday-row" style="display:none">
-      <div class="ev-row">
-        <div class="ev-field">
-          <label>Data início</label>
-          <input type="date" id="ev-start-date">
-        </div>
-        <div class="ev-field">
-          <label>Data fim</label>
-          <input type="date" id="ev-end-date">
-        </div>
-      </div>
-    </div>
-    <div class="ev-field">
-      <label>Local</label>
-      <input type="text" id="ev-location" placeholder="Endereço ou nome do local" maxlength="200">
-    </div>
-    <div class="ev-field">
-      <label>Descrição</label>
-      <textarea id="ev-description" placeholder="Detalhes adicionais..." maxlength="1000"></textarea>
-    </div>
-    <div id="event-modal-footer">
-      <button class="btn" id="btn-ev-delete" style="display:none">🗑 Excluir</button>
-      <button class="btn" id="btn-ev-cancel">Cancelar</button>
-      <button class="btn btn-accent" id="btn-ev-save">Salvar</button>
-    </div>
-  </div>
-</div>
 
 <!-- Focus mode exit button -->
 <button id="focus-exit-btn" title="Sair do modo foco">
@@ -5604,7 +5317,7 @@ function renderSidebar() {
   // ── Home item ──
   var homeItem = document.createElement("div");
   homeItem.id = "sidebar-home-item";
-  homeItem.innerHTML = '<span class="sidebar-icon">&#8962;</span><span>Início</span>';
+  homeItem.innerHTML = '<span class="home-sidebar-icon"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></span><span>Início</span>';
   homeItem.addEventListener("click", function() {
     _confirmLeaveEdit(function() {
       _forceCloseModal();
@@ -6601,285 +6314,6 @@ function _confirmLeaveEdit(onConfirmed, msg) {
   );
 }
 
-// ─── Google Calendar ─────────────────────────────────────────────────────────
-var _MONTHS_SHORT = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
-
-function loadCalendar() {
-  fetch("/api/calendar")
-    .then(function(r) { return r.json(); })
-    .then(function(data) {
-      var widget = document.getElementById("calendar-widget");
-      var list   = document.getElementById("cal-list");
-      list.innerHTML = "";
-
-      var emptyState = document.getElementById("cal-empty-state");
-      if (data.error) {
-        widget.style.display = "none";
-        return;
-      }
-      if (!data.events || !data.events.length) {
-        list.style.display = "none";
-        emptyState.style.display = "block";
-        widget.style.display = "flex";
-        return;
-      }
-      list.style.display = "";
-      emptyState.style.display = "none";
-
-      var today = new Date(); today.setHours(0,0,0,0);
-
-      data.events.forEach(function(ev) {
-        var startDate = new Date(ev.start);
-        var day   = startDate.getDate();
-        var month = _MONTHS_SHORT[startDate.getMonth()];
-
-        var timeStr = "";
-        var isToday = false;
-        if (!ev.allDay) {
-          var evDay = new Date(startDate); evDay.setHours(0,0,0,0);
-          isToday = evDay.getTime() === today.getTime();
-          timeStr = startDate.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
-          if (isToday) timeStr += " · Hoje";
-        } else {
-          timeStr = "Dia inteiro";
-        }
-
-        // Detect event type from title keywords
-        var titleLow = (ev.title || "").toLowerCase();
-        var evType = "";
-        var evDotColor = "var(--text-muted)";
-        if (titleLow.indexOf("missa") !== -1) { evType = "Missa"; evDotColor = "#c47e2a"; }
-        else if (titleLow.indexOf("ensaio") !== -1) { evType = "Ensaio"; evDotColor = "var(--primary)"; }
-        else if (titleLow.indexOf("retiro") !== -1) { evType = "Retiro"; evDotColor = "#3b7c3b"; }
-        else if (titleLow.indexOf("reunião") !== -1 || titleLow.indexOf("reuniao") !== -1) { evType = "Reunião"; evDotColor = "#4a7dbf"; }
-
-        var a = document.createElement("a");
-        a.className = "cal-event";
-        a.href = ev.htmlLink || "#";
-        a.target = "_blank";
-        a.rel = "noopener noreferrer";
-        a.innerHTML =
-          '<div class="cal-date-block">' +
-            '<span class="cal-date-day">' + day + '</span>' +
-            '<span class="cal-date-month">' + month + '</span>' +
-          '</div>' +
-          '<div class="cal-event-info">' +
-            (evType ? '<div class="cal-event-type-label"><span class="cal-event-type-dot" style="background:' + evDotColor + '"></span>' + escHtml(evType) + '</div>' : '') +
-            '<div class="cal-event-title">' + escHtml(ev.title) + '</div>' +
-            '<div class="cal-event-meta">' +
-              '<span class="cal-event-time">🕐 ' + escHtml(timeStr) + '</span>' +
-              (ev.location ? '<span class="cal-event-loc">📍 ' + escHtml(ev.location) + '</span>' : '') +
-            '</div>' +
-          '</div>';
-        list.appendChild(a);
-      });
-
-      widget.style.display = "flex";
-    })
-    .catch(function() {
-      document.getElementById("calendar-widget").style.display = "none";
-    });
-}
-
-// ─── Agenda completa (FullCalendar) ──────────────────────────────────────────
-var _fcInstance = null;
-var _evModalEventId = null; // null = criação, string = edição
-
-function _pad(n) { return String(n).padStart(2, "0"); }
-function _toLocalDT(date) {
-  if (!date) return "";
-  var d = new Date(date);
-  return d.getFullYear() + "-" + _pad(d.getMonth()+1) + "-" + _pad(d.getDate()) +
-         "T" + _pad(d.getHours()) + ":" + _pad(d.getMinutes());
-}
-function _toLocalDate(date) {
-  if (!date) return "";
-  var d = new Date(date);
-  return d.getFullYear() + "-" + _pad(d.getMonth()+1) + "-" + _pad(d.getDate());
-}
-
-function openAgendaView() {
-  document.getElementById("home-table-wrap").style.display = "none";
-  document.getElementById("song-grid").style.display = "none";
-  document.getElementById("empty-state").style.display = "none";
-  document.getElementById("agenda-view").classList.add("active");
-
-  if (!_fcInstance) {
-    var calEl = document.getElementById("fc-wrap");
-    _fcInstance = new FullCalendar.Calendar(calEl, {
-      locale: "pt-br",
-      initialView: "dayGridMonth",
-      headerToolbar: {
-        left:   "prev,next today",
-        center: "title",
-        right:  "dayGridMonth,timeGridWeek,timeGridDay,listMonth"
-      },
-      buttonText: {
-        today:    "Hoje",
-        month:    "Mês",
-        week:     "Semana",
-        day:      "Dia",
-        list:     "Lista",
-      },
-      height: "100%",
-      editable: true,
-      selectable: true,
-      nowIndicator: true,
-      events: function(info, successCb, failureCb) {
-        fetch("/api/calendar?start=" + info.startStr.slice(0,10) + "&end=" + info.endStr.slice(0,10))
-          .then(function(r) { return r.json(); })
-          .then(function(data) { successCb(data.events || []); })
-          .catch(function() { failureCb(); });
-      },
-      // Clique em evento existente → abre modal de edição
-      eventClick: function(info) {
-        var ev = info.event;
-        openEventModal({
-          id:          ev.id,
-          title:       ev.title,
-          start:       ev.start,
-          end:         ev.end || ev.start,
-          allDay:      ev.allDay,
-          location:    ev.extendedProps.location    || "",
-          description: ev.extendedProps.description || "",
-        });
-      },
-      // Clique em célula vazia → abre modal de criação
-      select: function(info) {
-        openEventModal({
-          start:  info.start,
-          end:    info.end,
-          allDay: info.allDay,
-        });
-      },
-      // Drag & drop / resize → salva automaticamente
-      eventDrop: function(info) { _saveEventChange(info); },
-      eventResize: function(info) { _saveEventChange(info); },
-    });
-    _fcInstance.render();
-  }
-}
-
-function _saveEventChange(info) {
-  var ev = info.event;
-  var body = {
-    title:       ev.title,
-    allDay:      ev.allDay,
-    start:       ev.allDay ? _toLocalDate(ev.start) : ev.start.toISOString(),
-    end:         ev.allDay ? _toLocalDate(ev.end || ev.start) : (ev.end || ev.start).toISOString(),
-    location:    ev.extendedProps.location    || "",
-    description: ev.extendedProps.description || "",
-    timeZone:    Intl.DateTimeFormat().resolvedOptions().timeZone,
-  };
-  fetch("/api/calendar/events/" + ev.id, {
-    method: "PUT",
-    headers: {"Content-Type": "application/json"},
-    body: JSON.stringify(body),
-  }).then(function(r) { return r.json(); })
-    .then(function(data) {
-      if (data.error) { showToast("Erro: " + data.error); info.revert(); }
-    })
-    .catch(function() { showToast("Falha ao salvar."); info.revert(); });
-}
-
-function closeAgendaView() {
-  document.getElementById("agenda-view").classList.remove("active");
-  showHomeTable();
-  renderHomeTable(allSongs);
-}
-
-function openEventModal(opts) {
-  opts = opts || {};
-  _evModalEventId = opts.id || null;
-  document.getElementById("event-modal-title").textContent = _evModalEventId ? "Editar Evento" : "Novo Evento";
-  document.getElementById("ev-title").value       = opts.title       || "";
-  document.getElementById("ev-location").value    = opts.location    || "";
-  document.getElementById("ev-description").value = opts.description || "";
-
-  var allDay = opts.allDay || false;
-  document.getElementById("ev-allday").checked = allDay;
-  _evToggleAllDay(allDay);
-
-  document.getElementById("ev-start").value      = _toLocalDT(opts.start);
-  document.getElementById("ev-end").value        = _toLocalDT(opts.end || opts.start);
-  document.getElementById("ev-start-date").value = _toLocalDate(opts.start);
-  document.getElementById("ev-end-date").value   = _toLocalDate(opts.end || opts.start);
-  document.getElementById("btn-ev-delete").style.display = _evModalEventId ? "inline-flex" : "none";
-  document.getElementById("event-modal-overlay").classList.add("open");
-  setTimeout(function() { document.getElementById("ev-title").focus(); }, 50);
-}
-
-function closeEventModal() {
-  document.getElementById("event-modal-overlay").classList.remove("open");
-  _evModalEventId = null;
-}
-
-function _evToggleAllDay(allDay) {
-  document.getElementById("ev-start").parentElement.parentElement.style.display = allDay ? "none" : "flex";
-  document.getElementById("ev-allday-row").style.display = allDay ? "block" : "none";
-}
-
-async function saveEvent() {
-  var title = document.getElementById("ev-title").value.trim();
-  if (!title) { showToast("Informe o título do evento."); document.getElementById("ev-title").focus(); return; }
-
-  var allDay = document.getElementById("ev-allday").checked;
-  var tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-  var body = {
-    title: title,
-    allDay: allDay,
-    location:    document.getElementById("ev-location").value.trim(),
-    description: document.getElementById("ev-description").value.trim(),
-    timeZone: tz,
-  };
-  if (allDay) {
-    body.start = document.getElementById("ev-start-date").value;
-    body.end   = document.getElementById("ev-end-date").value   || body.start;
-  } else {
-    var sRaw = document.getElementById("ev-start").value;
-    var eRaw = document.getElementById("ev-end").value;
-    if (!sRaw) { showToast("Informe a data de início."); return; }
-    body.start = new Date(sRaw).toISOString();
-    body.end   = eRaw ? new Date(eRaw).toISOString() : body.start;
-  }
-
-  var btn = document.getElementById("btn-ev-save");
-  btn.disabled = true; btn.textContent = "Salvando...";
-
-  try {
-    var url    = _evModalEventId ? "/api/calendar/events/" + _evModalEventId : "/api/calendar/events";
-    var method = _evModalEventId ? "PUT" : "POST";
-    var resp   = await fetch(url, { method: method, headers: {"Content-Type":"application/json"}, body: JSON.stringify(body) });
-    var data   = await resp.json();
-    if (data.error) { showToast("Erro: " + data.error); }
-    else {
-      showToast(_evModalEventId ? "Evento atualizado!" : "Evento criado!");
-      closeEventModal();
-      if (_fcInstance) _fcInstance.refetchEvents();
-      loadCalendar(); // atualiza widget compacto
-    }
-  } catch(e) { showToast("Falha ao salvar."); }
-  btn.disabled = false; btn.textContent = "Salvar";
-}
-
-async function deleteEvent() {
-  if (!_evModalEventId || _evModalEventId === "null") return;
-  var eventId = _evModalEventId;
-  _confirmDialog("Excluir este evento?", "Excluir", async function() {
-    try {
-      var resp = await fetch("/api/calendar/events/" + eventId, { method: "DELETE" });
-      var data = await resp.json();
-      if (data.error) { showToast("Erro: " + data.error); }
-      else {
-        showToast("Evento excluído.");
-        closeEventModal();
-        if (_fcInstance) _fcInstance.refetchEvents();
-        loadCalendar();
-      }
-    } catch(e) { showToast("Falha ao excluir."); }
-  });
-}
-
 // ─── Liturgia do Dia ─────────────────────────────────────────────────────────
 var _litDate  = new Date();
 var _litCache = {};
@@ -6934,12 +6368,25 @@ async function loadLiturgia(d, shortcutId) {
   }
 }
 
+function _hexToRgba(hex, a) {
+  var c = hex.replace("#","");
+  if (c.length === 3) c = c[0]+c[0]+c[1]+c[1]+c[2]+c[2];
+  var r = parseInt(c.slice(0,2),16), g = parseInt(c.slice(2,4),16), b = parseInt(c.slice(4,6),16);
+  return "rgba("+r+","+g+","+b+","+a+")";
+}
+
 function _renderLiturgia(data) {
   var corHex  = data.corHex  || "#9b97b0";
   var isGold  = data.cor && /pascal|natal|aleluia/i.test((data.cor || "") + " " + (data.tempo || "") + " " + (data.liturgia || ""));
   var headerBg = isGold
     ? "linear-gradient(135deg, rgba(212,175,55,.18) 0%, rgba(212,175,55,.06) 100%)"
     : "rgba(0,0,0,.02)";
+
+  // Gradiente sutil no widget (desktop 2-col)
+  var widget = document.getElementById("liturgia-widget");
+  if (widget && widget.closest("#home-2col")) {
+    widget.style.background = "linear-gradient(160deg, " + _hexToRgba(corHex, isGold ? 0.10 : 0.07) + " 0%, #ffffff 55%)";
+  }
 
   var h = '<div class="lit-card">';
 
@@ -9851,31 +9298,7 @@ function init() {
     loadLiturgia(_litNextWeekday(0), "lit-btn-domingo");
   });
   loadLiturgia(new Date(), "lit-btn-hoje");
-  loadCalendar();
 
-  // Empty state do widget de calendário → abre agenda e modal de novo evento
-  document.getElementById("btn-cal-empty").addEventListener("click", function() {
-    openAgendaView();
-    setTimeout(function() { openEventModal(); }, 300);
-  });
-
-  // Botão "+ Novo" no header do widget compacto
-  var btnCalNew = document.getElementById("btn-cal-new");
-  if (btnCalNew) btnCalNew.addEventListener("click", function() { openEventModal(); });
-
-  // ─── Agenda completa ──────────────────────────────────────────────────────
-  document.getElementById("btn-open-agenda").addEventListener("click", openAgendaView);
-  document.getElementById("btn-agenda-back").addEventListener("click", closeAgendaView);
-  document.getElementById("btn-ev-new").addEventListener("click", function() { openEventModal(); });
-  document.getElementById("btn-ev-cancel").addEventListener("click", closeEventModal);
-  document.getElementById("btn-ev-save").addEventListener("click", saveEvent);
-  document.getElementById("btn-ev-delete").addEventListener("click", deleteEvent);
-  document.getElementById("event-modal-overlay").addEventListener("click", function(e) {
-    if (e.target === this) closeEventModal();
-  });
-  document.getElementById("ev-allday").addEventListener("change", function() {
-    _evToggleAllDay(this.checked);
-  });
 
   // ─── Bottom nav mobile ────────────────────────────────────────────────────
   function mbnSetActive(id) {

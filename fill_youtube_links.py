@@ -101,6 +101,7 @@ def _skip_cat(cat: str) -> bool:
 # ─── Biblioteca ───────────────────────────────────────────────────────────────
 
 def load_songs(svc):
+    """Carrega músicas da seção SECTION_TARGET (exceto SKIP_CATS)."""
     import drive as drv
     library = drv.scan_library(svc, CIFRAS_FOLDER_ID)
 
@@ -126,18 +127,102 @@ def load_songs(svc):
     return songs
 
 
+def load_all_songs(svc):
+    """Carrega todas as músicas de todas as seções (para sync global)."""
+    import drive as drv
+    library = drv.scan_library(svc, CIFRAS_FOLDER_ID)
+    songs = []
+    for cats in library.values():
+        for items in cats.values():
+            for song in items:
+                if song.get("fileId"):
+                    songs.append(song)
+    return songs
+
+
 # ─── YouTube search ───────────────────────────────────────────────────────────
 
+_YT_RETRIES   = 3        # tentativas por música
+_YT_RETRY_WAIT = 8.0    # segundos entre tentativas (back-off: *2 a cada falha)
+
 def _yt_search(query: str) -> str | None:
-    try:
-        from youtubesearchpython import VideosSearch
-        res = VideosSearch(query, limit=1)
-        items = res.result().get("result", [])
-        if items:
-            return "https://www.youtube.com/watch?v=" + items[0]["id"]
-    except Exception as e:
-        print(f"  [WARN] Erro na busca YT: {e}")
+    import yt_dlp
+    opts = {
+        "quiet": True,
+        "no_warnings": True,
+        "extract_flat": True,
+        "skip_download": True,
+        "socket_timeout": 20,
+        "retries": 3,
+        "http_headers": {
+            "User-Agent": (
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                "AppleWebKit/537.36 (KHTML, like Gecko) "
+                "Chrome/124.0.0.0 Safari/537.36"
+            )
+        },
+    }
+    wait = _YT_RETRY_WAIT
+    for attempt in range(1, _YT_RETRIES + 1):
+        try:
+            with yt_dlp.YoutubeDL(opts) as ydl:
+                result = ydl.extract_info(f"ytsearch1:{query}", download=False)
+                entries = (result or {}).get("entries", [])
+                if entries:
+                    vid_id = entries[0].get("id")
+                    if vid_id:
+                        return f"https://www.youtube.com/watch?v={vid_id}"
+            return None  # busca OK mas sem resultado
+        except Exception as e:
+            msg = str(e)
+            print(f"  [WARN] Tentativa {attempt}/{_YT_RETRIES} falhou: {msg[:120]}")
+            if attempt < _YT_RETRIES:
+                print(f"         Aguardando {wait:.0f}s antes de tentar novamente...")
+                time.sleep(wait)
+                wait *= 2
     return None
+
+
+_MD_MIMES = {"text/markdown", "text/plain"}
+
+def _patch_youtube_in_frontmatter(raw: str, url: str) -> str:
+    """Injeta/substitui o campo youtube no frontmatter YAML do .md, preservando o resto."""
+    if not raw.startswith("---"):
+        return f"---\nyoutube: {url}\n---\n\n{raw}"
+    parts = raw.split("---", 2)
+    if len(parts) < 3:
+        return raw  # frontmatter malformado — não toca
+    fm_lines = parts[1].splitlines(keepends=True)
+    new_lines = []
+    replaced = False
+    for line in fm_lines:
+        if line.startswith("youtube:"):
+            new_lines.append(f"youtube: {url}\n")
+            replaced = True
+        else:
+            new_lines.append(line)
+    if not replaced:
+        new_lines.append(f"youtube: {url}\n")
+    return "---" + "".join(new_lines) + "---\n\n" + parts[2].lstrip("\n")
+
+
+def _ensure_frontmatter_youtube(svc, fid: str, mime: str, url: str, drv) -> str:
+    """Garante que o frontmatter do .md tem o youtube informado.
+    Retorna: 'synced' (atualizou), 'ok' (já estava correto), 'skipped' (não é .md / erro).
+    """
+    if mime not in _MD_MIMES and not mime.endswith("markdown"):
+        return "skipped"
+    try:
+        raw = drv.download_bytes(svc, fid).decode("utf-8", errors="replace")
+        # Checa se o frontmatter já tem a URL exata — evita upload desnecessário
+        if f"youtube: {url}" in raw:
+            return "ok"
+        patched = _patch_youtube_in_frontmatter(raw, url)
+        drv.update_md_content(svc, fid, patched)
+        return "synced"
+    except Exception as e:
+        print(f"         [WARN] Não foi possível verificar/atualizar frontmatter: {e}")
+        return "skipped"
 
 
 def _build_query(song: dict, meta: dict) -> str:
@@ -150,7 +235,7 @@ def _build_query(song: dict, meta: dict) -> str:
 
 # ─── Main ─────────────────────────────────────────────────────────────────────
 
-def run(overwrite: bool, dry_run: bool):
+def run(overwrite: bool, dry_run: bool, save_every: int = 20):
     if not CIFRAS_FOLDER_ID:
         print("[ERRO] CIFRAS_FOLDER_ID não definido no .env")
         sys.exit(1)
@@ -168,9 +253,20 @@ def run(overwrite: bool, dry_run: bool):
     meta_data, meta_fid = drv.load_songs_meta(svc, CIFRAS_FOLDER_ID)
     print(f"  {len(meta_data)} entradas no songs_meta.\n")
 
-    updated = 0
-    skipped = 0
-    failed  = 0
+    updated          = 0
+    skipped          = 0
+    failed           = 0
+    pending_save     = 0  # atualizações desde o último save
+
+    def _checkpoint(force: bool = False):
+        nonlocal pending_save
+        if dry_run or pending_save == 0:
+            return
+        if force or pending_save >= save_every:
+            print(f"\n  💾 Checkpoint — salvando {pending_save} atualização(ões) no Drive...")
+            drv.save_songs_meta(svc, meta_fid, meta_data)
+            print(f"  ✓ Salvo.\n")
+            pending_save = 0
 
     for i, song in enumerate(songs, 1):
         fid    = song["fileId"]
@@ -179,11 +275,18 @@ def run(overwrite: bool, dry_run: bool):
         artist = meta.get("artist") or song.get("artist") or ""
         cat    = song.get("category", "")
 
-        has_link = bool(meta.get("youtube"))
-        prefix   = f"[{i:03}/{len(songs):03}]"
+        existing_url = meta.get("youtube", "")
+        has_link     = bool(existing_url)
+        mime         = song.get("mimeType", "")
+        prefix       = f"[{i:03}/{len(songs):03}]"
 
         if has_link and not overwrite:
-            print(f"{prefix} ⏩ {name}  (já tem link, pulando)")
+            # Link já existe no _songs_meta.json — garante que o frontmatter também tem
+            fm_status = _ensure_frontmatter_youtube(svc, fid, mime, existing_url, drv)
+            if fm_status == "synced":
+                print(f"{prefix} 🔄 {name}  (frontmatter sincronizado com link existente)")
+            else:
+                print(f"{prefix} ⏩ {name}  (já tem link, pulando)")
             skipped += 1
             continue
 
@@ -198,32 +301,139 @@ def run(overwrite: bool, dry_run: bool):
         url = _yt_search(query)
         if url:
             print(f"         ✓ {url}")
-            if not dry_run:
-                meta_data.setdefault(fid, {})
-                meta_data[fid] = {
-                    "artist":  meta.get("artist", ""),
-                    "key":     meta.get("key", ""),
-                    "capo":    meta.get("capo", ""),
-                    "tags":    meta.get("tags", []),
-                    "youtube": url,
-                }
-            updated += 1
+            # Atualiza frontmatter do arquivo .md no Drive (fonte da verdade)
+            fm_status = _ensure_frontmatter_youtube(svc, fid, mime, url, drv)
+            if fm_status in ("synced", "ok"):
+                print(f"         ✓ frontmatter {'atualizado' if fm_status == 'synced' else 'já correto'}")
+            # Atualiza _songs_meta.json (cache de listagem)
+            meta_data.setdefault(fid, {})
+            meta_data[fid] = {
+                "artist":  meta.get("artist", ""),
+                "key":     meta.get("key", ""),
+                "capo":    meta.get("capo", ""),
+                "tags":    meta.get("tags", []),
+                "youtube": url,
+            }
+            updated      += 1
+            pending_save += 1
         else:
             print(f"         ✗ nenhum resultado")
             failed += 1
 
         time.sleep(DELAY_BETWEEN)
+        _checkpoint()
 
     print(f"\n{'─'*50}")
     print(f"  Atualizadas : {updated}")
     print(f"  Puladas     : {skipped}")
     print(f"  Sem resultado: {failed}")
 
-    if not dry_run and updated > 0:
-        print(f"\nSalvando metadados no Drive...")
-        drv.save_songs_meta(svc, meta_fid, meta_data)
-        print("  ✓ Salvo com sucesso.")
-    elif dry_run:
+    _checkpoint(force=True)  # salva o restante (< save_every)
+    if dry_run:
+        print("\n[dry-run] Nada foi salvo.")
+
+
+def _read_frontmatter_youtube(raw: str) -> str:
+    """Extrai o campo youtube do frontmatter YAML de um .md. Retorna '' se não encontrado."""
+    if not raw.startswith("---"):
+        return ""
+    parts = raw.split("---", 2)
+    if len(parts) < 3:
+        return ""
+    for line in parts[1].splitlines():
+        if line.startswith("youtube:"):
+            return line.partition(":")[2].strip()
+    return ""
+
+
+def sync_from_md(dry_run: bool, save_every: int = 20):
+    """Lê o frontmatter de TODOS os .md do Drive e sincroniza o _songs_meta.json.
+
+    Útil quando o youtube foi adicionado manualmente ao arquivo mas o cache
+    _songs_meta.json ainda não reflete isso — sem fazer nenhuma busca no YouTube.
+    """
+    if not CIFRAS_FOLDER_ID:
+        print("[ERRO] CIFRAS_FOLDER_ID não definido no .env")
+        sys.exit(1)
+
+    print("Conectando ao Google Drive...")
+    svc = _get_svc()
+
+    import drive as drv
+
+    print("Carregando biblioteca completa (todas as seções)...")
+    songs = load_all_songs(svc)
+    md_songs = [s for s in songs if s.get("mimeType") in _MD_MIMES
+                or (s.get("mimeType") or "").endswith("markdown")]
+    print(f"  {len(md_songs)} arquivos .md encontrados.\n")
+
+    print("Carregando _songs_meta.json...")
+    meta_data, meta_fid = drv.load_songs_meta(svc, CIFRAS_FOLDER_ID)
+    print(f"  {len(meta_data)} entradas no cache.\n")
+
+    synced       = 0
+    already_ok   = 0
+    no_link      = 0
+    pending_save = 0
+
+    def _checkpoint(force: bool = False):
+        nonlocal pending_save
+        if dry_run or pending_save == 0:
+            return
+        if force or pending_save >= save_every:
+            print(f"\n  💾 Checkpoint — salvando {pending_save} entrada(s) no Drive...")
+            drv.save_songs_meta(svc, meta_fid, meta_data)
+            print("  ✓ Salvo.\n")
+            pending_save = 0
+
+    for i, song in enumerate(md_songs, 1):
+        fid  = song["fileId"]
+        name = song.get("name", "?")
+        prefix = f"[{i:03}/{len(md_songs):03}]"
+
+        try:
+            raw = drv.download_bytes(svc, fid).decode("utf-8", errors="replace")
+        except Exception as e:
+            print(f"{prefix} ⚠ {name}  — erro ao baixar: {e}")
+            continue
+
+        fm_url   = _read_frontmatter_youtube(raw)
+        meta_url = (meta_data.get(fid) or {}).get("youtube", "")
+
+        if not fm_url:
+            print(f"{prefix} —  {name}  (sem youtube no frontmatter)")
+            no_link += 1
+            continue
+
+        if meta_url == fm_url:
+            print(f"{prefix} ✓  {name}  (já sincronizado)")
+            already_ok += 1
+            continue
+
+        print(f"{prefix} 🔄 {name}")
+        print(f"         frontmatter : {fm_url}")
+        print(f"         songs_meta  : {meta_url or '(vazio)'}")
+
+        if not dry_run:
+            existing = meta_data.get(fid, {})
+            meta_data[fid] = {
+                "artist":  existing.get("artist", ""),
+                "key":     existing.get("key", ""),
+                "capo":    existing.get("capo", ""),
+                "tags":    existing.get("tags", []),
+                "youtube": fm_url,
+            }
+            pending_save += 1
+        synced += 1
+        _checkpoint()
+
+    print(f"\n{'─'*50}")
+    print(f"  Sincronizados : {synced}")
+    print(f"  Já corretos   : {already_ok}")
+    print(f"  Sem link      : {no_link}")
+
+    _checkpoint(force=True)
+    if dry_run:
         print("\n[dry-run] Nada foi salvo.")
 
 
@@ -233,5 +443,15 @@ if __name__ == "__main__":
                         help="Sobrescreve links já existentes")
     parser.add_argument("--dry-run", action="store_true",
                         help="Mostra o que faria sem salvar nada")
+    parser.add_argument("--save-every", type=int, default=20, metavar="N",
+                        help="Salva no Drive a cada N músicas atualizadas (padrão: 20)")
+    parser.add_argument("--sync-from-md", action="store_true",
+                        help="Lê o youtube do frontmatter de todos os .md e sincroniza o "
+                             "_songs_meta.json (sem buscar YouTube). Útil quando o link foi "
+                             "adicionado manualmente ao arquivo.")
     args = parser.parse_args()
-    run(overwrite=args.overwrite, dry_run=args.dry_run)
+
+    if args.sync_from_md:
+        sync_from_md(dry_run=args.dry_run, save_every=args.save_every)
+    else:
+        run(overwrite=args.overwrite, dry_run=args.dry_run, save_every=args.save_every)
