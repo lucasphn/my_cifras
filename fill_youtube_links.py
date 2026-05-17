@@ -21,6 +21,8 @@ from pathlib import Path
 from dotenv import load_dotenv
 load_dotenv()
 
+import db
+
 CIFRAS_FOLDER_ID = os.environ.get("CIFRAS_FOLDER_ID", "")
 SECTION_TARGET   = "ministração"
 SKIP_CATS        = {"missa"}   # categorias a ignorar (case-insensitive, sem acento)
@@ -250,23 +252,26 @@ def run(overwrite: bool, dry_run: bool, save_every: int = 20):
     print(f"  {len(songs)} músicas encontradas.\n")
 
     print("Carregando metadados existentes...")
-    meta_data, meta_fid = drv.load_songs_meta(svc, CIFRAS_FOLDER_ID)
+    meta_data = db.load_songs_meta() if db.enabled() else {}
     print(f"  {len(meta_data)} entradas no songs_meta.\n")
 
     updated          = 0
     skipped          = 0
     failed           = 0
-    pending_save     = 0  # atualizações desde o último save
+    pending_save     = 0
+    pending_records: list = []
 
     def _checkpoint(force: bool = False):
-        nonlocal pending_save
+        nonlocal pending_save, pending_records
         if dry_run or pending_save == 0:
             return
         if force or pending_save >= save_every:
-            print(f"\n  💾 Checkpoint — salvando {pending_save} atualização(ões) no Drive...")
-            drv.save_songs_meta(svc, meta_fid, meta_data)
+            print(f"\n  💾 Checkpoint — salvando {pending_save} atualização(ões) no Supabase...")
+            if db.enabled():
+                db.upsert_songs_meta_batch(pending_records)
             print(f"  ✓ Salvo.\n")
-            pending_save = 0
+            pending_save    = 0
+            pending_records = []
 
     for i, song in enumerate(songs, 1):
         fid    = song["fileId"]
@@ -305,15 +310,21 @@ def run(overwrite: bool, dry_run: bool, save_every: int = 20):
             fm_status = _ensure_frontmatter_youtube(svc, fid, mime, url, drv)
             if fm_status in ("synced", "ok"):
                 print(f"         ✓ frontmatter {'atualizado' if fm_status == 'synced' else 'já correto'}")
-            # Atualiza _songs_meta.json (cache de listagem)
-            meta_data.setdefault(fid, {})
-            meta_data[fid] = {
+            entry = {
                 "artist":  meta.get("artist", ""),
                 "key":     meta.get("key", ""),
                 "capo":    meta.get("capo", ""),
                 "tags":    meta.get("tags", []),
                 "youtube": url,
             }
+            meta_data[fid] = entry
+            pending_records.append({
+                "file_id": fid,
+                "artist":  entry["artist"] or None,
+                "key":     entry["key"] or None,
+                "capo":    entry["capo"] or None,
+                "youtube": url,
+            })
             updated      += 1
             pending_save += 1
         else:
@@ -367,24 +378,27 @@ def sync_from_md(dry_run: bool, save_every: int = 20):
                 or (s.get("mimeType") or "").endswith("markdown")]
     print(f"  {len(md_songs)} arquivos .md encontrados.\n")
 
-    print("Carregando _songs_meta.json...")
-    meta_data, meta_fid = drv.load_songs_meta(svc, CIFRAS_FOLDER_ID)
+    print("Carregando songs_meta...")
+    meta_data = db.load_songs_meta() if db.enabled() else {}
     print(f"  {len(meta_data)} entradas no cache.\n")
 
     synced       = 0
     already_ok   = 0
     no_link      = 0
     pending_save = 0
+    pending_records: list = []
 
     def _checkpoint(force: bool = False):
-        nonlocal pending_save
+        nonlocal pending_save, pending_records
         if dry_run or pending_save == 0:
             return
         if force or pending_save >= save_every:
-            print(f"\n  💾 Checkpoint — salvando {pending_save} entrada(s) no Drive...")
-            drv.save_songs_meta(svc, meta_fid, meta_data)
+            print(f"\n  💾 Checkpoint — salvando {pending_save} entrada(s) no Supabase...")
+            if db.enabled():
+                db.upsert_songs_meta_batch(pending_records)
             print("  ✓ Salvo.\n")
-            pending_save = 0
+            pending_save    = 0
+            pending_records = []
 
     for i, song in enumerate(md_songs, 1):
         fid  = song["fileId"]
@@ -416,13 +430,21 @@ def sync_from_md(dry_run: bool, save_every: int = 20):
 
         if not dry_run:
             existing = meta_data.get(fid, {})
-            meta_data[fid] = {
+            entry = {
                 "artist":  existing.get("artist", ""),
                 "key":     existing.get("key", ""),
                 "capo":    existing.get("capo", ""),
                 "tags":    existing.get("tags", []),
                 "youtube": fm_url,
             }
+            meta_data[fid] = entry
+            pending_records.append({
+                "file_id": fid,
+                "artist":  entry["artist"] or None,
+                "key":     entry["key"] or None,
+                "capo":    entry["capo"] or None,
+                "youtube": fm_url,
+            })
             pending_save += 1
         synced += 1
         _checkpoint()

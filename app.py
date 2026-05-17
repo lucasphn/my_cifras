@@ -893,60 +893,16 @@ _library_cache = {"data": None, "ts": 0}
 _cache_lock = threading.Lock()
 CACHE_TTL = 120  # segundos — re-escaneia se a última leitura foi há mais de 2 min
 
-# Cache global de metadados por fileId — fonte de verdade compartilhada entre todos os usuários.
-# Persistido em _songs_meta.json no CIFRAS_FOLDER_ID do Drive.
+# Cache global de metadados por fileId — carregado do Supabase.
 _songs_meta: dict = {}  # { fileId: {artist, key, capo, youtube} }
-_songs_meta_file_id: str | None = None
 _meta_lock = threading.Lock()
-
-def _load_songs_meta_from_drive():
-    """Carrega _songs_meta do Drive na inicialização do processo."""
-    global _songs_meta, _songs_meta_file_id
-    if not _use_drive() or not CIFRAS_FOLDER_ID:
-        return
-    try:
-        import drive as drv
-        svc = get_service()
-        data, fid = drv.load_songs_meta(svc, CIFRAS_FOLDER_ID)
-        with _meta_lock:
-            _songs_meta = data
-            _songs_meta_file_id = fid
-    except Exception:
-        pass
-
-def _persist_songs_meta(svc=None):
-    """Salva _songs_meta no Drive em background, usando o svc já autenticado.
-
-    O svc DEVE ser passado pelo chamador (contexto de request). Chamar
-    get_service() dentro da thread de background falha silenciosamente porque
-    a Flask session não existe fora do contexto de request.
-    """
-    if svc is None or not _use_drive() or not CIFRAS_FOLDER_ID:
-        return
-
-    def _save(svc):
-        global _songs_meta_file_id
-        try:
-            import drive as drv
-            with _meta_lock:
-                data = dict(_songs_meta)
-                fid  = _songs_meta_file_id
-            if not fid:
-                _, fid = drv.load_songs_meta(svc, CIFRAS_FOLDER_ID)
-                with _meta_lock:
-                    _songs_meta_file_id = fid
-            drv.save_songs_meta(svc, fid, data)
-        except Exception:
-            pass
-
-    threading.Thread(target=_save, args=(svc,), daemon=True).start()
 
 _songs_meta_loaded = False
 _songs_meta_loaded_ts = 0.0
-SONGS_META_TTL = 300  # 5 min — re-lê do Drive para sincronizar com outros processos
+SONGS_META_TTL = 300  # 5 min
 
 def _ensure_songs_meta_loaded():
-    """Carrega _songs_meta do Drive na primeira chamada, ou quando o TTL expira."""
+    """Carrega _songs_meta do Supabase na primeira chamada, ou quando o TTL expira."""
     global _songs_meta_loaded, _songs_meta_loaded_ts
     now = time.monotonic()
     with _meta_lock:
@@ -954,18 +910,27 @@ def _ensure_songs_meta_loaded():
             return
         _songs_meta_loaded = True
         _songs_meta_loaded_ts = now
-    _load_songs_meta_from_drive()
+    if db.enabled():
+        try:
+            data = db.load_songs_meta()
+            with _meta_lock:
+                _songs_meta.update(data)
+        except Exception:
+            pass
 
 def _set_song_meta(file_id: str, meta: dict, persist: bool = False, svc=None):
+    entry = {
+        "artist":  meta.get("artist", ""),
+        "key":     meta.get("key", ""),
+        "capo":    meta.get("capo", ""),
+        "youtube": meta.get("youtube", ""),
+    }
     with _meta_lock:
-        _songs_meta[file_id] = {
-            "artist":  meta.get("artist", ""),
-            "key":     meta.get("key", ""),
-            "capo":    meta.get("capo", ""),
-            "youtube": meta.get("youtube", ""),
-        }
-    if persist:
-        _persist_songs_meta(svc)
+        _songs_meta[file_id] = entry
+    if persist and db.enabled():
+        threading.Thread(
+            target=db.upsert_song_meta, args=(file_id, entry), daemon=True,
+        ).start()
 
 def _get_song_meta(file_id: str) -> dict:
     with _meta_lock:
@@ -1614,13 +1579,22 @@ def api_cifras_bundle():
             return fid, None
 
     bundle = {}
+    meta_batch = []
     with concurrent.futures.ThreadPoolExecutor(max_workers=4) as pool:
         for fid, data in pool.map(_fetch, songs):
             if data:
                 bundle[fid] = data
-                _set_song_meta(fid, data)  # alimenta cache em memória
+                _set_song_meta(fid, data)
+                meta_batch.append({
+                    "file_id": fid,
+                    "artist":  data.get("artist", "") or None,
+                    "key":     data.get("key", "") or None,
+                    "capo":    data.get("capo", "") or None,
+                    "youtube": data.get("youtube", "") or None,
+                })
 
-    _persist_songs_meta(svc=_gdrive_build("drive", "v3", credentials=creds, cache_discovery=False))  # salva metadados atualizados no Drive em background
+    if meta_batch and db.enabled():
+        threading.Thread(target=db.upsert_songs_meta_batch, args=(meta_batch,), daemon=True).start()
 
     with _bundle_lock:
         _bundle_cache["etag"] = etag

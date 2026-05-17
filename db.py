@@ -310,3 +310,31 @@ def update_group(group_id: str, data: dict) -> dict:
 
 def delete_group(group_id: str) -> None:
     _delete("groups", id=f"eq.{group_id}")
+
+
+# ─── Songs Meta ───────────────────────────────────────────────────────────────
+
+_META_COLS = ("artist", "key", "capo", "youtube")
+
+
+def load_songs_meta() -> dict:
+    """Retorna {file_id: {artist, key, capo, youtube}} — global, não por usuário."""
+    rows = _get("songs_meta", select="file_id,artist,key,capo,youtube")
+    result = {}
+    for r in rows:
+        d = {k: r[k] for k in _META_COLS if r.get(k) is not None}
+        result[r["file_id"]] = d
+    return result
+
+
+def upsert_song_meta(file_id: str, meta: dict) -> None:
+    payload = {"file_id": file_id}
+    for k in _META_COLS:
+        payload[k] = meta.get(k) or None
+    _post("songs_meta", payload, upsert=True)
+
+
+def upsert_songs_meta_batch(records: list) -> None:
+    """Upsert em lote. Cada record deve ter 'file_id' + campos opcionais."""
+    if records:
+        _post("songs_meta", records, upsert=True)
