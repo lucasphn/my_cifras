@@ -1642,6 +1642,9 @@ button, a, .song-card, .home-card, .home-top-card, .sidebar-cat,
   background: var(--surface2);
   border-bottom-color: var(--border);
 }
+/* Texto da cifra e acordes: forçar cores claras (cancela override do Android) */
+#modal[data-dark="1"] #cifra-content { color: var(--text); }
+#modal[data-dark="1"] #cifra-content .chord-line { color: var(--chord-color); }
 /* Botões de controle (A- A+ colunas lua fullscreen): mais visíveis no escuro */
 #modal[data-dark="1"] .modal-vctrl {
   border-color: rgba(255,255,255,.18);
@@ -2846,8 +2849,21 @@ body.android #presenter-cifra .chord-line {
 }
 
 /* ─── Responsivo mobile ─────────────────────────────────────────────────── */
-#btn-menu-toggle { display: none; font-size: 1.3em; padding: 5px 9px; border-radius: 8px; color: var(--text-muted); flex-shrink: 0; }
-#btn-menu-toggle:hover { background: var(--surface2); color: var(--primary); }
+#btn-menu-toggle { display: none; }
+#header-avatar {
+  display: none; width: 32px; height: 32px; border-radius: 99px;
+  background: var(--primary); color: #fff; border: none;
+  font: 700 12px 'Inter', system-ui, sans-serif;
+  align-items: center; justify-content: center;
+  flex-shrink: 0; cursor: pointer; flex-shrink: 0;
+}
+#account-panel {
+  display: none; position: fixed; inset: 0; z-index: 60;
+  background: var(--surface); flex-direction: column;
+  transform: translateY(100%);
+  transition: transform .28s cubic-bezier(.4,0,.2,1);
+}
+#account-panel.open { transform: translateY(0); }
 #sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(30,20,60,.4); z-index: 49; }
 #sidebar-overlay.show { display: block; }
 
@@ -2912,6 +2928,15 @@ body.android #presenter-cifra .chord-line {
   justify-content: center; padding: 0 4px; line-height: 1;
 }
 .mbn-btn .mbn-badge.show { display: flex; }
+/* Item Categorias: estado ativo quando drawer está aberto */
+#mbn-cats[aria-expanded="true"] {
+  background: var(--primary); color: #fff;
+  flex: 2; padding: 10px 14px;
+}
+#mbn-cats[aria-expanded="true"] .mbn-label { display: inline; font-size: 0.75rem; font-weight: 700; }
+/* Focus visible em todos os nav items */
+.mbn-btn:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+#header-avatar:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
 
 
 @media (max-width: 1024px) {
@@ -2933,16 +2958,13 @@ body.android #presenter-cifra .chord-line {
   #search-mode-toggle button { padding: 3px 8px; font-size: 0.68em; }
   #search-wrap { padding: 0 6px 0 12px; }
 
-  /* Esconde tudo no header exceto a busca e o menu */
+  /* Esconde tudo no header exceto a busca, sino e avatar */
   #btn-import, #user-badge { display: none; }
-  #header-right { width: auto; padding: 0 4px; }
+  #header-right { width: auto; padding: 0 4px; gap: 4px; display: flex; align-items: center; }
   #btn-notif { display: flex; }
-  #btn-menu-toggle {
-    display: flex; align-items: center; justify-content: center;
-    flex-shrink: 0; font-size: 1.3em; padding: 6px 9px;
-    border-radius: 8px; color: var(--text-muted);
-    background: none; border: none; cursor: pointer;
-  }
+  #header-avatar { display: flex; }
+  /* Account panel visível no mobile */
+  #account-panel { display: flex; }
 
   /* Elimina delay 300ms iOS: touch-action + cursor:pointer (iOS Safari checa cursor) */
   * { touch-action: manipulation; }
@@ -2950,7 +2972,7 @@ body.android #presenter-cifra .chord-line {
   .home-card, .song-card, .sidebar-cat, .sidebar-section-title,
   .mbn-btn, .btn, .btn-sm, .btn-accent,
   .btn-hc-add, .btn-song-ops, .btn-cat-menu, .btn-folder-add,
-  #btn-home, #btn-menu-toggle, #search-box,
+  #btn-home, #search-box,
   #btn-meta-toggle, #btn-save-meta {
     cursor: pointer;
   }
@@ -3887,27 +3909,65 @@ html.pwa-standalone #modal-footer {
 <!-- Overlay para fechar sidebar no mobile -->
 <div id="sidebar-overlay"></div>
 
+<!-- Account panel (mobile, acionado pelo avatar) -->
+<div id="account-panel" role="dialog" aria-label="Sua conta" aria-modal="true">
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 18px 0;flex-shrink:0">
+    <span style="font-size:.8em;font-weight:800;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-muted)">Minha conta</span>
+    <button id="btn-account-close" aria-label="Fechar" style="font-size:1.1em;color:var(--text-muted);padding:5px 8px;border-radius:6px;background:none;border:none;cursor:pointer">&#10005;</button>
+  </div>
+  {% if user %}
+  <div style="padding:20px 18px 16px;display:flex;align-items:center;gap:14px;border-bottom:1px solid var(--border);flex-shrink:0">
+    {% if user.picture %}
+    <img src="{{ user.picture }}" alt="{{ user.name }}" referrerpolicy="no-referrer" style="width:52px;height:52px;border-radius:99px;object-fit:cover;flex-shrink:0">
+    {% else %}
+    <div style="width:52px;height:52px;border-radius:99px;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;font:700 20px Inter;flex-shrink:0">{{ (user.name or user.email or 'U')[0] | upper }}</div>
+    {% endif %}
+    <div style="min-width:0">
+      <div style="font-weight:700;font-size:.97em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ user.name or '' }}</div>
+      <div style="font-size:.8em;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ user.email or '' }}</div>
+    </div>
+  </div>
+  {% endif %}
+  <div style="flex:1;overflow-y:auto;padding:8px 10px">
+    <a href="/logout" style="display:flex;align-items:center;gap:12px;padding:13px 10px;border-radius:10px;color:var(--danger);font-weight:600;font-size:.9em;text-decoration:none;margin-top:4px">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+      Sair
+    </a>
+  </div>
+</div>
+
 <!-- Bottom nav (mobile only) -->
 <nav id="mobile-bottom-nav" aria-label="Navegação">
   <div class="mbn-inner">
-    <button class="mbn-btn active" id="mbn-home" title="Início">
+    <button class="mbn-btn active" id="mbn-home" title="Início" aria-label="Início" aria-current="page">
       <span class="mbn-icon">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 3l9 8h-2v9h-5v-6h-4v6H5v-9H3l9-8z"/></svg>
       </span>
       <span class="mbn-label">Início</span>
     </button>
-    <button class="mbn-btn" id="mbn-search" title="Pesquisar">
+    <button class="mbn-btn" id="mbn-search" title="Pesquisar" aria-label="Pesquisar">
       <span class="mbn-icon">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
       </span>
       <span class="mbn-label">Pesquisar</span>
     </button>
-    <button class="mbn-btn" id="mbn-rep" title="Repertório">
+    <button class="mbn-btn" id="mbn-rep" title="Repertório" aria-label="Repertório">
       <span class="mbn-icon">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h12M4 12h12M4 18h8"/><path d="M18 14l5 4-5 4z" fill="currentColor"/></svg>
       </span>
       <span class="mbn-label">Repertório</span>
       <span class="mbn-badge" id="mbn-rep-badge"></span>
+    </button>
+    <button class="mbn-btn" id="mbn-cats" title="Categorias" aria-label="Abrir categorias" aria-expanded="false">
+      <span class="mbn-icon">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <rect x="3" y="3" width="7" height="7" rx="1.4"/>
+          <rect x="14" y="3" width="7" height="7" rx="1.4"/>
+          <rect x="3" y="14" width="7" height="7" rx="1.4"/>
+          <rect x="14" y="14" width="7" height="7" rx="1.4"/>
+        </svg>
+      </span>
+      <span class="mbn-label">Categorias</span>
     </button>
   </div>
 </nav>
@@ -3919,7 +3979,6 @@ html.pwa-standalone #modal-footer {
       <img src="/static/brand/logo-light.svg" alt="My Cifras" height="30">
     </div>
     <div id="header-main">
-      <button id="btn-menu-toggle" title="Menu">&#9776;</button>
       <div id="search-wrap">
         <span class="search-wrap-icon">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
@@ -3943,7 +4002,7 @@ html.pwa-standalone #modal-footer {
       <input type="file" id="file-input" accept=".docx,.doc,.pdf,.txt" style="display:none">
       {% endif %}
       {% if user %}
-      <button id="btn-notif" title="Notificações">
+      <button id="btn-notif" title="Notificações" aria-label="Notificações">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
         <span id="notif-badge" style="display:none">0</span>
       </button>
@@ -3953,6 +4012,10 @@ html.pwa-standalone #modal-footer {
         {% endif %}
         <a href="/logout" id="btn-logout" title="Sair">Sair</a>
       </div>
+      <!-- Avatar mobile (desktop usa user-badge) -->
+      <button id="header-avatar" aria-label="Sua conta" title="Sua conta">
+        {{ (user.name or user.email or 'U')[0] | upper }}
+      </button>
       {% endif %}
     </div>
   </div>
@@ -9345,16 +9408,26 @@ function init() {
     if (hi) hi.classList.add("active");
   });
 
-  // Sidebar hamburguer (mobile)
+  // Sidebar — acionado pelo item Categorias da bottom nav (mobile)
   var sidebarOverlay = document.getElementById("sidebar-overlay");
-  document.getElementById("btn-menu-toggle").addEventListener("click", function() {
-    document.getElementById("sidebar").classList.toggle("open");
-    sidebarOverlay.classList.toggle("show");
-  });
-  sidebarOverlay.addEventListener("click", function() {
+
+  function _closeSidebar() {
     document.getElementById("sidebar").classList.remove("open");
     sidebarOverlay.classList.remove("show");
-    if (typeof mbnSetActive === "function") mbnSetActive("mbn-home");
+    var catsBtn = document.getElementById("mbn-cats");
+    if (catsBtn) catsBtn.setAttribute("aria-expanded", "false");
+  }
+
+  sidebarOverlay.addEventListener("click", function() {
+    var repPanel = document.getElementById("rep-panel");
+    if (repPanel && repPanel.classList.contains("mobile-open")) {
+      repPanel.classList.remove("mobile-open");
+      sidebarOverlay.classList.remove("show");
+      if (typeof mbnSetActive === "function") mbnSetActive("mbn-home");
+    } else {
+      _closeSidebar();
+      if (typeof mbnSetActive === "function") mbnSetActive("mbn-home");
+    }
   });
 
   // Painel repertório: fixo no desktop, drawer no mobile (aberto via bottom nav)
@@ -9533,19 +9606,24 @@ function init() {
 
   // ─── Bottom nav mobile ────────────────────────────────────────────────────
   function mbnSetActive(id) {
-    document.querySelectorAll(".mbn-btn").forEach(function(b) { b.classList.remove("active"); });
+    var routeIds = ["mbn-home", "mbn-search", "mbn-rep"];
+    document.querySelectorAll(".mbn-btn").forEach(function(b) {
+      b.classList.remove("active");
+      if (routeIds.indexOf(b.id) !== -1) b.removeAttribute("aria-current");
+    });
     var el = document.getElementById(id);
-    if (el) el.classList.add("active");
+    if (el) {
+      el.classList.add("active");
+      if (routeIds.indexOf(id) !== -1) el.setAttribute("aria-current", "page");
+    }
   }
   document.getElementById("mbn-home").addEventListener("click", function() {
     _confirmLeaveEdit(function() {
       _forceCloseModal();
-      mbnSetActive("mbn-home");
-      // fecha drawers abertos
-      document.getElementById("sidebar").classList.remove("open");
+      _closeSidebar();
       document.getElementById("rep-panel").classList.remove("mobile-open");
       sidebarOverlay.classList.remove("show");
-      // volta para home
+      mbnSetActive("mbn-home");
       currentCategory = null; searchActive = false;
       document.getElementById("search-box").value = ""; if(typeof _updateSearchClear==="function") _updateSearchClear();
       document.querySelectorAll(".sidebar-cat").forEach(function(el) { el.classList.remove("active"); });
@@ -9558,21 +9636,18 @@ function init() {
   });
   document.getElementById("mbn-search").addEventListener("click", function() {
     _forceCloseModal();
-    // Fecha drawers, foca no campo de busca e marca active
-    document.getElementById("sidebar").classList.remove("open");
+    _closeSidebar();
     document.getElementById("rep-panel").classList.remove("mobile-open");
     sidebarOverlay.classList.remove("show");
     mbnSetActive("mbn-search");
     var sb = document.getElementById("search-box");
     sb.focus();
-    // Scroll até o topo para garantir que o campo fique visível
     window.scrollTo({ top: 0, behavior: "smooth" });
   });
   document.getElementById("mbn-rep").addEventListener("click", function() {
     var repPanel = document.getElementById("rep-panel");
-    var sidebar = document.getElementById("sidebar");
     var isOpen = repPanel.classList.contains("mobile-open");
-    sidebar.classList.remove("open");
+    _closeSidebar();
     if (isOpen) {
       repPanel.classList.remove("mobile-open");
       sidebarOverlay.classList.remove("show");
@@ -9583,21 +9658,42 @@ function init() {
       mbnSetActive("mbn-rep");
     }
   });
+  document.getElementById("mbn-cats").addEventListener("click", function() {
+    var sidebar = document.getElementById("sidebar");
+    var isOpen = sidebar.classList.contains("open");
+    document.getElementById("rep-panel").classList.remove("mobile-open");
+    if (isOpen) {
+      _closeSidebar();
+      mbnSetActive("mbn-home");
+    } else {
+      sidebar.classList.add("open");
+      sidebarOverlay.classList.add("show");
+      this.setAttribute("aria-expanded", "true");
+    }
+  });
   document.getElementById("btn-rep-close").addEventListener("click", function() {
     document.getElementById("rep-panel").classList.remove("mobile-open");
     sidebarOverlay.classList.remove("show");
     mbnSetActive("mbn-home");
   });
 
-  // Fechar rep-panel ao clicar no overlay (mobile)
-  sidebarOverlay.addEventListener("click", function() {
-    var repPanel = document.getElementById("rep-panel");
-    if (repPanel.classList.contains("mobile-open")) {
-      repPanel.classList.remove("mobile-open");
-      sidebarOverlay.classList.remove("show");
-      mbnSetActive("mbn-home");
-    }
-  });
+  // Account panel (avatar mobile)
+  var accountPanel = document.getElementById("account-panel");
+  var headerAvatar = document.getElementById("header-avatar");
+  if (headerAvatar && accountPanel) {
+    headerAvatar.addEventListener("click", function() {
+      accountPanel.classList.add("open");
+    });
+    var closeBtn = document.getElementById("btn-account-close");
+    if (closeBtn) closeBtn.addEventListener("click", function() {
+      accountPanel.classList.remove("open");
+    });
+    document.addEventListener("keydown", function(e) {
+      if (e.key === "Escape" && accountPanel.classList.contains("open")) {
+        accountPanel.classList.remove("open");
+      }
+    });
+  }
 
   // Sincroniza badge da bottom nav com o rep count
   var _origUpdateRepBadge = updateRepBadge;
