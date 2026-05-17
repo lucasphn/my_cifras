@@ -71,6 +71,44 @@ app.register_blueprint(auth_bp)
 
 
 # ---------------------------------------------------------------------------
+# Service Account (leitura do Drive para todos os usuários)
+# ---------------------------------------------------------------------------
+
+_sa_creds = None
+
+def _build_sa_creds():
+    global _sa_creds
+    if _sa_creds is not None:
+        return _sa_creds
+    sa_json = os.environ.get("GOOGLE_SERVICE_ACCOUNT_JSON", "")
+    if not sa_json:
+        return None
+    try:
+        from google.oauth2 import service_account
+        _sa_creds = service_account.Credentials.from_service_account_info(
+            json.loads(sa_json),
+            scopes=["https://www.googleapis.com/auth/drive.readonly"],
+        )
+        return _sa_creds
+    except Exception as e:
+        log.error("[sa] Falha ao criar credenciais: %s", e)
+        return None
+
+
+def _get_sa_service():
+    """Retorna um novo Drive service autenticado como service account."""
+    from googleapiclient.discovery import build as _build
+    creds = _build_sa_creds()
+    if creds is None:
+        return None
+    try:
+        return _build("drive", "v3", credentials=creds, cache_discovery=False)
+    except Exception as e:
+        log.error("[sa] Falha ao construir Drive service: %s", e)
+        return None
+
+
+# ---------------------------------------------------------------------------
 # Controle de acesso por role
 # ---------------------------------------------------------------------------
 
@@ -986,7 +1024,7 @@ def _get_library():
             try:
                 if _use_drive():
                     import drive
-                    data = drive.scan_library(get_service(), CIFRAS_FOLDER_ID)
+                    data = drive.scan_library(_get_sa_service() or get_service(), CIFRAS_FOLDER_ID)
                 else:
                     data = scan_library_local()
                 _library_cache["data"] = data
@@ -1588,10 +1626,11 @@ def api_cifra():
         import drive
         mime = request.args.get("mimeType", "")
         try:
+            _read_svc = _get_sa_service() or get_service()
             if mime == drive.GDOCS_MIME:
-                text = drive.export_gdoc_as_text(get_service(), file_id)
+                text = drive.export_gdoc_as_text(_read_svc, file_id)
             else:
-                content_bytes = drive.download_bytes(get_service(), file_id)
+                content_bytes = drive.download_bytes(_read_svc, file_id)
                 ext = _mime_to_ext(mime)
                 text = extract_text_from_bytes(content_bytes, ext)
         except Exception as e:
@@ -1635,8 +1674,6 @@ def api_cifras_bundle():
 
     import drive as drv
     from googleapiclient.discovery import build as _gdrive_build
-    from auth import get_credentials as _get_oauth_creds
-    from google.auth.transport.requests import Request as _GRequest
 
     songs = [s for s in flatten_songs(_get_library()) if s.get("fileId")]
     etag  = _compute_bundle_etag(songs)
@@ -1645,13 +1682,20 @@ def api_cifras_bundle():
     if request.headers.get("If-None-Match", "") == etag:
         return Response(status=304)
 
-    # Obtém credenciais no contexto Flask antes de spawnar threads
-    creds = _get_oauth_creds()
-    if creds and creds.expired and creds.refresh_token:
-        creds.refresh(_GRequest())
+    # Precomputa credenciais para os threads — SA tem prioridade sobre OAuth
+    _sa = _build_sa_creds()
+    if not _sa:
+        from auth import get_credentials as _get_oauth_creds
+        from google.auth.transport.requests import Request as _GRequest
+        _oauth_creds = _get_oauth_creds()
+        if _oauth_creds and _oauth_creds.expired and _oauth_creds.refresh_token:
+            _oauth_creds.refresh(_GRequest())
+    else:
+        _oauth_creds = None
 
     def _fetch(song):
-        local_svc = _gdrive_build("drive", "v3", credentials=creds, cache_discovery=False)
+        _creds = _sa or _oauth_creds
+        local_svc = _gdrive_build("drive", "v3", credentials=_creds, cache_discovery=False)
         fid  = song["fileId"]
         mime = song.get("mimeType", "")
         try:
