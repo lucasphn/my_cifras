@@ -88,6 +88,20 @@ def get_or_create_user(email: str, google_id: str, name: str = "",
     if email in _uid_cache:
         return _uid_cache[email]
     try:
+        # Busca por email primeiro — garante que dados seedados (google_id=email)
+        # sejam encontrados mesmo quando o sub real do Google é diferente.
+        rows = _get("users", select="id,google_id", email=f"eq.{email}")
+        if rows:
+            uid = rows[0]["id"]
+            real_gid = google_id or email
+            # Atualiza google_id se ainda era o placeholder (email), e atualiza perfil.
+            patch: dict = {"name": name, "avatar_url": avatar, "last_seen_at": "now()"}
+            if rows[0].get("google_id") != real_gid:
+                patch["google_id"] = real_gid
+            _patch("users", patch, id=f"eq.{uid}")
+            _uid_cache[email] = uid
+            return uid
+        # Não existe → cria
         rows = _post("users", {
             "google_id": google_id or email,
             "email": email,

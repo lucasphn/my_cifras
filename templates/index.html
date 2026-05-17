@@ -33,6 +33,7 @@
   --accent-hover: #b8961f;
   --border: #e6e1f0;
   --danger: #dc2626;
+  --danger-bg: rgba(220,38,38,.10);
   --success: #16a34a;
   --offline-bg: rgba(22, 163, 74, 0.10);
   --offline-border: rgba(22, 163, 74, 0.28);
@@ -2561,122 +2562,232 @@ body.android #presenter-cifra .chord-line {
 
 #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
-/* ─── Modal de importação ────────────────────────────────────────────────── */
+/* ─── Modal de importação v2 ────────────────────────────────────────────── */
 #import-overlay {
-  display: none;
-  position: fixed;
-  inset: 0;
-  background: rgba(30,40,80,.45);
-  z-index: 110;
-  align-items: center;
-  justify-content: center;
+  display: none; position: fixed; inset: 0;
+  background: rgba(31,26,56,.42);
+  backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+  z-index: 110; align-items: center; justify-content: center;
+  padding: 32px;
 }
 #import-overlay.open { display: flex; }
 #import-modal {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  width: min(680px, 95vw);
-  max-height: 92vh;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  box-shadow: 0 12px 48px rgba(30,40,80,.18);
+  width: 100%; max-width: 1180px;
+  height: min(900px, calc(100vh - 64px));
+  background: var(--surface); border-radius: 20px;
+  box-shadow: 0 30px 80px rgba(20,12,50,.35), 0 4px 14px rgba(20,12,50,.15);
+  display: grid; grid-template-rows: auto auto 1fr auto;
+  overflow: hidden; position: relative;
 }
+/* ── Confirmation overlay ── */
+.im-confirm-shroud {
+  position: absolute; inset: 0;
+  background: rgba(31,26,56,.30);
+  display: none; align-items: center; justify-content: center;
+  z-index: 5; border-radius: 20px;
+}
+.im-confirm-shroud.visible { display: flex; }
+.im-confirm {
+  background: var(--surface); border-radius: 14px;
+  box-shadow: 0 20px 60px rgba(20,12,50,.30);
+  max-width: 460px; width: calc(100% - 48px);
+  padding: 24px 24px 18px;
+  animation: im-confirm-pop .18s cubic-bezier(.2,.9,.3,1.2);
+}
+@keyframes im-confirm-pop { from { transform: scale(.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .im-confirm { animation: none; } }
+.im-confirm-icon {
+  width: 44px; height: 44px; border-radius: 12px;
+  background: var(--danger-bg); color: var(--danger);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.3em; margin-bottom: 14px;
+}
+.im-confirm h3 { font-size: .95em; font-weight: 700; margin-bottom: 6px; }
+.im-confirm > p { font-size: .84em; color: var(--text-muted); margin-bottom: 14px; }
+.im-lost-box {
+  background: var(--surface2); border-radius: 9px;
+  padding: 10px 12px; margin-bottom: 16px;
+  display: flex; flex-direction: column; gap: 5px;
+}
+.im-lost-row { display: flex; align-items: baseline; gap: 8px; font-size: .8em; }
+.im-lost-row span { color: var(--text-muted); flex: none; min-width: 110px; }
+.im-lost-row strong { color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+.im-confirm-btns { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
+/* ── Header ── */
 #import-modal-header {
-  padding: 14px 18px;
-  border-bottom: 1px solid var(--border);
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-shrink: 0;
+  padding: 16px 20px 14px; border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 12px; flex-shrink: 0;
 }
-#import-modal-header h2 { flex: 1; font-size: 1em; font-weight: 600; }
-#import-close { font-size: 1.2em; color: var(--text-muted); padding: 4px 8px; border-radius: 5px; }
+.im-header-icon {
+  width: 36px; height: 36px; border-radius: 10px;
+  background: var(--primary-light); color: var(--primary);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.1em; flex-shrink: 0;
+}
+.im-header-text { flex: 1; }
+.im-header-text h2 { font-size: .97em; font-weight: 700; line-height: 1.2; }
+.im-header-text p { font-size: .76em; color: var(--text-muted); margin-top: 2px; }
+.im-esc-hint {
+  font-size: .72em; font-weight: 600; color: var(--text-muted);
+  border: 1px solid var(--border); border-radius: 5px;
+  padding: 2px 7px; font-family: var(--font-mono);
+}
+#import-close { font-size: 1.1em; color: var(--text-muted); padding: 5px 8px; border-radius: 6px; line-height: 1; }
 #import-close:hover { color: var(--text); background: var(--surface2); }
-#import-tabs {
-  display: flex;
-  border-bottom: 1px solid var(--border);
-  flex-shrink: 0;
+/* ── Body ── */
+#import-body { display: flex; flex-direction: column; overflow: hidden; min-height: 0; }
+/* Text pane */
+.im-text-pane {
+  flex: 1; display: grid; grid-template-columns: 340px 1fr;
+  min-height: 0; overflow: hidden;
 }
-.import-tab {
-  flex: 1;
-  padding: 10px;
-  text-align: center;
-  font-size: 0.88em;
-  color: var(--text-muted);
-  border-bottom: 2px solid transparent;
-  transition: color .15s, border-color .15s;
+/* ── Form column ── */
+.im-form {
+  border-right: 1px solid var(--border); overflow-y: auto;
+  padding: 18px 18px 12px; display: flex; flex-direction: column; gap: 16px;
 }
-.import-tab:hover { color: var(--text); }
-.import-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
-#import-body { overflow-y: auto; padding: 16px 18px; display: flex; flex-direction: column; gap: 14px; }
-.import-panel { display: none; flex-direction: column; gap: 10px; }
-.import-panel.active { display: flex; }
-.import-url-row { display: flex; gap: 8px; }
-.import-url-row input { flex: 1; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius); color: var(--text); padding: 8px 12px; outline: none; }
-.import-url-row input:focus { border-color: var(--accent); }
+.im-section-label {
+  font-size: .7em; font-weight: 800; letter-spacing: 1.3px;
+  text-transform: uppercase; color: var(--text-muted); margin-bottom: 8px;
+}
+.im-fields { display: flex; flex-direction: column; gap: 10px; }
+.im-fields-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.im-field { display: flex; flex-direction: column; gap: 4px; }
+.im-field label {
+  font-size: .7em; font-weight: 800; letter-spacing: 1.1px;
+  text-transform: uppercase; color: var(--text-muted);
+}
+.im-field input, .im-field select {
+  width: 100%; padding: 9px 11px;
+  border: 1.5px solid var(--border); border-radius: 9px;
+  background: var(--surface);
+  font: 600 13px 'Inter', system-ui, sans-serif;
+  color: var(--text); outline: none;
+  transition: border-color .12s, background .12s;
+  -webkit-appearance: none; appearance: none;
+}
+.im-field input:focus, .im-field select:focus { border-color: var(--primary); background: #fdfdff; }
+.im-field input.invalid { border-color: var(--danger); }
+.im-field .im-hint { font-size: .72em; color: var(--danger); margin-top: 2px; display: none; }
+.im-field.invalid .im-hint { display: block; }
+.im-field.im-f-tom input, .im-field.im-f-capo input {
+  font-family: var(--font-mono); font-weight: 700; text-align: center; text-transform: uppercase;
+}
+.im-yt-wrap { position: relative; }
+.im-yt-wrap input { padding-left: 34px; }
+.im-yt-icon { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); color: var(--danger); font-size: .9em; pointer-events: none; }
+.im-field select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%236b7280' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 10px center; padding-right: 30px; cursor: pointer;
+}
+.im-callout {
+  background: var(--primary-light); border-radius: 10px; padding: 10px 12px;
+  font-size: .78em; color: var(--primary); line-height: 1.5; margin-top: auto;
+  display: flex; gap: 7px; align-items: flex-start;
+}
+/* ── Editor column ── */
+.im-editor { display: flex; flex-direction: column; overflow: hidden; }
+.im-editor-header {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 14px 8px; border-bottom: 1px solid var(--border); flex-shrink: 0;
+}
+.im-editor-label { display: flex; align-items: center; gap: 8px; flex: 1; }
+.im-editor-pulse {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--accent); box-shadow: 0 0 0 3px rgba(212,175,55,.18); flex-shrink: 0;
+}
+.im-editor-label-text {
+  font-size: .7em; font-weight: 800; letter-spacing: 1.3px;
+  text-transform: uppercase; color: var(--text-muted);
+}
+.im-editor-hint { font-size: .75em; color: var(--text-muted); }
+.im-editor-actions { display: flex; gap: 6px; }
+.im-editor-btn {
+  padding: 4px 10px; border-radius: 99px; font-size: .75em; font-weight: 600;
+  border: 1.5px solid var(--border); color: var(--text);
+  transition: border-color .15s, background .15s; cursor: pointer; background: var(--surface);
+}
+.im-editor-btn:hover { border-color: var(--primary); }
+.im-editor-btn.primary { background: var(--primary-light); color: var(--primary); border-color: transparent; }
+.im-editor-wrap {
+  flex: 1; display: grid; grid-template-columns: 44px 1fr;
+  min-height: 0; position: relative; overflow: hidden;
+}
+#import-gutter {
+  background: var(--surface2); overflow: hidden;
+  padding: 18px 8px 18px 0;
+  font-family: var(--font-mono); font-size: 12px; color: var(--text-muted);
+  text-align: right; line-height: 1.6; user-select: none;
+  border-right: 1px solid var(--border); white-space: pre;
+}
 #import-textarea {
-  width: 100%;
-  min-height: 140px;
-  background: var(--surface2);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  color: var(--text);
-  padding: 10px 12px;
-  font-family: var(--font-mono);
-  font-size: 0.85em;
-  resize: vertical;
-  outline: none;
+  resize: none; border: none; outline: none;
+  padding: 18px 22px 80px;
+  font-family: var(--font-mono); font-size: 13.5px; line-height: 1.6;
+  color: var(--text); background: transparent;
+  white-space: pre; overflow-wrap: normal; overflow-x: auto;
+  tab-size: 4; -moz-tab-size: 4; overflow-y: auto;
 }
-#import-textarea:focus { border-color: var(--accent); }
-.import-meta-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
+.im-toolbar {
+  position: absolute; bottom: 10px; left: 54px;
+  display: flex; align-items: center; gap: 1px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 99px; box-shadow: 0 2px 8px rgba(30,20,60,.10); padding: 3px;
 }
-.import-field { display: flex; flex-direction: column; gap: 4px; }
-.import-field label { font-size: 0.78em; color: var(--text-muted); }
-.import-field input,
-.import-field select {
-  background: var(--surface2);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  color: var(--text);
-  padding: 7px 10px;
-  outline: none;
-  font: inherit;
-  font-size: 0.88em;
+.im-tool-btn {
+  width: 30px; height: 30px; border-radius: 99px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: .85em; color: var(--text-muted);
+  transition: background .12s, color .12s; cursor: pointer;
 }
-.import-field input:focus,
-.import-field select:focus { border-color: var(--accent); }
-.import-field select option { background: var(--surface2); }
-#import-preview-wrap { display: none; flex-direction: column; gap: 6px; }
-#import-preview-wrap label { font-size: 0.78em; color: var(--text-muted); }
-#import-preview {
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 12px;
-  font-family: var(--font-mono);
-  font-size: 0.82em;
-  line-height: 1.7;
-  white-space: pre-wrap;
-  word-break: break-word;
-  max-height: 200px;
-  overflow-y: auto;
-  color: var(--text);
+.im-tool-btn:hover { background: var(--surface2); color: var(--text); }
+.im-tool-divider { width: 1px; height: 16px; background: var(--border); margin: 0 2px; }
+.im-section-dropdown {
+  position: absolute; bottom: 46px; left: 54px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 10px; box-shadow: 0 8px 24px rgba(30,20,60,.14);
+  padding: 4px; min-width: 160px; display: none; z-index: 10;
 }
+.im-section-dropdown.open { display: block; }
+.im-section-opt {
+  display: block; width: 100%; padding: 7px 12px;
+  text-align: left; font-size: .83em; font-weight: 600;
+  color: var(--text); border-radius: 7px; font-family: var(--font-mono);
+  cursor: pointer; background: none; border: none;
+}
+.im-section-opt:hover { background: var(--surface2); }
+.im-counter {
+  position: absolute; bottom: 14px; right: 12px;
+  font-family: var(--font-mono); font-size: 11px; color: var(--text-muted);
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 99px; padding: 3px 10px; pointer-events: none;
+}
+/* ── Footer ── */
 #import-footer {
-  padding: 12px 18px;
-  border-top: 1px solid var(--border);
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-shrink: 0;
+  padding: 10px 18px; border-top: 1px solid var(--border);
+  display: flex; align-items: center; gap: 10px; flex-shrink: 0;
 }
-#import-footer .btn { font-size: 0.88em; }
-#import-error { font-size: 0.82em; color: var(--danger); flex: 1; }
+.im-footer-btns { display: flex; gap: 8px; align-items: center; flex: 1; justify-content: flex-end; }
+#import-error { font-size: .82em; color: var(--danger); }
+.btn-danger {
+  background: var(--danger); color: #fff; border: 1.5px solid var(--danger);
+  border-radius: 8px; padding: 7px 14px; font-size: .86em; font-weight: 600;
+  cursor: pointer; transition: background .15s;
+}
+.btn-danger:hover { background: #92302f; border-color: #92302f; }
+/* ── Mobile: bottom-sheet ── */
+@media (max-width: 768px) {
+  #import-overlay { padding: 0; align-items: flex-end; }
+  #import-modal {
+    max-width: 100%; width: 100%; height: min(100dvh, 100vh);
+    border-radius: 20px 20px 0 0;
+  }
+  .im-text-pane { grid-template-columns: 1fr; grid-template-rows: auto 1fr; overflow-y: auto; }
+  .im-form { border-right: none; border-bottom: 1px solid var(--border); max-height: 45vh; }
+  .im-editor { min-height: 300px; }
+  #import-textarea { min-height: 260px; }
+  .im-esc-hint { display: none; }
+}
 
 /* ─── Export overlay ────────────────────────────────────────────────────── */
 #export-overlay {
@@ -4344,81 +4455,164 @@ html.pwa-standalone #modal-footer {
   </div>
 </div>
 
-<!-- Modal de importação -->
+<!-- Modal de importação v2 -->
 <div id="import-overlay">
-  <div id="import-modal">
-    <div id="import-modal-header">
-      <h2>&#43; Importar cifra</h2>
-      <button id="import-close" title="Fechar">&#10005;</button>
-    </div>
-    <div id="import-tabs">
-      <button class="import-tab active" data-tab="url">&#127760; Por URL</button>
-      <button class="import-tab" data-tab="text">&#128203; Colar texto</button>
-    </div>
-    <div id="import-body">
-      <!-- Painel URL -->
-      <div class="import-panel active" id="import-panel-url">
-        <div class="import-url-row">
-          <input type="url" id="import-url-input" placeholder="https://www.cifras.com.br/... ou bananacifras.com.br/...">
-          <button class="btn btn-accent" id="btn-import-fetch">Buscar</button>
-        </div>
-      </div>
-      <!-- Painel Texto -->
-      <div class="import-panel" id="import-panel-text">
-        <textarea id="import-textarea" placeholder="Cole a cifra aqui..."></textarea>
-        <button class="btn btn-accent" id="btn-import-preview-text" style="align-self:flex-start">Pré-visualizar</button>
-      </div>
+  <div id="import-modal" role="dialog" aria-labelledby="import-modal-title" aria-modal="true">
 
-      <!-- Metadados -->
-      <div id="import-meta-wrap" style="display:none; flex-direction:column; gap:10px;">
-        <div class="import-meta-grid">
-          <div class="import-field" style="grid-column:1/-1">
-            <label>Título</label>
-            <input type="text" id="import-title" placeholder="Nome da música" maxlength="120">
-          </div>
-          <div class="import-field" style="grid-column:1/-1">
-            <label>Artista / Banda</label>
-            <input type="text" id="import-artist" placeholder="Artista / Ministério" maxlength="80">
-          </div>
-          <div class="import-field">
-            <label>Tom</label>
-            <input type="text" id="import-key" placeholder="Ex: G, Am, C#" maxlength="4">
-          </div>
-          <div class="import-field">
-            <label>Capotraste</label>
-            <input type="number" id="import-capo" placeholder="0" min="0" max="12" style="width:80px">
-          </div>
-          <div class="import-field" style="grid-column:1/-1">
-            <label>YouTube</label>
-            <input type="url" id="import-youtube" placeholder="https://youtube.com/watch?v=...">
-          </div>
-          <div class="import-field">
-            <label>Seção</label>
-            <select id="import-section"><option value="">Selecione...</option></select>
-          </div>
-          <div class="import-field">
-            <label>Categoria</label>
-            <select id="import-category"><option value="">Selecione...</option></select>
-          </div>
-          <div class="import-field" id="import-subcategory-field" style="display:none">
-            <label>Momento</label>
-            <select id="import-subcategory"><option value="">Selecione...</option></select>
-          </div>
-        </div>
-        <!-- Preview da cifra -->
-        <div id="import-preview-wrap">
-          <label>Prévia da cifra</label>
-          <pre id="import-preview"></pre>
+    <!-- Confirmação de saída (position:absolute dentro do modal) -->
+    <div class="im-confirm-shroud" id="import-confirm-shroud" role="alertdialog" aria-labelledby="import-confirm-title" aria-modal="true">
+      <div class="im-confirm">
+        <div class="im-confirm-icon" aria-hidden="true">&#9888;</div>
+        <h3 id="import-confirm-title">Sair sem salvar?</h3>
+        <p>Você tem dados preenchidos. Se sair agora, tudo abaixo será perdido.</p>
+        <div class="im-lost-box" id="import-lost-summary"></div>
+        <div class="im-confirm-btns">
+          <button id="import-confirm-stay" class="btn">Continuar editando</button>
+          <button id="import-confirm-discard" class="btn-danger">&#128465; Descartar e sair</button>
         </div>
       </div>
     </div>
-    <div id="import-footer">
-      <span id="import-error"></span>
-      <span id="import-loading" style="display:none"><span class="loading-spinner"></span></span>
-      <button class="btn btn-accent" id="btn-import-save" style="display:none">Salvar</button>
+
+    <!-- Header -->
+    <div id="import-modal-header">
+      <span class="im-header-icon" aria-hidden="true">&#8593;</span>
+      <div class="im-header-text">
+        <h2 id="import-modal-title">Importar cifra</h2>
+        <p>Preencha os dados e cole a cifra. Você pode editar antes de salvar.</p>
+      </div>
+      <kbd class="im-esc-hint">Esc</kbd>
+      <button id="import-close" aria-label="Fechar modal">&#10005;</button>
     </div>
-  </div>
-</div>
+
+    <!-- Body -->
+    <div id="import-body">
+
+      <!-- Form + editor -->
+      <div class="im-text-pane" id="import-panel-text">
+
+        <!-- Coluna esquerda: formulário -->
+        <div class="im-form">
+          <!-- Identificação -->
+          <div>
+            <div class="im-section-label">Identificação</div>
+            <div class="im-fields">
+              <div class="im-field">
+                <label for="import-title">Título</label>
+                <input type="text" id="import-title" placeholder="Nome da música" maxlength="120" required autocomplete="off">
+              </div>
+              <div class="im-field">
+                <label for="import-artist">Artista / Banda</label>
+                <input type="text" id="import-artist" placeholder="Artista / Ministério" maxlength="80" required autocomplete="off">
+              </div>
+            </div>
+          </div>
+          <!-- Tonalidade -->
+          <div>
+            <div class="im-section-label">Tonalidade</div>
+            <div class="im-fields-row">
+              <div class="im-field im-f-tom">
+                <label for="import-key">Tom</label>
+                <input type="text" id="import-key" placeholder="G, Am…" maxlength="5" required autocomplete="off">
+                <span class="im-hint">Ex: G, Am, C#, Bbm</span>
+              </div>
+              <div class="im-field im-f-capo">
+                <label for="import-capo">Capotraste</label>
+                <input type="number" id="import-capo" placeholder="0" min="0" max="11" value="0" autocomplete="off">
+              </div>
+            </div>
+          </div>
+          <!-- Mídia -->
+          <div>
+            <div class="im-section-label">Mídia <span style="font-size:.9em;font-weight:500;letter-spacing:0;text-transform:none;color:var(--text-muted);opacity:.7">(opcional)</span></div>
+            <div class="im-fields">
+              <div class="im-field">
+                <label for="import-youtube">YouTube</label>
+                <div class="im-yt-wrap">
+                  <span class="im-yt-icon" aria-hidden="true">&#9654;</span>
+                  <input type="url" id="import-youtube" placeholder="https://youtube.com/watch?v=..." autocomplete="off">
+                </div>
+              </div>
+            </div>
+          </div>
+          <!-- Organização -->
+          <div>
+            <div class="im-section-label">Organização</div>
+            <div class="im-fields-row">
+              <div class="im-field">
+                <label for="import-section">Seção</label>
+                <select id="import-section" required><option value="">Selecione...</option></select>
+              </div>
+              <div class="im-field">
+                <label for="import-category">Categoria</label>
+                <select id="import-category" required><option value="">Selecione...</option></select>
+              </div>
+            </div>
+            <div id="import-subcategory-field" style="display:none; margin-top:10px">
+              <div class="im-field">
+                <label for="import-subcategory">Momento</label>
+                <select id="import-subcategory"><option value="">Selecione...</option></select>
+              </div>
+            </div>
+          </div>
+          <!-- Callout -->
+          <div class="im-callout">
+            <span aria-hidden="true">&#128161;</span>
+            <span><strong>Detectamos automaticamente</strong> tom e estrutura ao colar a cifra. Você pode ajustar acima.</span>
+          </div>
+        </div><!-- /.im-form -->
+
+        <!-- Coluna direita: editor -->
+        <div class="im-editor">
+          <div class="im-editor-header">
+            <div class="im-editor-label">
+              <span class="im-editor-pulse" aria-hidden="true"></span>
+              <span class="im-editor-label-text">Prévia da cifra</span>
+              <span class="im-editor-hint">cole ou edite o texto</span>
+            </div>
+            <div class="im-editor-actions">
+              <button class="im-editor-btn" id="btn-import-autodetect" aria-label="Detectar tom automaticamente">&#10024; Auto-formatar</button>
+              <button class="im-editor-btn primary" id="btn-import-transpose" aria-label="Transpor cifra">&#8599; Transpor</button>
+            </div>
+          </div>
+          <div class="im-editor-wrap">
+            <div id="import-gutter" aria-hidden="true">1</div>
+            <textarea id="import-textarea" placeholder="Cole a cifra aqui..." spellcheck="false" aria-label="Editor de cifra"></textarea>
+            <!-- Toolbar flutuante -->
+            <div class="im-toolbar" role="toolbar" aria-label="Ferramentas do editor">
+              <button class="im-tool-btn" id="btn-im-undo" aria-label="Desfazer" title="Desfazer">&#8630;</button>
+              <button class="im-tool-btn" id="btn-im-redo" aria-label="Refazer" title="Refazer">&#8631;</button>
+              <div class="im-tool-divider" aria-hidden="true"></div>
+              <button class="im-tool-btn" id="btn-im-clear" aria-label="Limpar conteúdo" title="Limpar">&#128465;</button>
+              <button class="im-tool-btn" id="btn-im-insert-section" aria-label="Inserir marcação de seção" title="Inserir seção">&#9776;</button>
+            </div>
+            <!-- Dropdown de seções -->
+            <div class="im-section-dropdown" id="import-section-dropdown" role="menu">
+              <button class="im-section-opt" data-section="[Intro]" role="menuitem">[Intro]</button>
+              <button class="im-section-opt" data-section="[Verso]" role="menuitem">[Verso]</button>
+              <button class="im-section-opt" data-section="[Refrão]" role="menuitem">[Refrão]</button>
+              <button class="im-section-opt" data-section="[Ponte]" role="menuitem">[Ponte]</button>
+              <button class="im-section-opt" data-section="[Solo]" role="menuitem">[Solo]</button>
+              <button class="im-section-opt" data-section="[Final]" role="menuitem">[Final]</button>
+            </div>
+            <!-- Contador -->
+            <div class="im-counter" id="import-counter" aria-live="polite" aria-atomic="true">0 linhas · 0 chars</div>
+          </div>
+        </div><!-- /.im-editor -->
+
+      </div><!-- /.im-text-pane -->
+    </div><!-- /#import-body -->
+
+    <!-- Footer -->
+    <div id="import-footer">
+      <div class="im-footer-btns">
+        <span id="import-error" style="display:none"></span>
+        <button class="btn" id="import-btn-cancel">Cancelar</button>
+        <button class="btn btn-accent" id="import-btn-preview" disabled aria-label="Importar cifra">Importar</button>
+      </div>
+    </div>
+
+  </div><!-- /#import-modal -->
+</div><!-- /#import-overlay -->
 
 <!-- Import loading overlay (bloqueante, cobre toda a tela durante salvamento) -->
 <div id="import-loading-overlay" style="display:none; position:fixed; inset:0; background:rgba(15,15,25,.82); z-index:9999; flex-direction:column; align-items:center; justify-content:center; gap:18px; color:#fff;">
@@ -9447,262 +9641,488 @@ function init() {
 }
 
 // ─── Modal de Importação ────────────────────────────────────────────────────
+// ─── Import Modal v2 ────────────────────────────────────────────────────────
 var importSections = {};
-var importCifraText = "";
 var _importPresetSection = "";
 var _importPresetCat     = "";
+var _importDraftTimer    = null;
+var _importDraftSavedAt  = null;
+var _importDraftInterval = null;
+var _DRAFT_KEY           = "mycifras.import.draft";
+var _TOM_RE              = /^[A-G][#b]?m?$/;
 
+function _iEl(id) { return document.getElementById(id); }
+
+// ── Dirty check ───────────────────────────────────────────────────────────────
+function isDirty() {
+  var ta = _iEl("import-textarea");
+  if (ta && ta.value.trim().length > 0) return true;
+  var ids = ["import-title","import-artist","import-key","import-youtube"];
+  for (var i = 0; i < ids.length; i++) {
+    var el = _iEl(ids[i]);
+    if (el && el.value && el.value.trim() !== "") return true;
+  }
+  var sec = _iEl("import-section");
+  if (sec && sec.value) return true;
+  return false;
+}
+
+// ── Lost summary ──────────────────────────────────────────────────────────────
+function buildLostSummary() {
+  var trunc = function(s, n) { return s.length > n ? s.slice(0, n) + "…" : s; };
+  var rows = [];
+  var title  = (_iEl("import-title")   || {}).value  || "";
+  var artist = (_iEl("import-artist")  || {}).value  || "";
+  var tom    = (_iEl("import-key")     || {}).value  || "";
+  var capo   = (_iEl("import-capo")    || {}).value  || "";
+  var yt     = (_iEl("import-youtube") || {}).value  || "";
+  var secSel = _iEl("import-section");
+  var catSel = _iEl("import-category");
+  var ta     = _iEl("import-textarea");
+  var cifra  = ta ? ta.value.trim() : "";
+  if (title)  rows.push(["T\xedtulo",     trunc(title, 36)]);
+  if (artist) rows.push(["Artista",       trunc(artist, 36)]);
+  if (tom || capo) rows.push(["Tom \xb7 Capo", (tom || "—") + " \xb7 " + (capo || "0")]);
+  if (yt)     rows.push(["YouTube",       "1 link"]);
+  if ((secSel && secSel.value) || (catSel && catSel.value)) {
+    var secTxt = secSel && secSel.value ? ((secSel.options[secSel.selectedIndex] || {}).text || secSel.value) : "—";
+    var catTxt = catSel && catSel.value ? ((catSel.options[catSel.selectedIndex] || {}).text || catSel.value) : "—";
+    rows.push(["Se\xe7\xe3o \xb7 Categ.", trunc(secTxt + " \xb7 " + catTxt, 36)]);
+  }
+  if (cifra) rows.push(["Cifra", cifra.split("\n").length + " linhas \xb7 " + cifra.length + " chars"]);
+  return rows;
+}
+
+// ── Confirm dialog ────────────────────────────────────────────────────────────
+function showImportConfirm() {
+  var rows = buildLostSummary();
+  var box = _iEl("import-lost-summary");
+  if (box) box.innerHTML = rows.map(function(r) {
+    return "<div class=\"im-lost-row\"><span>" + r[0] + "</span><strong>" + r[1] + "</strong></div>";
+  }).join("");
+  var sh = _iEl("import-confirm-shroud");
+  if (sh) { sh.classList.add("visible"); }
+  setTimeout(function() { var b = _iEl("import-confirm-stay"); if (b) b.focus(); }, 80);
+}
+
+function hideImportConfirm() {
+  var sh = _iEl("import-confirm-shroud");
+  if (sh) sh.classList.remove("visible");
+}
+
+function tryCloseImport() {
+  if (isDirty()) { showImportConfirm(); } else { closeImportModal(); }
+}
+
+function discardAndClose() {
+  clearImportDraft();
+  closeImportModal();
+}
+
+// ── Draft ─────────────────────────────────────────────────────────────────────
+function saveImportDraftNow() {
+  var draft = {
+    title:    (_iEl("import-title")    || {}).value || "",
+    artist:   (_iEl("import-artist")   || {}).value || "",
+    key:      (_iEl("import-key")      || {}).value || "",
+    capo:     (_iEl("import-capo")     || {}).value || "",
+    youtube:  (_iEl("import-youtube")  || {}).value || "",
+    section:  (_iEl("import-section")  || {}).value || "",
+    category: (_iEl("import-category") || {}).value || "",
+    text:     (_iEl("import-textarea") || {}).value || "",
+    savedAt:  Date.now(),
+  };
+  try { localStorage.setItem(_DRAFT_KEY, JSON.stringify(draft)); } catch(e) {}
+  _importDraftSavedAt = Date.now();
+  updateDraftDot(true);
+  updateDraftStatus();
+}
+
+function clearImportDraft() {
+  try { localStorage.removeItem(_DRAFT_KEY); } catch(e) {}
+  _importDraftSavedAt = null;
+  _importDraftTimer = null;
+  updateDraftDot(false);
+  updateDraftStatus();
+}
+
+function scheduleDraftSave() {
+  if (_importDraftTimer) clearTimeout(_importDraftTimer);
+  updateDraftDot(false);
+  _importDraftTimer = setTimeout(saveImportDraftNow, 800);
+}
+
+function updateDraftDot(saved) {
+  var dot = _iEl("import-draft-dot");
+  if (!dot) return;
+  dot.classList.toggle("unsaved", !saved);
+}
+
+function updateDraftStatus() {
+  var label = _iEl("import-draft-label");
+  if (!label) return;
+  if (!_importDraftSavedAt) {
+    label.textContent = "Nenhum rascunho salvo";
+    updateDraftDot(false);
+    return;
+  }
+  var sec = Math.round((Date.now() - _importDraftSavedAt) / 1000);
+  label.textContent = "Rascunho salvo automaticamente \xb7 " + (sec < 5 ? "agora mesmo" : "h\xe1 " + sec + "s");
+  updateDraftDot(true);
+}
+
+function startDraftStatusTimer() {
+  if (_importDraftInterval) clearInterval(_importDraftInterval);
+  _importDraftInterval = setInterval(updateDraftStatus, 5000);
+}
+
+function stopDraftStatusTimer() {
+  if (_importDraftInterval) clearInterval(_importDraftInterval);
+  _importDraftInterval = null;
+}
+
+function restoreImportDraftIfExists() {
+  var raw; try { raw = localStorage.getItem(_DRAFT_KEY); } catch(e) {}
+  if (!raw) return;
+  var draft; try { draft = JSON.parse(raw); } catch(e) { return; }
+  if (!draft || (!draft.text && !draft.title)) return;
+  if (!confirm("H\xe1 um rascunho n\xe3o salvo de \"" + (draft.title || "cifra sem t\xedtulo") + "\". Restaurar?")) {
+    clearImportDraft(); return;
+  }
+  if (draft.title)   (_iEl("import-title")    || {}).value = draft.title;
+  if (draft.artist)  (_iEl("import-artist")   || {}).value = draft.artist;
+  if (draft.key)     (_iEl("import-key")      || {}).value = draft.key;
+  if (draft.capo)    (_iEl("import-capo")     || {}).value = draft.capo;
+  if (draft.youtube) (_iEl("import-youtube")  || {}).value = draft.youtube;
+  if (draft.text)  { var ta = _iEl("import-textarea"); if (ta) ta.value = draft.text; }
+  if (draft.section) {
+    var ss = _iEl("import-section"); if (ss) { ss.value = draft.section; onImportSectionChange(draft.category || ""); }
+  }
+  _importDraftSavedAt = draft.savedAt || Date.now();
+  updateGutter(); updateImportCounter(); updateDraftStatus(); validateImportForm();
+}
+
+// ── Gutter & counter ──────────────────────────────────────────────────────────
+function updateGutter() {
+  var ta = _iEl("import-textarea"), g = _iEl("import-gutter");
+  if (!ta || !g) return;
+  var n = ta.value ? ta.value.split("\n").length : 1;
+  var nums = []; for (var i = 1; i <= n; i++) nums.push(i);
+  g.textContent = nums.join("\n");
+  g.scrollTop = ta.scrollTop;
+}
+
+function updateImportCounter() {
+  var ta = _iEl("import-textarea"), c = _iEl("import-counter");
+  if (!ta || !c) return;
+  var text = ta.value;
+  var lines = text ? text.split("\n").length : 0;
+  c.textContent = lines + (lines === 1 ? " linha" : " linhas") + " \xb7 " + text.length + " chars";
+}
+
+// ── Validation ────────────────────────────────────────────────────────────────
+function validateImportForm() {
+  var title  = ((_iEl("import-title")    || {}).value || "").trim();
+  var artist = ((_iEl("import-artist")   || {}).value || "").trim();
+  var tom    = ((_iEl("import-key")      || {}).value || "").trim();
+  var secVal = ((_iEl("import-section")  || {}).value || "");
+  var catVal = ((_iEl("import-category") || {}).value || "");
+  var text   = ((_iEl("import-textarea") || {}).value || "").trim();
+  var tomEl  = _iEl("import-key");
+  var tomParent = tomEl ? tomEl.closest(".im-field") : null;
+  var tomInvalid = tom && !_TOM_RE.test(tom);
+  if (tomEl) tomEl.classList.toggle("invalid", !!tomInvalid);
+  if (tomParent) tomParent.classList.toggle("invalid", !!tomInvalid);
+  var valid = !!(title && artist && tom && !tomInvalid && secVal && catVal && text);
+  var btn = _iEl("import-btn-preview");
+  if (btn) btn.disabled = !valid;
+}
+
+
+// ── Open / Close ──────────────────────────────────────────────────────────────
 function openImportModal(presetSection, presetCat) {
   _importPresetSection = presetSection || "";
   _importPresetCat     = presetCat     || "";
+  ["import-title","import-artist","import-key","import-youtube"].forEach(function(id) {
+    var el = _iEl(id); if (el) el.value = "";
+  });
+  var capo = _iEl("import-capo"); if (capo) capo.value = "0";
+  var ta = _iEl("import-textarea"); if (ta) ta.value = "";
+  var errEl = _iEl("import-error"); if (errEl) { errEl.textContent = ""; errEl.style.display = "none"; }
+  hideImportConfirm();
   document.getElementById("import-overlay").classList.add("open");
-  document.getElementById("import-error").textContent = "";
-  document.getElementById("import-meta-wrap").style.display = "none";
-  document.getElementById("btn-import-save").style.display = "none";
-  document.getElementById("import-preview-wrap").style.display = "none";
-  document.getElementById("import-url-input").value = "";
-  document.getElementById("import-textarea").value = "";
-  document.getElementById("import-title").value = "";
-  document.getElementById("import-artist").value = "";
-  document.getElementById("import-key").value = "";
-  document.getElementById("import-capo").value = "";
-  document.getElementById("import-youtube").value = "";
-  importCifraText = "";
+  updateGutter(); updateImportCounter(); validateImportForm();
   loadImportSections();
+  setTimeout(function() {
+    restoreImportDraftIfExists();
+    if (_importPresetSection) {
+      var s = _iEl("import-section"); if (s) { s.value = _importPresetSection; onImportSectionChange(_importPresetCat); }
+    }
+  }, 150);
+  setTimeout(function() { var f = _iEl("import-title"); if (f) f.focus(); }, 80);
 }
 
 function closeImportModal() {
   document.getElementById("import-overlay").classList.remove("open");
+  hideImportConfirm();
 }
 
+// ── Sections ──────────────────────────────────────────────────────────────────
 function loadImportSections() {
   if (Object.keys(importSections).length) { populateImportSection(); return; }
-  fetch("/api/sections")
-    .then(function(r) { return r.json(); })
-    .then(function(data) {
-      importSections = data;
-      populateImportSection();
-    });
+  fetch("/api/sections").then(function(r) { return r.json(); }).then(function(data) {
+    importSections = data; populateImportSection();
+  });
 }
 
 function populateImportSection() {
-  var sel = document.getElementById("import-section");
-  sel.innerHTML = '<option value="">Selecione...</option>';
+  var sel = _iEl("import-section"); if (!sel) return;
+  sel.innerHTML = "<option value=\"\">Selecione...</option>";
   Object.keys(importSections).forEach(function(s) {
     var opt = document.createElement("option");
-    opt.value = s; opt.textContent = cleanLabel(s);
-    sel.appendChild(opt);
+    opt.value = s; opt.textContent = cleanLabel(s); sel.appendChild(opt);
   });
-  if (_importPresetSection) {
-    sel.value = _importPresetSection;
-    onImportSectionChange(_importPresetCat);
-  }
+  if (_importPresetSection) { sel.value = _importPresetSection; onImportSectionChange(_importPresetCat); }
 }
 
 function onImportSectionChange(presetCat) {
-  var section = document.getElementById("import-section").value;
-  var catSel = document.getElementById("import-category");
-  catSel.innerHTML = '<option value="_raiz">Geral</option>';
-  // Only show base category names (exclude compound keys like "Cat > Sub")
-  var cats = (importSections[section] || []).filter(function(c) {
-    return c !== "_raiz" && c.indexOf(" > ") === -1;
-  });
+  var section = (_iEl("import-section") || {}).value;
+  var catSel  = _iEl("import-category"); if (!catSel) return;
+  catSel.innerHTML = "<option value=\"_raiz\">Geral</option>";
+  var cats = (importSections[section] || []).filter(function(c) { return c !== "_raiz" && c.indexOf(" > ") === -1; });
   cats.forEach(function(c) {
-    var opt = document.createElement("option");
-    opt.value = c; opt.textContent = cleanLabel(c);
-    catSel.appendChild(opt);
+    var opt = document.createElement("option"); opt.value = c; opt.textContent = cleanLabel(c); catSel.appendChild(opt);
   });
   if (presetCat) catSel.value = presetCat;
-  onImportCategoryChange();
+  onImportCategoryChange(); validateImportForm();
 }
 
 function onImportCategoryChange() {
-  var section = document.getElementById("import-section").value;
-  var cat = document.getElementById("import-category").value;
-  var subField = document.getElementById("import-subcategory-field");
-  var subSel = document.getElementById("import-subcategory");
-  var prefix = cat + " > ";
+  var section  = (_iEl("import-section")  || {}).value;
+  var cat      = (_iEl("import-category") || {}).value;
+  var subField = _iEl("import-subcategory-field");
+  var subSel   = _iEl("import-subcategory");
+  var prefix   = cat + " > ";
   var subs = (importSections[section] || [])
     .filter(function(c) { return c.indexOf(prefix) === 0; })
     .map(function(c) { return c.slice(prefix.length); });
-
   if (cat && subs.length > 0) {
-    subSel.innerHTML = '<option value="">Selecione...</option>';
-    subs.forEach(function(s) {
-      var opt = document.createElement("option");
-      opt.value = s; opt.textContent = cleanLabel(s);
-      subSel.appendChild(opt);
-    });
-    subField.style.display = "";
+    if (subSel) { subSel.innerHTML = "<option value=\"\">Selecione...</option>"; subs.forEach(function(s) { var opt = document.createElement("option"); opt.value = s; opt.textContent = cleanLabel(s); subSel.appendChild(opt); }); }
+    if (subField) subField.style.display = "";
   } else {
-    subField.style.display = "none";
-    subSel.innerHTML = '<option value="">Selecione...</option>';
+    if (subField) subField.style.display = "none";
+    if (subSel)   subSel.innerHTML = "<option value=\"\">Selecione...</option>";
   }
+  validateImportForm();
 }
 
+// ── Show result (URL fetch ou auto-detect) ────────────────────────────────────
 function showImportResult(data) {
-  importCifraText = data.text || "";
-  document.getElementById("import-title").value = data.title || "";
-  document.getElementById("import-artist").value = data.artist || "";
-  // Tonalidade: usa do scraping; se não veio, detecta pelo primeiro acorde do texto
   var key = data.key || "";
-  if (!key && importCifraText) key = detectBaseNote(importCifraText) || "";
-  document.getElementById("import-key").value = key;
-  document.getElementById("import-capo").value = data.capo || "";
-  document.getElementById("import-youtube").value = data.youtube || "";
-
-  var metaWrap = document.getElementById("import-meta-wrap");
-  metaWrap.style.display = "flex";
-
-  var previewWrap = document.getElementById("import-preview-wrap");
-  var preview = document.getElementById("import-preview");
-  if (importCifraText) {
-    preview.textContent = importCifraText.slice(0, 1200) + (importCifraText.length > 1200 ? "\n..." : "");
-    previewWrap.style.display = "flex";
-  } else {
-    previewWrap.style.display = "none";
+  if (!key && data.text) key = detectBaseNote(data.text) || "";
+  if (data.title)   { var el = _iEl("import-title");   if (el) el.value = data.title; }
+  if (data.artist)  { var el = _iEl("import-artist");  if (el) el.value = data.artist; }
+  if (key)          { var el = _iEl("import-key");     if (el) el.value = key; }
+  if (data.capo)    { var el = _iEl("import-capo");    if (el) el.value = data.capo; }
+  if (data.youtube) { var el = _iEl("import-youtube"); if (el) el.value = data.youtube; }
+  if (data.text) {
+    var ta = _iEl("import-textarea");
+    if (ta) { ta.value = data.text; updateGutter(); updateImportCounter(); }
   }
-
-  document.getElementById("btn-import-save").style.display = "inline-block";
-  document.getElementById("import-error").textContent = "";
+  validateImportForm();
+  var errEl = _iEl("import-error"); if (errEl) { errEl.textContent = ""; errEl.style.display = "none"; }
 }
 
-async function fetchImportUrl() {
-  var url = document.getElementById("import-url-input").value.trim();
-  if (!url) { document.getElementById("import-error").textContent = "Informe uma URL."; return; }
-  setImportLoading(true);
-  try {
-    var resp = await fetch("/api/import/preview", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ url: url })
-    });
-    var data = await resp.json();
-    if (data.error) throw new Error(data.error);
-    showImportResult(data);
-  } catch(e) {
-    document.getElementById("import-error").textContent = e.message;
-  } finally {
-    setImportLoading(false);
-  }
-}
 
-function previewImportText() {
-  var text = document.getElementById("import-textarea").value.trim();
-  if (!text) { document.getElementById("import-error").textContent = "Cole uma cifra primeiro."; return; }
-  showImportResult({ title: "", artist: "", key: "", text: text });
-}
-
+// ── Save ──────────────────────────────────────────────────────────────────────
 async function saveImport() {
-  var title    = document.getElementById("import-title").value.trim();
-  var section  = document.getElementById("import-section").value;
-  var baseCat  = document.getElementById("import-category").value || "_raiz";
-  var subField = document.getElementById("import-subcategory-field");
-  var subCat   = (subField.style.display !== "none")
-    ? document.getElementById("import-subcategory").value
-    : "";
+  var title    = (_iEl("import-title")    || {}).value.trim();
+  var section  = (_iEl("import-section")  || {}).value;
+  var baseCat  = (_iEl("import-category") || {}).value || "_raiz";
+  var subField = _iEl("import-subcategory-field");
+  var subCat   = (subField && subField.style.display !== "none") ? ((_iEl("import-subcategory") || {}).value || "") : "";
   var category = subCat ? baseCat + " > " + subCat : baseCat;
-  if (!title)   { document.getElementById("import-error").textContent = "Informe o título."; return; }
-  if (!section) { document.getElementById("import-error").textContent = "Selecione a seção."; return; }
-
-  var overlay = document.getElementById("import-loading-overlay");
+  var text     = (_iEl("import-textarea") || {}).value.trim();
+  var errEl    = _iEl("import-error");
+  function showErr(msg) { if (errEl) { errEl.textContent = msg; errEl.style.display = ""; } }
+  if (!title)   { showErr("Informe o t\xedtulo."); return; }
+  if (!section) { showErr("Selecione a se\xe7\xe3o."); return; }
+  if (!text)    { showErr("Cole uma cifra primeiro."); return; }
+  var overlay = _iEl("import-loading-overlay");
   setImportLoading(true);
   try {
     var resp = await fetch("/api/import/save", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
+      method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        title:    title,
-        artist:   document.getElementById("import-artist").value.trim(),
-        key:      document.getElementById("import-key").value.trim(),
-        capo:     document.getElementById("import-capo").value.trim(),
-        youtube:  document.getElementById("import-youtube").value.trim(),
-        section:  section,
-        category: category,
-        text:     importCifraText
+        title: title, artist: (_iEl("import-artist") || {}).value.trim(),
+        key: (_iEl("import-key") || {}).value.trim(), capo: (_iEl("import-capo") || {}).value.trim(),
+        youtube: (_iEl("import-youtube") || {}).value.trim(),
+        section: section, category: category, text: text
       })
     });
     var data = await resp.json();
     if (data.error) throw new Error(data.error);
-
-    // Persiste metadados no cache local imediatamente, para que reloadLibrary()
-    // já enriqueça a nova música sem precisar abrir e salvar metadados manualmente.
     if (data.fileId) {
       _metaStore.set(data.fileId, {
-        artist:  document.getElementById("import-artist").value.trim(),
-        key:     document.getElementById("import-key").value.trim(),
-        capo:    document.getElementById("import-capo").value.trim(),
-        youtube: document.getElementById("import-youtube").value.trim(),
+        artist:  (_iEl("import-artist")  || {}).value.trim(),
+        key:     (_iEl("import-key")     || {}).value.trim(),
+        capo:    (_iEl("import-capo")    || {}).value.trim(),
+        youtube: (_iEl("import-youtube") || {}).value.trim(),
         tags: [],
       });
     }
-
-    // Fecha o modal e exibe overlay bloqueante durante atualização da biblioteca
+    clearImportDraft();
     closeImportModal();
-    overlay.style.display = "flex";
-
-    // Drive tem consistência eventual: tenta até 4× (intervalo 1.2s) até a música aparecer
-    var savedTitle = title.toLowerCase();
-    var catKey = category === "_raiz" ? "_raiz" : category;
-    var found = false;
+    if (overlay) overlay.style.display = "flex";
+    var savedTitle = title.toLowerCase(), catKey = category === "_raiz" ? "_raiz" : category, found = false;
     for (var attempt = 0; attempt < 4 && !found; attempt++) {
       await new Promise(function(r) { setTimeout(r, 1200); });
       await reloadLibrary();
-      found = allSongs.some(function(s) {
-        return s.name.toLowerCase() === savedTitle && s.section === section;
-      });
+      found = allSongs.some(function(s) { return s.name.toLowerCase() === savedTitle && s.section === section; });
     }
-    renderHomeTable(allSongs);
-    showHomeTable();
-
-    // Navega para a categoria onde a música foi salva
-    selectCategory(section, catKey);
+    renderHomeTable(allSongs); showHomeTable(); selectCategory(section, catKey);
     showToast("\"" + title + "\" salvo com sucesso!", 3500);
   } catch(e) {
-    if (overlay.style.display === "flex") {
-      showToast("Erro ao atualizar biblioteca: " + e.message);
-    } else {
-      document.getElementById("import-error").textContent = e.message;
-    }
+    if (overlay && overlay.style.display === "flex") { showToast("Erro ao atualizar biblioteca: " + e.message); }
+    else { showErr(e.message); }
   } finally {
-    overlay.style.display = "none";
+    if (overlay) overlay.style.display = "none";
     setImportLoading(false);
   }
 }
 
 function setImportLoading(on) {
-  document.getElementById("import-loading").style.display = on ? "inline" : "none";
-  document.getElementById("btn-import-fetch").disabled = on;
-  document.getElementById("btn-import-save").disabled = on;
+  var pb = _iEl("import-btn-preview");
+  if (pb) {
+    pb.disabled = on;
+    pb.innerHTML = on
+      ? "<span class=\"loading-spinner\" style=\"width:13px;height:13px;border-width:2px;display:inline-block;vertical-align:middle;margin-right:6px\"></span>Importando…"
+      : "Importar";
+  }
+  if (!on) validateImportForm();
 }
 
+// ── Focus trap ────────────────────────────────────────────────────────────────
+function trapFocusInImport(e) {
+  if (e.key !== "Tab") return;
+  var modal = _iEl("import-modal"); if (!modal) return;
+  var focusable = Array.from(modal.querySelectorAll(
+    "button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex=\"-1\"])"
+  )).filter(function(el) { return !!(el.offsetWidth || el.offsetHeight || el.getClientRects().length); });
+  if (!focusable.length) return;
+  var first = focusable[0], last = focusable[focusable.length - 1];
+  if (e.shiftKey) { if (document.activeElement === first) { e.preventDefault(); last.focus(); } }
+  else            { if (document.activeElement === last)  { e.preventDefault(); first.focus(); } }
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
 function initImportModal() {
-  if (!document.getElementById("btn-import")) return;
-  document.getElementById("btn-import").addEventListener("click", openImportModal);
-  document.getElementById("import-close").addEventListener("click", closeImportModal);
-  document.getElementById("import-overlay").addEventListener("click", function(e) {
-    if (e.target === this) closeImportModal();
+  if (!_iEl("btn-import")) return;
+
+  _iEl("btn-import").addEventListener("click", openImportModal);
+  _iEl("import-close").addEventListener("click", tryCloseImport);
+
+  // Shroud: mousedown para não fechar ao soltar fora após seleção de texto
+  _iEl("import-overlay").addEventListener("mousedown", function(e) {
+    if (e.target === this) tryCloseImport();
   });
 
-  // Tabs
-  document.querySelectorAll(".import-tab").forEach(function(tab) {
-    tab.addEventListener("click", function() {
-      document.querySelectorAll(".import-tab").forEach(function(t) { t.classList.remove("active"); });
-      document.querySelectorAll(".import-panel").forEach(function(p) { p.classList.remove("active"); });
-      tab.classList.add("active");
-      document.getElementById("import-panel-" + tab.dataset.tab).classList.add("active");
-      document.getElementById("import-error").textContent = "";
+  // Keyboard: Esc, Ctrl+Enter, Tab trap
+  document.addEventListener("keydown", function(e) {
+    var overlay = _iEl("import-overlay");
+    if (!overlay || !overlay.classList.contains("open")) return;
+    trapFocusInImport(e);
+    if (e.key === "Escape") {
+      e.preventDefault();
+      var confirmOpen = (_iEl("import-confirm-shroud") || {}).classList.contains("visible");
+      if (confirmOpen) hideImportConfirm(); else tryCloseImport();
+    }
+    if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+      e.preventDefault();
+      var btn = _iEl("import-btn-preview"); if (btn && !btn.disabled) saveImport();
+    }
+  });
+
+  // Footer
+  _iEl("import-btn-cancel").addEventListener("click", tryCloseImport);
+  _iEl("import-btn-preview").addEventListener("click", saveImport);
+
+  // Confirm dialog
+  _iEl("import-confirm-stay").addEventListener("click", hideImportConfirm);
+  _iEl("import-confirm-discard").addEventListener("click", discardAndClose);
+
+  // Textarea: gutter, counter, validate, auto-detect key; auto-fill title+artist on paste
+  var ta = _iEl("import-textarea");
+  if (ta) {
+    ta.addEventListener("input", function() {
+      updateGutter(); updateImportCounter(); validateImportForm();
+      if (!((_iEl("import-key") || {}).value) && ta.value.trim().length > 20) {
+        var k = detectBaseNote(ta.value); if (k) { (_iEl("import-key") || {}).value = k; validateImportForm(); }
+      }
+    });
+    ta.addEventListener("paste", function() {
+      // Após o paste o valor ainda não está atualizado, usamos setTimeout
+      setTimeout(function() {
+        var lines = ta.value.split("\n");
+        var nonEmpty = lines.filter(function(l) { return l.trim(); });
+        var titleEl  = _iEl("import-title");
+        var artistEl = _iEl("import-artist");
+        if (titleEl  && !titleEl.value.trim()  && nonEmpty[0]) titleEl.value  = nonEmpty[0].trim();
+        if (artistEl && !artistEl.value.trim() && nonEmpty[1]) artistEl.value = nonEmpty[1].trim();
+        updateGutter(); updateImportCounter(); validateImportForm();
+        if (!((_iEl("import-key") || {}).value) && ta.value.trim().length > 20) {
+          var k = detectBaseNote(ta.value); if (k) { (_iEl("import-key") || {}).value = k; validateImportForm(); }
+        }
+      }, 0);
+    });
+    ta.addEventListener("scroll", function() { var g = _iEl("import-gutter"); if (g) g.scrollTop = this.scrollTop; });
+  }
+
+  // Form fields → validate
+  ["import-title","import-artist","import-key","import-capo","import-youtube"].forEach(function(id) {
+    var el = _iEl(id); if (!el) return;
+    el.addEventListener("input", function() { validateImportForm(); });
+  });
+  _iEl("import-section").addEventListener("change", function() { onImportSectionChange(); });
+  _iEl("import-category").addEventListener("change", function() { onImportCategoryChange(); });
+
+  // Auto-formatar
+  var autoBtn = _iEl("btn-import-autodetect");
+  if (autoBtn) autoBtn.addEventListener("click", function() {
+    var ta = _iEl("import-textarea"); if (!ta || !ta.value.trim()) return;
+    var k = detectBaseNote(ta.value);
+    if (k && !(_iEl("import-key") || {}).value) { (_iEl("import-key") || {}).value = k; validateImportForm(); }
+  });
+
+  // Toolbar: undo, redo, clear, insert section
+  var dropdown = _iEl("import-section-dropdown");
+  var undoBtn = _iEl("btn-im-undo"), redoBtn = _iEl("btn-im-redo");
+  var clearBtn = _iEl("btn-im-clear"), insBtn = _iEl("btn-im-insert-section");
+  if (undoBtn) undoBtn.addEventListener("click", function() { var ta = _iEl("import-textarea"); if (!ta) return; ta.focus(); document.execCommand("undo"); updateGutter(); updateImportCounter(); });
+  if (redoBtn) redoBtn.addEventListener("click", function() { var ta = _iEl("import-textarea"); if (!ta) return; ta.focus(); document.execCommand("redo"); updateGutter(); updateImportCounter(); });
+  if (clearBtn) clearBtn.addEventListener("click", function() {
+    var ta = _iEl("import-textarea"); if (!ta) return;
+    if (ta.value && confirm("Limpar todo o conte\xfado da cifra?")) {
+      ta.value = ""; updateGutter(); updateImportCounter(); validateImportForm();
+    }
+  });
+  if (insBtn && dropdown) {
+    insBtn.addEventListener("click", function(e) { e.stopPropagation(); dropdown.classList.toggle("open"); });
+    document.addEventListener("click", function() { if (dropdown) dropdown.classList.remove("open"); });
+  }
+  document.querySelectorAll(".im-section-opt").forEach(function(btn) {
+    btn.addEventListener("click", function() {
+      var ta = _iEl("import-textarea"); if (!ta) return;
+      var sec = btn.dataset.section || "";
+      var start = ta.selectionStart;
+      var before = ta.value.slice(0, start), after = ta.value.slice(ta.selectionEnd);
+      var ins = (before.length && !before.endsWith("\n") ? "\n" : "") + sec + "\n";
+      ta.value = before + ins + after;
+      ta.selectionStart = ta.selectionEnd = start + ins.length;
+      ta.focus(); updateGutter(); updateImportCounter();
+      if (dropdown) dropdown.classList.remove("open");
     });
   });
-
-  document.getElementById("btn-import-fetch").addEventListener("click", fetchImportUrl);
-  document.getElementById("import-url-input").addEventListener("keydown", function(e) {
-    if (e.key === "Enter") fetchImportUrl();
-  });
-  document.getElementById("btn-import-preview-text").addEventListener("click", previewImportText);
-  document.getElementById("btn-import-save").addEventListener("click", saveImport);
-  document.getElementById("import-section").addEventListener("change", onImportSectionChange);
-  document.getElementById("import-category").addEventListener("change", onImportCategoryChange);
 }
 
 if (/android/i.test(navigator.userAgent)) {

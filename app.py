@@ -91,13 +91,6 @@ def owner_required(f):
     return decorated
 
 
-def _get_user_data_folder_id(svc):
-    """Owner usa CIFRAS_FOLDER_ID (compatibilidade). Outros: pasta própria no Drive."""
-    if is_owner() or not _use_drive():
-        return CIFRAS_FOLDER_ID
-    import drive as drv
-    return drv.get_user_data_folder(svc)
-
 
 _db_uid_cache: dict = {}  # email → supabase uuid
 
@@ -358,96 +351,27 @@ def flatten_songs(library):
 # Repertórios (persistidos em arquivo JSON)
 # ---------------------------------------------------------------------------
 
-REPERTORIOS_LOCAL = Path(__file__).parent / "_repertorios.json"
-_rep_lock = threading.Lock()
-_reps_cache: dict = {}   # { email: {"data": ..., "file_id": ...} }
-
-def _load_reps_local():
-    try:
-        return json.loads(REPERTORIOS_LOCAL.read_text(encoding="utf-8"))
-    except Exception:
-        return {}
-
-def _save_reps_local(data):
-    REPERTORIOS_LOCAL.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
-
 def _load_reps():
-    if db.enabled():
-        uid = _get_db_uid()
-        if uid:
-            try:
-                return db.load_reps(uid)
-            except Exception as e:
-                log.error("[reps] Erro ao carregar do Supabase: %s", e)
-        return {}
-    if _use_drive():
-        import drive as drv
-        svc = get_service()
-        folder_id = _get_user_data_folder_id(svc)
-        email = current_user().get("email", "_local")
-        data, file_id = drv.load_repertorios(svc, folder_id)
-        cached = _reps_cache.get(email, {})
-        _reps_cache[email] = {"data": None, "file_id": file_id or cached.get("file_id")}
-        return data
-    return _load_reps_local()
+    uid = _get_db_uid()
+    if uid:
+        try:
+            return db.load_reps(uid)
+        except Exception as e:
+            log.error("[reps] Erro ao carregar do Supabase: %s", e)
+    return {}
 
-def _save_reps(data):
-    if db.enabled():
-        return  # operações feitas direto nos endpoints
-    if _use_drive():
-        import drive as drv
-        svc = get_service()
-        folder_id = _get_user_data_folder_id(svc)
-        email = current_user().get("email", "_local")
-        cached = _reps_cache.get(email)
-        if cached and cached.get("file_id"):
-            file_id = cached["file_id"]
-        else:
-            _, file_id = drv.load_repertorios(svc, folder_id)
-        drv.save_repertorios(svc, file_id, data)
-        _reps_cache[email] = {"data": data, "file_id": file_id}
-    else:
-        _save_reps_local(data)
 
 
 # ─── Grupos ──────────────────────────────────────────────────────────────────
 
-_groups_cache: dict = {}  # { email: {"file_id": str} }
-
 def _load_groups():
-    if db.enabled():
-        uid = _get_db_uid()
-        if uid:
-            try:
-                return db.load_groups(uid)
-            except Exception as e:
-                log.error("[groups] Erro ao carregar do Supabase: %s", e)
-        return {}
-    if _use_drive():
-        import drive as drv
-        svc = get_service()
-        folder_id = _get_user_data_folder_id(svc)
-        email = current_user().get("email", "_local")
-        data, file_id = drv.load_groups(svc, folder_id)
-        _groups_cache[email] = {"file_id": file_id}
-        return data
+    uid = _get_db_uid()
+    if uid:
+        try:
+            return db.load_groups(uid)
+        except Exception as e:
+            log.error("[groups] Erro ao carregar do Supabase: %s", e)
     return {}
-
-def _save_groups(data):
-    if db.enabled():
-        return  # operações feitas direto nos endpoints
-    if _use_drive():
-        import drive as drv
-        svc = get_service()
-        folder_id = _get_user_data_folder_id(svc)
-        email = current_user().get("email", "_local")
-        cached = _groups_cache.get(email)
-        if cached and cached.get("file_id"):
-            file_id = cached["file_id"]
-        else:
-            _, file_id = drv.load_groups(svc, folder_id)
-        drv.save_groups(svc, file_id, data)
-        _groups_cache[email] = {"file_id": file_id}
 
 
 @app.route("/api/groups", methods=["GET"])
@@ -469,112 +393,66 @@ def api_groups_create():
     members = [e.strip().lower() for e in body.get("members", []) if e.strip()]
     if not name:
         return jsonify({"error": "Nome obrigatório"}), 400
-    if db.enabled():
-        uid = _get_db_uid()
-        if uid:
-            try:
-                groups = db.load_groups(uid)
-                if len(groups) >= 20:
-                    return jsonify({"error": "Limite de 20 grupos atingido"}), 400
-                group = db.create_group(uid, name, members)
-                return jsonify(group), 201
-            except Exception as e:
-                return jsonify({"error": str(e)}), 500
-    groups = _load_groups()
-    if len(groups) >= 20:
-        return jsonify({"error": "Limite de 20 grupos atingido"}), 400
-    from datetime import datetime
-    gid = "grp_" + os.urandom(6).hex()
-    group = {"id": gid, "name": name, "members": members,
-             "created_at": datetime.utcnow().isoformat()}
-    groups[gid] = group
-    _save_groups(groups)
-    return jsonify(group), 201
+    uid = _get_db_uid()
+    if not uid:
+        return jsonify({"error": "Usuário não identificado"}), 401
+    try:
+        groups = db.load_groups(uid)
+        if len(groups) >= 20:
+            return jsonify({"error": "Limite de 20 grupos atingido"}), 400
+        group = db.create_group(uid, name, members)
+        return jsonify(group), 201
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
 @app.route("/api/groups/<gid>", methods=["PUT"])
 @login_required
 def api_groups_update(gid):
     body = request.get_json(force=True)
-    if db.enabled():
-        try:
-            groups = _load_groups()
-            if gid not in groups:
-                return jsonify({"error": "Grupo não encontrado"}), 404
-            old_members = set(groups[gid].get("members", []))
-            patch = {}
-            if "name" in body and body["name"].strip():
-                patch["name"] = body["name"].strip()
-            if "members" in body:
-                patch["members"] = [e.strip().lower() for e in body["members"] if e.strip()]
-            group = db.update_group(gid, patch)
-            new_members = set(group.get("members", []))
-            added = new_members - old_members
-            if added:
-                me = current_user()
-                my_email = me.get("email", "").lower()
-                reps = _load_reps()
-                with _shares_lock:
-                    shares = _load_shares_raw()
-                    group_rep_ids = {s.get("repertory_id") or s.get("rep_id")
-                                     for s in shares.values()
-                                     if s.get("group_ref") == gid
-                                     and s.get("from_email", "").lower() == my_email}
-                    for email in added:
-                        if email == my_email:
-                            continue
-                        for rep_id in group_rep_ids:
-                            _do_share_rep(rep_id, email, me, reps, shares, group_id=gid)
-                    if group_rep_ids:
-                        _save_shares_raw(shares)
-            return jsonify(group)
-        except Exception as e:
-            return jsonify({"error": str(e)}), 500
-    groups = _load_groups()
-    if gid not in groups:
-        return jsonify({"error": "Grupo não encontrado"}), 404
-    old_members = set(groups[gid].get("members", []))
-    if "name" in body and body["name"].strip():
-        groups[gid]["name"] = body["name"].strip()
-    if "members" in body:
-        groups[gid]["members"] = [e.strip().lower() for e in body["members"] if e.strip()]
-    new_members = set(groups[gid]["members"])
-    added = new_members - old_members
-    _save_groups(groups)
-    if added:
-        me = current_user()
-        my_email = me.get("email", "").lower()
-        reps = _load_reps()
-        with _shares_lock:
-            shares = _load_shares_raw()
-            group_rep_ids = {s["rep_id"] for s in shares.values()
-                             if s.get("group_id") == gid
-                             and s.get("from_email", "").lower() == my_email}
-            for email in added:
-                if email == my_email:
-                    continue
-                for rep_id in group_rep_ids:
-                    _do_share_rep(rep_id, email, me, reps, shares, group_id=gid)
-            if group_rep_ids:
-                _save_shares_raw(shares)
-    return jsonify(groups[gid])
+    try:
+        groups = _load_groups()
+        if gid not in groups:
+            return jsonify({"error": "Grupo não encontrado"}), 404
+        old_members = set(groups[gid].get("members", []))
+        patch = {}
+        if "name" in body and body["name"].strip():
+            patch["name"] = body["name"].strip()
+        if "members" in body:
+            patch["members"] = [e.strip().lower() for e in body["members"] if e.strip()]
+        group = db.update_group(gid, patch)
+        new_members = set(group.get("members", []))
+        added = new_members - old_members
+        if added:
+            me = current_user()
+            my_email = me.get("email", "").lower()
+            reps = _load_reps()
+            with _shares_lock:
+                shares = _load_shares_raw()
+                group_rep_ids = {s.get("repertory_id") or s.get("rep_id")
+                                 for s in shares.values()
+                                 if s.get("group_ref") == gid
+                                 and s.get("from_email", "").lower() == my_email}
+                for email in added:
+                    if email == my_email:
+                        continue
+                    for rep_id in group_rep_ids:
+                        _do_share_rep(rep_id, email, me, reps, shares, group_id=gid)
+                if group_rep_ids:
+                    _save_shares_raw(shares)
+        return jsonify(group)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
 @app.route("/api/groups/<gid>", methods=["DELETE"])
 @login_required
 def api_groups_delete(gid):
-    if db.enabled():
-        try:
-            db.delete_group(gid)
-            return jsonify({"ok": True})
-        except Exception as e:
-            return jsonify({"error": str(e)}), 500
-    groups = _load_groups()
-    if gid not in groups:
-        return jsonify({"error": "Grupo não encontrado"}), 404
-    del groups[gid]
-    _save_groups(groups)
-    return jsonify({"ok": True})
+    try:
+        db.delete_group(gid)
+        return jsonify({"ok": True})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
 @app.route("/api/repertorios", methods=["GET"])
@@ -591,224 +469,113 @@ def api_reps_list():
 @app.route("/api/repertorios", methods=["POST"])
 @login_required
 def api_reps_create():
-    from datetime import datetime
     data = request.get_json(force=True)
     name = data.get("name", "").strip()
     songs = data.get("songs", [])
     if not name:
         return jsonify({"error": "Nome obrigatório"}), 400
-    if db.enabled():
-        uid = _get_db_uid()
-        if uid:
-            try:
-                reps = db.load_reps(uid)
-                if len(reps) >= 5:
-                    return jsonify({"error": "Limite de 5 repertórios atingido"}), 400
-                rep = db.create_rep(uid, name, songs)
-                return jsonify(rep), 201
-            except Exception as e:
-                return jsonify({"error": str(e)}), 500
-    rep_id = "rpt_" + os.urandom(6).hex()
-    now = datetime.utcnow().isoformat()
-    rep = {"id": rep_id, "name": name, "songs": songs, "created_at": now, "updated_at": now}
-    with _rep_lock:
-        reps = _load_reps()
+    uid = _get_db_uid()
+    if not uid:
+        return jsonify({"error": "Usuário não identificado"}), 401
+    try:
+        reps = db.load_reps(uid)
         if len(reps) >= 5:
             return jsonify({"error": "Limite de 5 repertórios atingido"}), 400
-        reps[rep_id] = rep
-        _save_reps(reps)
-    return jsonify(rep), 201
+        rep = db.create_rep(uid, name, songs)
+        return jsonify(rep), 201
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
 @app.route("/api/repertorios/<rep_id>", methods=["PUT"])
 @login_required
 def api_reps_update(rep_id):
-    from datetime import datetime
     data = request.get_json(force=True)
-    if db.enabled():
-        try:
-            patch = {}
-            if "name" in data:
-                patch["name"] = data["name"].strip() or None
-            if "songs" in data:
-                patch["songs"] = data["songs"]
-            rep = db.update_rep(rep_id, patch)
-            if not rep:
-                return jsonify({"error": "Não encontrado"}), 404
-            # Propaga para shares ativos
-            if "songs" in data or "name" in data:
-                try:
-                    from_email = current_user().get("email", "").lower()
-                    with _shares_lock:
-                        shares = _load_shares_raw()
-                        changed = False
-                        for share in shares.values():
-                            if share.get("repertory_id") == rep_id and \
-                               share.get("from_email", "").lower() == from_email:
-                                if "songs" in data:
-                                    share["songs"] = data["songs"]
-                                if "name" in data:
-                                    share["rep_name"] = rep.get("name", "")
-                                changed = True
-                        if changed:
-                            _save_shares_raw(shares)
-                except Exception:
-                    pass
-            return jsonify(rep)
-        except Exception as e:
-            return jsonify({"error": str(e)}), 500
-    with _rep_lock:
-        reps = _load_reps()
-        if rep_id not in reps:
-            return jsonify({"error": "Não encontrado"}), 404
+    try:
+        patch = {}
         if "name" in data:
-            reps[rep_id]["name"] = data["name"].strip() or reps[rep_id]["name"]
+            patch["name"] = data["name"].strip() or None
         if "songs" in data:
-            reps[rep_id]["songs"] = data["songs"]
-        reps[rep_id]["updated_at"] = datetime.utcnow().isoformat()
-        _save_reps(reps)
-    if "songs" in data or "name" in data:
-        try:
-            from_email = current_user().get("email", "").lower()
-            new_songs = reps[rep_id].get("songs", [])
-            new_name  = reps[rep_id].get("name", "")
-            with _shares_lock:
-                shares = _load_shares_raw()
-                changed = False
-                for share in shares.values():
-                    if share.get("rep_id") == rep_id and \
-                       share.get("from_email", "").lower() == from_email:
-                        if "songs" in data:
-                            share["songs"] = new_songs
-                        if "name" in data:
-                            share["rep_name"] = new_name
-                        changed = True
-                if changed:
-                    _save_shares_raw(shares)
-        except Exception:
-            pass
-    return jsonify(reps[rep_id])
+            patch["songs"] = data["songs"]
+        rep = db.update_rep(rep_id, patch)
+        if not rep:
+            return jsonify({"error": "Não encontrado"}), 404
+        if "songs" in data or "name" in data:
+            try:
+                from_email = current_user().get("email", "").lower()
+                with _shares_lock:
+                    shares = _load_shares_raw()
+                    changed = False
+                    for share in shares.values():
+                        if share.get("repertory_id") == rep_id and \
+                           share.get("from_email", "").lower() == from_email:
+                            if "songs" in data:
+                                share["songs"] = data["songs"]
+                            if "name" in data:
+                                share["rep_name"] = rep.get("name", "")
+                            changed = True
+                    if changed:
+                        _save_shares_raw(shares)
+            except Exception:
+                pass
+        return jsonify(rep)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
 @app.route("/api/repertorios/<rep_id>", methods=["DELETE"])
 @login_required
 def api_reps_delete(rep_id):
     my_email = current_user().get("email", "").lower()
-    if db.enabled():
-        try:
-            db.delete_rep(rep_id)
-            # Remove shares deste rep via Supabase
-            with _shares_lock:
-                shares = _load_shares_raw()
-                before = len(shares)
-                shares = {k: v for k, v in shares.items()
-                          if not (v.get("repertory_id") == rep_id and
-                                  v.get("from_email", "").lower() == my_email)}
-                if len(shares) < before:
-                    _save_shares_raw(shares)
-            return jsonify({"ok": True})
-        except Exception as e:
-            return jsonify({"error": str(e)}), 500
-    with _rep_lock:
-        reps = _load_reps()
-        if rep_id not in reps:
-            return jsonify({"error": "Não encontrado"}), 404
-        del reps[rep_id]
-        _save_reps(reps)
-    with _shares_lock:
-        shares = _load_shares_raw()
-        before = len(shares)
-        shares = {k: v for k, v in shares.items()
-                  if not (v.get("rep_id") == rep_id and
-                          v.get("from_email", "").lower() == my_email)}
-        if len(shares) < before:
-            _save_shares_raw(shares)
-    return jsonify({"ok": True})
+    try:
+        db.delete_rep(rep_id)
+        with _shares_lock:
+            shares = _load_shares_raw()
+            before = len(shares)
+            shares = {k: v for k, v in shares.items()
+                      if not (v.get("repertory_id") == rep_id and
+                              v.get("from_email", "").lower() == my_email)}
+            if len(shares) < before:
+                _save_shares_raw(shares)
+        return jsonify({"ok": True})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
 # ---------------------------------------------------------------------------
 # Compartilhamento de repertórios
 # ---------------------------------------------------------------------------
 
-SHARES_LOCAL = Path(__file__).parent / "_shares.json"
 _shares_lock = threading.Lock()
-_shares_drive_file_id: str | None = None  # cache do file_id no Drive
-
-
-_shares_supabase_cache: dict | None = None  # cache em memória para diff no save
+_shares_supabase_cache: dict | None = None
 
 def _load_shares_raw():
-    """Lê o registro central de shares."""
     global _shares_supabase_cache
-    if db.enabled():
-        try:
-            _shares_supabase_cache = db.load_all_shares()
-            return dict(_shares_supabase_cache)
-        except Exception as e:
-            log.error("[shares] Erro ao carregar do Supabase: %s", e)
-            return {}
-    global _shares_drive_file_id
     try:
-        data = json.loads(SHARES_LOCAL.read_text(encoding="utf-8"))
-        log.debug("[shares] lido arquivo local (%d shares)", len(data))
-        return data
+        _shares_supabase_cache = db.load_all_shares()
+        return dict(_shares_supabase_cache)
     except Exception as e:
-        log.info("[shares] arquivo local indisponível (%s) — tentando Drive", e)
-    if _use_drive() and CIFRAS_FOLDER_ID:
-        try:
-            import drive as drv
-            svc = get_service()
-            data, fid = drv.load_shares(svc, CIFRAS_FOLDER_ID)
-            if fid:
-                _shares_drive_file_id = fid
-            log.info("[shares] carregado do Drive (%d shares)", len(data))
-            try:
-                SHARES_LOCAL.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
-            except Exception as e:
-                log.error("[shares] falha ao gravar arquivo local: %s", e)
-            return data
-        except Exception as e:
-            log.error("[shares] falha ao carregar do Drive: %s", e)
-    return {}
+        log.error("[shares] Erro ao carregar do Supabase: %s", e)
+        return {}
 
 
 def _save_shares_raw(new_data: dict):
-    """Persiste o registro de shares (cria/atualiza/remove diffs no Supabase)."""
     global _shares_supabase_cache
-    if db.enabled():
-        try:
-            old_data = _shares_supabase_cache or {}
-            old_ids  = set(old_data.keys())
-            new_ids  = set(new_data.keys())
-            for sid in new_ids - old_ids:
-                db.create_share(new_data[sid])
-            for sid in old_ids - new_ids:
-                db.delete_share(sid)
-            for sid in new_ids & old_ids:
-                if new_data[sid] != old_data[sid]:
-                    db.update_share(sid, new_data[sid])
-            _shares_supabase_cache = dict(new_data)
-            log.debug("[shares] Supabase sincronizado (%d shares)", len(new_data))
-        except Exception as e:
-            log.error("[shares] Erro ao sincronizar no Supabase: %s", e)
-        return
-    global _shares_drive_file_id
-    data = new_data
     try:
-        SHARES_LOCAL.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
-        log.info("[shares] arquivo local salvo (%d shares)", len(data))
+        old_data = _shares_supabase_cache or {}
+        old_ids  = set(old_data.keys())
+        new_ids  = set(new_data.keys())
+        for sid in new_ids - old_ids:
+            db.create_share(new_data[sid])
+        for sid in old_ids - new_ids:
+            db.delete_share(sid)
+        for sid in new_ids & old_ids:
+            if new_data[sid] != old_data[sid]:
+                db.update_share(sid, new_data[sid])
+        _shares_supabase_cache = dict(new_data)
+        log.debug("[shares] Supabase sincronizado (%d shares)", len(new_data))
     except Exception as e:
-        log.error("[shares] falha ao gravar arquivo local: %s", e)
-    if _use_drive() and CIFRAS_FOLDER_ID and is_owner():
-        try:
-            import drive as drv
-            svc = get_service()
-            if not _shares_drive_file_id:
-                _, _shares_drive_file_id = drv.load_shares(svc, CIFRAS_FOLDER_ID)
-            drv.save_shares(svc, _shares_drive_file_id, data)
-            log.info("[shares] Drive atualizado")
-        except Exception as e:
-            log.error("[shares] falha ao salvar no Drive: %s", e)
+        log.error("[shares] Erro ao sincronizar no Supabase: %s", e)
 
 
 def _do_share_rep(rep_id, to_email, me, reps, shares, group_id=None):
@@ -1018,77 +785,23 @@ def api_notif_count():
 # Views tracking (persistido em views.json com lock para concorrência)
 # ---------------------------------------------------------------------------
 
-_views_lock = threading.Lock()
-_views_cache: dict = {}   # { email: {"data": ..., "file_id": ...} }
-
 def _load_views():
-    """Carrega views para o usuário atual."""
-    if db.enabled():
-        uid = _get_db_uid()
-        if uid:
-            try:
-                return db.load_views(uid)
-            except Exception as e:
-                log.error("[views] Erro ao carregar do Supabase: %s", e)
-        return {}
-    email = current_user().get("email", "_local")
-    cached = _views_cache.get(email)
-    if cached and cached.get("data") is not None:
-        return cached["data"]
-    if _use_drive():
+    uid = _get_db_uid()
+    if uid:
         try:
-            import drive as _drive
-            svc = get_service()
-            folder_id = _get_user_data_folder_id(svc)
-            data, file_id = _drive.load_views(svc, folder_id)
-            _views_cache[email] = {"data": data, "file_id": file_id}
-            return data
-        except Exception:
-            return {}
-    try:
-        p = Path(__file__).parent / "views.json"
-        return json.loads(p.read_text(encoding="utf-8"))
-    except Exception:
-        return {}
+            return db.load_views(uid)
+        except Exception as e:
+            log.error("[views] Erro ao carregar do Supabase: %s", e)
+    return {}
 
 def _increment_view(key: str) -> int:
-    """Incrementa o contador de uma música para o usuário atual e persiste."""
-    if db.enabled():
-        uid = _get_db_uid()
-        if uid:
-            try:
-                return db.increment_view(uid, key)
-            except Exception as e:
-                log.error("[views] Erro ao incrementar no Supabase: %s", e)
-        return 0
-    email = current_user().get("email", "_local")
-    with _views_lock:
-        if _use_drive():
-            try:
-                import drive as _drive
-                svc = get_service()
-                folder_id = _get_user_data_folder_id(svc)
-                cached = _views_cache.get(email)
-                if not cached or cached.get("file_id") is None:
-                    data, file_id = _drive.load_views(svc, folder_id)
-                    _views_cache[email] = {"data": data, "file_id": file_id}
-                views = _views_cache[email]["data"] or {}
-                views[key] = views.get(key, 0) + 1
-                _views_cache[email]["data"] = views
-                _drive.save_views(svc, _views_cache[email]["file_id"], views)
-                return views[key]
-            except Exception as e:
-                app.logger.error("Erro ao salvar view no Drive: %s", e)
-                return 0
-        else:
-            p = Path(__file__).parent / "views.json"
-            try:
-                views = json.loads(p.read_text(encoding="utf-8"))
-            except Exception:
-                views = {}
-            views[key] = views.get(key, 0) + 1
-            p.write_text(json.dumps(views, ensure_ascii=False), encoding="utf-8")
-            return views[key]
+    uid = _get_db_uid()
+    if uid:
+        try:
+            return db.increment_view(uid, key)
+        except Exception as e:
+            log.error("[views] Erro ao incrementar no Supabase: %s", e)
+    return 0
 
 def _song_key(data):
     return data.get("fileId") or data.get("path", "")
@@ -1098,57 +811,17 @@ def _song_key(data):
 # Preferências de tons (persistido em _preferences.json no Drive)
 # ---------------------------------------------------------------------------
 
-_prefs_lock = threading.Lock()
-_prefs_cache: dict = {}   # { email: {"data": ..., "file_id": ...} }
-
 VALID_SLOTS = {"my_key", "original_key", "alt_key", "my_capo"}
 
 
 def _load_prefs():
-    if db.enabled():
-        uid = _get_db_uid()
-        if uid:
-            try:
-                return db.load_tones(uid)
-            except Exception as e:
-                log.error("[prefs] Erro ao carregar do Supabase: %s", e)
-        return {}
-    email = current_user().get("email", "_local")
-    if _use_drive():
+    uid = _get_db_uid()
+    if uid:
         try:
-            import drive as _drive
-            svc = get_service()
-            folder_id = _get_user_data_folder_id(svc)
-            data, file_id = _drive.load_preferences(svc, folder_id)
-            with _prefs_lock:
-                cached = _prefs_cache.get(email, {})
-                _prefs_cache[email] = {"data": None, "file_id": file_id or cached.get("file_id")}
-            return data
-        except Exception:
-            pass
+            return db.load_tones(uid)
+        except Exception as e:
+            log.error("[prefs] Erro ao carregar do Supabase: %s", e)
     return {}
-
-
-def _save_prefs(data):
-    # Mantido apenas para compatibilidade com modo local/Drive
-    if db.enabled():
-        return  # operações granulares feitas direto nos endpoints
-    import drive as _drive
-    email = current_user().get("email", "_local")
-    with _prefs_lock:
-        if _use_drive():
-            svc = get_service()
-            cached = _prefs_cache.get(email)
-            if not cached or cached.get("file_id") is None:
-                folder_id = _get_user_data_folder_id(svc)
-                _, file_id = _drive.load_preferences(svc, folder_id)
-                if email not in _prefs_cache:
-                    _prefs_cache[email] = {}
-                _prefs_cache[email]["file_id"] = file_id
-            _drive.save_preferences(svc, _prefs_cache[email]["file_id"], data)
-        if email not in _prefs_cache:
-            _prefs_cache[email] = {}
-        _prefs_cache[email]["data"] = data
 
 
 @app.route("/api/preferences")
@@ -1179,20 +852,11 @@ def api_save_preference():
         return jsonify({"error": "fileId e slot válido são obrigatórios"}), 400
     if slot != "my_capo" and not key:
         return jsonify({"error": "key é obrigatório para este slot"}), 400
+    uid = _get_db_uid()
+    if not uid:
+        return jsonify({"error": "Usuário não identificado"}), 401
     try:
-        if db.enabled():
-            uid = _get_db_uid()
-            if uid:
-                song_prefs = db.upsert_tone(uid, file_id, slot, key or None)
-                return jsonify(song_prefs)
-        prefs = dict(_load_prefs())
-        song_prefs = dict(prefs.get(file_id, {}))
-        if slot == "my_capo" and (not key or key == "0"):
-            song_prefs.pop("my_capo", None)
-        else:
-            song_prefs[slot] = key
-        prefs[file_id] = song_prefs
-        _save_prefs(prefs)
+        song_prefs = db.upsert_tone(uid, file_id, slot, key or None)
         return jsonify(song_prefs)
     except Exception as e:
         if _is_auth_error(e):
@@ -1209,25 +873,11 @@ def api_delete_preference():
     slot = data.get("slot", "").strip()
     if not file_id:
         return jsonify({"error": "fileId é obrigatório"}), 400
+    uid = _get_db_uid()
+    if not uid:
+        return jsonify({"error": "Usuário não identificado"}), 401
     try:
-        if db.enabled():
-            uid = _get_db_uid()
-            if uid:
-                song_prefs = db.delete_tone(uid, file_id, slot if slot in VALID_SLOTS else "")
-                return jsonify(song_prefs)
-        prefs = dict(_load_prefs())
-        if file_id not in prefs:
-            return jsonify({})
-        song_prefs = dict(prefs[file_id])
-        if slot and slot in VALID_SLOTS:
-            song_prefs.pop(slot, None)
-        else:
-            song_prefs = {}
-        if song_prefs:
-            prefs[file_id] = song_prefs
-        else:
-            prefs.pop(file_id, None)
-        _save_prefs(prefs)
+        song_prefs = db.delete_tone(uid, file_id, slot if slot in VALID_SLOTS else "")
         return jsonify(song_prefs)
     except Exception as e:
         if _is_auth_error(e):
