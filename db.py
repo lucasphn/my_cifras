@@ -34,6 +34,14 @@ def _h(prefer: str = "") -> dict:
     return h
 
 
+def _raise(r) -> None:
+    if not r.is_success:
+        raise httpx.HTTPStatusError(
+            f"{r.status_code} {r.reason_phrase} — {r.text}",
+            request=r.request, response=r,
+        )
+
+
 def _get(table: str, **params) -> list:
     r = httpx.get(
         f"{SUPABASE_URL}/rest/v1/{table}",
@@ -41,7 +49,7 @@ def _get(table: str, **params) -> list:
         params={k: v for k, v in params.items() if v is not None},
         timeout=10,
     )
-    r.raise_for_status()
+    _raise(r)
     return r.json()
 
 
@@ -53,7 +61,7 @@ def _post(table: str, body, upsert: bool = False) -> list:
         json=body,
         timeout=10,
     )
-    r.raise_for_status()
+    _raise(r)
     return r.json()
 
 
@@ -65,7 +73,7 @@ def _patch(table: str, body: dict, **params) -> list:
         params={k: v for k, v in params.items()},
         timeout=10,
     )
-    r.raise_for_status()
+    _raise(r)
     return r.json()
 
 
@@ -76,7 +84,7 @@ def _delete(table: str, **params) -> None:
         params={k: v for k, v in params.items()},
         timeout=10,
     )
-    r.raise_for_status()
+    _raise(r)
 
 
 # ─── Users ────────────────────────────────────────────────────────────────────
