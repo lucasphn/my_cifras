@@ -82,14 +82,20 @@ def _build_sa_creds():
         return _sa_creds
     sa_json = os.environ.get("GOOGLE_SERVICE_ACCOUNT_JSON", "")
     if not sa_json:
+        log.warning("[sa] GOOGLE_SERVICE_ACCOUNT_JSON não definido — SA desativado")
         return None
     try:
         from google.oauth2 import service_account
+        info = json.loads(sa_json)
         _sa_creds = service_account.Credentials.from_service_account_info(
-            json.loads(sa_json),
+            info,
             scopes=["https://www.googleapis.com/auth/drive"],
         )
+        log.info("[sa] Credenciais carregadas: %s", info.get("client_email", "?"))
         return _sa_creds
+    except json.JSONDecodeError as e:
+        log.error("[sa] JSON inválido em GOOGLE_SERVICE_ACCOUNT_JSON: %s", e)
+        return None
     except Exception as e:
         log.error("[sa] Falha ao criar credenciais: %s", e)
         return None
@@ -1457,6 +1463,32 @@ def api_redeem_coupon():
     session["user"]["status"] = "active"
     session.modified = True
     return jsonify({"ok": True})
+
+
+# ---------------------------------------------------------------------------
+# Owner: diagnóstico
+# ---------------------------------------------------------------------------
+
+@app.route("/api/debug/sa")
+@login_required
+@owner_required
+def api_debug_sa():
+    sa_json = os.environ.get("GOOGLE_SERVICE_ACCOUNT_JSON", "")
+    if not sa_json:
+        return jsonify({"sa": "não configurado"})
+    try:
+        info = json.loads(sa_json)
+        creds = _build_sa_creds()
+        return jsonify({
+            "sa": "ok" if creds else "erro ao criar creds",
+            "client_email": info.get("client_email"),
+            "project_id":   info.get("project_id"),
+            "json_len":     len(sa_json),
+        })
+    except json.JSONDecodeError as e:
+        return jsonify({"sa": "JSON inválido", "erro": str(e), "primeiros_chars": sa_json[:80]})
+    except Exception as e:
+        return jsonify({"sa": "erro", "erro": str(e)})
 
 
 # ---------------------------------------------------------------------------
