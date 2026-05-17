@@ -390,12 +390,14 @@ def redeem_coupon(user_id: str, code: str) -> dict:
     if max_uses is not None and coupon.get("uses_count", 0) >= max_uses:
         return {"error": "Cupom esgotado"}
 
+    coupon_id = coupon["id"]
+
     existing = _get("coupon_uses", select="user_id",
-                    user_id=f"eq.{user_id}", coupon_code=f"eq.{code.upper().strip()}")
+                    user_id=f"eq.{user_id}", coupon_id=f"eq.{coupon_id}")
     if existing:
         return {"error": "Cupom já utilizado por esta conta"}
 
-    _post("coupon_uses", {"coupon_code": code.upper().strip(), "user_id": user_id})
+    _post("coupon_uses", {"coupon_id": coupon_id, "user_id": user_id})
     _patch("coupons", {"uses_count": coupon.get("uses_count", 0) + 1},
            code=f"eq.{code.upper().strip()}")
     activate_user(user_id, code.upper().strip())
