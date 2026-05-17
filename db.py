@@ -390,7 +390,7 @@ def redeem_coupon(user_id: str, code: str) -> dict:
     if max_uses is not None and coupon.get("uses_count", 0) >= max_uses:
         return {"error": "Cupom esgotado"}
 
-    existing = _get("coupon_uses", select="id",
+    existing = _get("coupon_uses", select="user_id",
                     user_id=f"eq.{user_id}", coupon_code=f"eq.{code.upper().strip()}")
     if existing:
         return {"error": "Cupom já utilizado por esta conta"}
