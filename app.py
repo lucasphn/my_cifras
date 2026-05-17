@@ -87,7 +87,7 @@ def _build_sa_creds():
         from google.oauth2 import service_account
         _sa_creds = service_account.Credentials.from_service_account_info(
             json.loads(sa_json),
-            scopes=["https://www.googleapis.com/auth/drive.readonly"],
+            scopes=["https://www.googleapis.com/auth/drive"],
         )
         return _sa_creds
     except Exception as e:
