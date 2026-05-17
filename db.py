@@ -5,6 +5,7 @@ Usado em vez de arquivos JSON no Google Drive para dados por usuário.
 import json
 import logging
 import os
+from datetime import datetime, timezone
 
 import httpx
 
@@ -338,3 +339,71 @@ def upsert_songs_meta_batch(records: list) -> None:
     """Upsert em lote. Cada record deve ter 'file_id' + campos opcionais."""
     if records:
         _post("songs_meta", records, upsert=True)
+
+
+# ─── User status ──────────────────────────────────────────────────────────────
+
+def get_user_status(user_id: str) -> str:
+    rows = _get("users", select="status", id=f"eq.{user_id}")
+    return rows[0]["status"] if rows else "pending"
+
+
+def activate_user(user_id: str, coupon_code: str) -> None:
+    _patch("users", {
+        "status": "active",
+        "activated_via": coupon_code,
+        "activated_at": "now()",
+    }, id=f"eq.{user_id}")
+
+
+# ─── Coupons ──────────────────────────────────────────────────────────────────
+
+def get_coupon(code: str) -> dict | None:
+    rows = _get("coupons", select="*", code=f"eq.{code.upper().strip()}")
+    return rows[0] if rows else None
+
+
+def redeem_coupon(user_id: str, code: str) -> dict:
+    """Valida e resgata um cupom. Retorna {"ok": True} ou {"error": "..."}."""
+    coupon = get_coupon(code)
+    if not coupon:
+        return {"error": "Cupom inválido"}
+
+    exp = coupon.get("expires_at")
+    if exp:
+        try:
+            exp_dt = datetime.fromisoformat(exp.replace("Z", "+00:00"))
+            if exp_dt < datetime.now(timezone.utc):
+                return {"error": "Cupom expirado"}
+        except Exception:
+            pass
+
+    max_uses = coupon.get("max_uses")
+    if max_uses is not None and coupon.get("uses_count", 0) >= max_uses:
+        return {"error": "Cupom esgotado"}
+
+    existing = _get("coupon_uses", select="id",
+                    user_id=f"eq.{user_id}", coupon_code=f"eq.{code.upper().strip()}")
+    if existing:
+        return {"error": "Cupom já utilizado por esta conta"}
+
+    _post("coupon_uses", {"coupon_code": code.upper().strip(), "user_id": user_id})
+    _patch("coupons", {"uses_count": coupon.get("uses_count", 0) + 1},
+           code=f"eq.{code.upper().strip()}")
+    activate_user(user_id, code.upper().strip())
+    return {"ok": True}
+
+
+def create_coupon(code: str, max_uses: int | None = 1,
+                  expires_at: str | None = None, note: str = "") -> dict:
+    rows = _post("coupons", {
+        "code":       code.upper().strip(),
+        "max_uses":   max_uses,
+        "expires_at": expires_at,
+        "note":       note,
+    })
+    return rows[0] if rows else {}
+
+
+def list_coupons() -> list:
+    return _get("coupons", select="*", order="created_at.desc")

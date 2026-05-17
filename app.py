@@ -15,7 +15,7 @@ from pathlib import Path
 log = logging.getLogger(__name__)
 
 from dotenv import load_dotenv
-from flask import Flask, request, jsonify, render_template, Response, session
+from flask import Flask, request, jsonify, render_template, Response, session, redirect
 import db
 
 load_dotenv()
@@ -118,6 +118,48 @@ def _get_db_uid() -> str | None:
     except Exception as e:
         log.error("[db] Erro ao resolver user_id para %s: %s", email, e)
         return None
+
+
+# ---------------------------------------------------------------------------
+# Active-user gate (before_request)
+# ---------------------------------------------------------------------------
+
+_ACTIVE_SKIP = {"/signup", "/api/redeem-coupon", "/login", "/login/google",
+                "/oauth/callback", "/logout", "/privacy", "/terms", "/ping", "/sw.js"}
+
+@app.before_request
+def require_active():
+    """Redireciona usuários com status != 'active' para /signup."""
+    path = request.path
+    # Rotas públicas e de autenticação
+    if (path in _ACTIVE_SKIP
+            or path.startswith("/static")
+            or path.startswith("/google")):
+        return None
+    if not is_oauth_configured():
+        return None
+    if not session.get("token"):
+        return None  # login_required em cada rota cuida do redirect
+    if is_owner():
+        return None
+
+    user = current_user()
+    status = user.get("status")
+    if status is None and db.enabled():
+        uid = _get_db_uid()
+        if uid:
+            try:
+                status = db.get_user_status(uid)
+            except Exception:
+                status = "pending"
+            session["user"]["status"] = status
+            session.modified = True
+
+    if status != "active":
+        if request.path.startswith("/api/"):
+            return jsonify({"error": "Conta não ativa", "signup_url": "/signup"}), 403
+        return redirect("/signup")
+    return None
 
 
 # ---------------------------------------------------------------------------
@@ -1340,6 +1382,67 @@ def google_site_verification(token):
 @app.route("/terms")
 def terms():
     return render_template("terms.html")
+
+
+# ---------------------------------------------------------------------------
+# Signup / coupon redemption
+# ---------------------------------------------------------------------------
+
+@app.route("/signup")
+def signup():
+    if not session.get("token"):
+        return redirect("/login")
+    user = current_user()
+    if user.get("status") == "active" or is_owner():
+        return redirect("/")
+    return render_template("signup.html", user=user)
+
+
+@app.route("/api/redeem-coupon", methods=["POST"])
+@login_required
+def api_redeem_coupon():
+    if is_owner():
+        return jsonify({"ok": True})
+    code = (request.json or {}).get("code", "").strip()
+    if not code:
+        return jsonify({"error": "Código obrigatório"}), 400
+    uid = _get_db_uid()
+    if not uid:
+        return jsonify({"error": "Usuário não encontrado"}), 400
+    result = db.redeem_coupon(uid, code)
+    if result.get("error"):
+        return jsonify({"error": result["error"]}), 400
+    session["user"]["status"] = "active"
+    session.modified = True
+    return jsonify({"ok": True})
+
+
+# ---------------------------------------------------------------------------
+# Owner: gerenciamento de cupons
+# ---------------------------------------------------------------------------
+
+@app.route("/api/coupons", methods=["GET"])
+@login_required
+@owner_required
+def api_coupons_list():
+    return jsonify(db.list_coupons())
+
+
+@app.route("/api/coupons", methods=["POST"])
+@login_required
+@owner_required
+def api_coupons_create():
+    body = request.json or {}
+    code = body.get("code", "").strip()
+    if not code:
+        return jsonify({"error": "code obrigatório"}), 400
+    coupon = db.create_coupon(
+        code=code,
+        max_uses=body.get("max_uses", 1),
+        expires_at=body.get("expires_at"),
+        note=body.get("note", ""),
+    )
+    return jsonify(coupon), 201
 
 
 @app.route("/")

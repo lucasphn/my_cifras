@@ -200,9 +200,10 @@ def callback():
     # quando iOS/Android fecha o browser em background (ITP mitigation).
     session.permanent = True
     session["user"] = {
-        "email": info.get("email", ""),
-        "name": info.get("name", ""),
+        "email":   info.get("email", ""),
+        "name":    info.get("name", ""),
         "picture": info.get("picture", ""),
+        "sub":     info.get("id", ""),  # Google account ID
     }
     log.info("[auth] sessão salva para %s — redirecionando para /", info.get("email"))
     return redirect(url_for("index"))
