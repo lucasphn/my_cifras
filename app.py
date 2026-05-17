@@ -1447,7 +1447,11 @@ def api_redeem_coupon():
     uid = _get_db_uid()
     if not uid:
         return jsonify({"error": "Usuário não encontrado"}), 400
-    result = db.redeem_coupon(uid, code)
+    try:
+        result = db.redeem_coupon(uid, code)
+    except Exception as e:
+        log.error("[redeem-coupon] Erro inesperado: %s", e)
+        return jsonify({"error": f"Erro interno: {e}"}), 500
     if result.get("error"):
         return jsonify({"error": result["error"]}), 400
     session["user"]["status"] = "active"
