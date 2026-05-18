@@ -1207,6 +1207,8 @@ def api_song_delete():
             return jsonify({"error": "fileId ou path obrigatório"}), 400
     except Exception as e:
         log.error("[song_delete] Erro ao excluir: %s", e)
+        if "insufficientFilePermissions" in str(e):
+            return jsonify({"error": "Sem permissão para excluir. Este arquivo foi enviado diretamente ao Google Drive — exclua-o pelo Drive."}), 403
         return jsonify({"error": str(e)}), 500
     invalidate_library_cache()
     return jsonify({"ok": True})
