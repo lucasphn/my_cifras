@@ -301,6 +301,30 @@ def upload_md(service, name, content, folder_id):
 
 # ─── Pastas ──────────────────────────────────────────────────────────────────
 
+LIXEIRA_FOLDER_NAME = "_Lixeira"
+
+
+def get_file_parent(service, file_id):
+    """Retorna o ID da pasta pai do arquivo."""
+    f = service.files().get(fileId=file_id, fields="parents", supportsAllDrives=True).execute()
+    parents = f.get("parents", [])
+    return parents[0] if parents else None
+
+
+def get_lixeira_folder_id(service, root_folder_id):
+    """Retorna/cria a pasta _Lixeira dentro de root_folder_id."""
+    return get_or_create_folder(service, LIXEIRA_FOLDER_NAME, root_folder_id)
+
+
+def list_lixeira(service, root_folder_id):
+    """Retorna (lista de arquivos, folder_id) da pasta _Lixeira. folder_id=None se não existir."""
+    folder_id = find_folder_by_name(service, LIXEIRA_FOLDER_NAME, root_folder_id)
+    if not folder_id:
+        return [], None
+    items = [f for f in list_folder(service, folder_id) if f["mimeType"] != FOLDER_MIME]
+    return items, folder_id
+
+
 def get_file_name(service, file_id):
     """Retorna o nome real (com extensão) do arquivo no Drive."""
     f = service.files().get(fileId=file_id, fields="name", supportsAllDrives=True).execute()
@@ -581,6 +605,8 @@ def scan_library(service, root_folder_id):
         if section["mimeType"] != FOLDER_MIME:
             continue
         sname = section["name"]
+        if sname.startswith("_"):
+            continue
         library[sname] = {}
         for item in list_folder(service, section["id"]):
             if item["mimeType"] == FOLDER_MIME:
