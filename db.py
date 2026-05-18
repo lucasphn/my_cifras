@@ -264,14 +264,17 @@ def load_all_shares() -> dict:
     return {r["id"]: _share_to_dict(r) for r in rows}
 
 
+_SHARE_LOCAL_ONLY = {"rep_id"}  # campos in-memory sem coluna no Supabase
+
+
 def create_share(data: dict) -> dict:
-    payload = {k: v for k, v in data.items() if k != "id"}
-    rows = _post("shares", payload)
+    payload = {k: v for k, v in data.items() if k not in _SHARE_LOCAL_ONLY}
+    rows = _post("shares", payload, upsert=True)
     return _share_to_dict(rows[0]) if rows else data
 
 
 def update_share(share_id: str, data: dict) -> dict:
-    payload = {k: v for k, v in data.items() if k != "id"}
+    payload = {k: v for k, v in data.items() if k not in {"id"} | _SHARE_LOCAL_ONLY}
     rows = _patch("shares", payload, id=f"eq.{share_id}")
     return _share_to_dict(rows[0]) if rows else {}
 

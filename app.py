@@ -9,6 +9,7 @@ import tempfile
 import threading
 import time
 import unicodedata
+import uuid
 from datetime import date
 from pathlib import Path
 
@@ -66,7 +67,7 @@ _OWNER_EMAILS = {
 }
 
 # Registra blueprint de autenticação
-from auth import bp as auth_bp, login_required, get_service, current_user, is_oauth_configured
+from auth import bp as auth_bp, login_required, current_user, is_oauth_configured
 app.register_blueprint(auth_bp)
 
 
@@ -89,7 +90,7 @@ def _build_sa_creds():
         info = json.loads(sa_json)
         _sa_creds = service_account.Credentials.from_service_account_info(
             info,
-            scopes=["https://www.googleapis.com/auth/drive.readonly"],
+            scopes=["https://www.googleapis.com/auth/drive"],
         )
         log.info("[sa] Credenciais carregadas: %s", info.get("client_email", "?"))
         return _sa_creds
@@ -674,15 +675,14 @@ def _do_share_rep(rep_id, to_email, me, reps, shares, group_id=None):
     if to_email == my_email:
         return None, "Você não pode compartilhar com você mesmo"
     for s in shares.values():
-        if (s.get("rep_id") == rep_id
+        if (s.get("repertory_id") == rep_id
                 and s.get("from_email", "").lower() == my_email
                 and s.get("to_email", "").lower() == to_email):
             return None, f"Já compartilhado com {to_email}"
-    share_id = "shr_" + os.urandom(6).hex()
+    share_id = str(uuid.uuid4())
     share = {
         "id": share_id,
-        "repertory_id": rep_id,   # chave canônica (Supabase + legado)
-        "rep_id": rep_id,          # mantido para compatibilidade com Drive/local
+        "repertory_id": rep_id,
         "rep_name": rep["name"],
         "songs": rep.get("songs", []),
         "from_email": my_email, "from_name": me.get("name", my_email),
@@ -726,7 +726,7 @@ def api_share_rep():
             for email in emails:
                 # Se já existe share para este membro, atualiza (renova songs e timestamp)
                 existing = next((s for s in shares.values()
-                                 if s.get("rep_id") == rep_id
+                                 if s.get("repertory_id") == rep_id
                                  and s.get("from_email", "").lower() == my_email
                                  and s.get("to_email", "").lower() == email), None)
                 if existing:
@@ -752,15 +752,15 @@ def api_share_rep():
     with _shares_lock:
         shares = _load_shares_raw()
         for s in shares.values():
-            if (s.get("rep_id") == rep_id
+            if (s.get("repertory_id") == rep_id
                     and s.get("from_email", "").lower() == my_email
                     and s.get("to_email", "").lower() == to_email):
                 return jsonify({"error": "Já compartilhado com este usuário"}), 400
-        share_id = "shr_" + os.urandom(6).hex()
+        share_id = str(uuid.uuid4())
         from datetime import datetime
         share = {
             "id": share_id,
-            "rep_id": rep_id,
+            "repertory_id": rep_id,
             "rep_name": rep["name"],
             "songs": rep.get("songs", []),
             "from_email": my_email,
@@ -1030,7 +1030,7 @@ def _get_library():
             try:
                 if _use_drive():
                     import drive
-                    data = drive.scan_library(_get_sa_service() or get_service(), CIFRAS_FOLDER_ID)
+                    data = drive.scan_library(_get_sa_service(), CIFRAS_FOLDER_ID)
                 else:
                     data = scan_library_local()
                 _library_cache["data"] = data
@@ -1086,7 +1086,7 @@ def api_folder_create():
 
     if _use_drive():
         import drive as drv
-        svc = get_service()
+        svc = _get_sa_service()
         section_id = drv.find_folder_by_name(svc, section, CIFRAS_FOLDER_ID)
         if not section_id:
             return jsonify({"error": f"Seção '{section}' não encontrada"}), 404
@@ -1117,7 +1117,7 @@ def api_folder_rename(section, category):
 
     if _use_drive():
         import drive as drv
-        svc = get_service()
+        svc = _get_sa_service()
         section_id = drv.find_folder_by_name(svc, section, CIFRAS_FOLDER_ID)
         if not section_id:
             return jsonify({"error": "Seção não encontrada"}), 404
@@ -1147,7 +1147,7 @@ def api_folder_delete(section, category):
     """Exclui uma categoria — apenas se estiver vazia."""
     if _use_drive():
         import drive as drv
-        svc = get_service()
+        svc = _get_sa_service()
         section_id = drv.find_folder_by_name(svc, section, CIFRAS_FOLDER_ID)
         if not section_id:
             return jsonify({"error": "Seção não encontrada"}), 404
@@ -1184,11 +1184,11 @@ def api_song_delete():
     if shortcut_file_id:
         # Excluir atalho: apenas o atalho é enviado para a lixeira
         import drive as drv
-        drv.trash_file(get_service(), shortcut_file_id)
+        drv.trash_file(_get_sa_service(), shortcut_file_id)
     elif file_id:
         # Excluir original: manda para lixeira + todos os atalhos que apontam para ele
         import drive as drv
-        svc = get_service()
+        svc = _get_sa_service()
         drv.trash_file(svc, file_id)
         for sc_id in drv.find_shortcuts_to(svc, file_id):
             drv.trash_file(svc, sc_id)
@@ -1218,7 +1218,7 @@ def api_song_rename():
         return jsonify({"error": "newName obrigatório"}), 400
     if file_id:
         import drive as drv
-        svc = get_service()
+        svc = _get_sa_service()
         # Renomeia sempre o arquivo original (targetId)
         current = drv.get_file_name(svc, file_id)
         ext = Path(current).suffix or ".md"
@@ -1256,7 +1256,7 @@ def api_song_copy():
         return jsonify({"error": "targetSection obrigatório"}), 400
     if file_id:
         import drive as drv
-        svc = get_service()
+        svc = _get_sa_service()
         target_id = drv.resolve_folder(svc, target_section, target_category or None, CIFRAS_FOLDER_ID)
         fname = drv.get_file_name(svc, file_id)
         drv.create_shortcut(svc, fname, file_id, target_id)
@@ -1296,7 +1296,7 @@ def api_song_move():
         return jsonify({"error": "targetSection obrigatório"}), 400
     if file_id:
         import drive as drv
-        svc = get_service()
+        svc = _get_sa_service()
         source_id = drv.resolve_folder(svc, source_section, source_category or None, CIFRAS_FOLDER_ID)
         target_id = drv.resolve_folder(svc, target_section, target_category or None, CIFRAS_FOLDER_ID)
         drv.move_file(svc, file_id, source_id, target_id)
@@ -1612,7 +1612,7 @@ def api_save_content():
 
     if file_id:
         import drive
-        svc = get_service()
+        svc = _get_sa_service()
         try:
             raw = drive.download_bytes(svc, file_id).decode("utf-8", errors="replace")
         except Exception:
@@ -1662,7 +1662,7 @@ def api_cifra():
         import drive
         mime = request.args.get("mimeType", "")
         try:
-            _read_svc = _get_sa_service() or get_service()
+            _read_svc = _get_sa_service()
             if mime == drive.GDOCS_MIME:
                 text = drive.export_gdoc_as_text(_read_svc, file_id)
             else:
@@ -1768,13 +1768,15 @@ def api_cifras_bundle():
             if data:
                 bundle[fid] = data
                 _set_song_meta(fid, data)
-                meta_batch.append({
-                    "file_id": fid,
-                    "artist":  data.get("artist", "") or None,
-                    "key":     data.get("key", "") or None,
-                    "capo":    data.get("capo", "") or None,
-                    "youtube": data.get("youtube", "") or None,
-                })
+                # Só inclui campos com valor — evita sobrescrever com NULL
+                # dados já gravados no Supabase (ex: youtube via fill_youtube_links)
+                entry = {"file_id": fid}
+                for col in ("artist", "key", "capo", "youtube"):
+                    val = data.get(col, "") or ""
+                    if val:
+                        entry[col] = val
+                if len(entry) > 1:
+                    meta_batch.append(entry)
 
     if meta_batch and db.enabled():
         threading.Thread(target=db.upsert_songs_meta_batch, args=(meta_batch,), daemon=True).start()
@@ -2172,7 +2174,7 @@ def api_import_save():
 
     if _use_drive():
         import drive
-        svc = get_service()
+        svc = _get_sa_service()
         folder_id = drive.resolve_folder(svc, section, category or "_raiz", CIFRAS_FOLDER_ID)
         file_id = drive.upload_md(svc, title, content, folder_id)
         _ensure_songs_meta_loaded()
@@ -2348,7 +2350,7 @@ def api_update_meta():
 
     if file_id:
         import drive
-        svc = get_service()
+        svc = _get_sa_service()
         try:
             raw = drive.download_bytes(svc, file_id).decode("utf-8", errors="replace")
         except Exception as e:
@@ -2401,7 +2403,7 @@ def api_save_tone():
     if file_id:
         # Drive: baixa o arquivo original para preservar frontmatter
         import drive
-        svc = get_service()
+        svc = _get_sa_service()
         try:
             raw = drive.download_bytes(svc, file_id)
             original = raw.decode("utf-8", errors="replace")
@@ -2464,7 +2466,7 @@ def api_search_content():
 
     if _use_drive():
         import drive as drv
-        svc = get_service()
+        svc = _get_sa_service()
         try:
             items = drv.search_content(svc, q, CIFRAS_FOLDER_ID)
             views = _load_views()
@@ -2709,10 +2711,9 @@ def _build_md(fm, body):
 @owner_required
 def api_fix_keys():
     """Percorre todos os .md do acervo e escreve o campo key nos que não têm."""
-    from auth import get_service
     from drive import scan_library, download_bytes, update_md_content
 
-    svc = get_service()
+    svc = _get_sa_service()
     try:
         lib = scan_library(svc, CIFRAS_FOLDER_ID)
     except Exception as e:

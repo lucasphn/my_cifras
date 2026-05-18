@@ -7828,7 +7828,7 @@ async function loadSharesByMe() {
     var list = await r.json();
     sharesByMe = {};
     list.forEach(function(s) {
-      var key = s.rep_id;
+      var key = s.repertory_id || s.rep_id;
       if (!sharesByMe[key]) sharesByMe[key] = [];
       sharesByMe[key].push(s);
     });
@@ -9247,10 +9247,10 @@ function init() {
       loadSharesByMe();
     }
   });
-  // Poll leve a cada 3 minutos para manter shares sincronizados
+  // Poll a cada 30 segundos para manter shares e notificações sincronizados
   setInterval(function() {
     if (navigator.onLine) { loadSharedWithMe(); loadSharesByMe(); }
-  }, 3 * 60 * 1000);
+  }, 30 * 1000);
 
   // Registra Service Worker
   if ('serviceWorker' in navigator) {
