@@ -89,7 +89,7 @@ def _build_sa_creds():
         info = json.loads(sa_json)
         _sa_creds = service_account.Credentials.from_service_account_info(
             info,
-            scopes=["https://www.googleapis.com/auth/drive"],
+            scopes=["https://www.googleapis.com/auth/drive.readonly"],
         )
         log.info("[sa] Credenciais carregadas: %s", info.get("client_email", "?"))
         return _sa_creds
