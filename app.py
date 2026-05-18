@@ -2243,23 +2243,29 @@ def api_import_save():
 
     meta = {"artist": artist, "key": key, "capo": capo, "youtube": youtube}
 
-    if _use_drive():
-        import drive
-        svc = _get_sa_service()
-        folder_id = drive.resolve_folder(svc, section, category or "_raiz", CIFRAS_FOLDER_ID)
-        file_id = drive.upload_md(svc, title, content, folder_id)
-        _ensure_songs_meta_loaded()
-        _set_song_meta(file_id, meta, persist=True, svc=svc)
-        invalidate_library_cache()
-        return jsonify({"ok": True, "fileId": file_id})
-    else:
-        safe_name = re.sub(r'[<>:"/\\|?*]', "_", title).strip()
-        dest_dir = Path(CIFRAS_ROOT) / section / (category if category and category != "_raiz" else "")
-        dest_dir.mkdir(parents=True, exist_ok=True)
-        dest_file = dest_dir / (safe_name + ".md")
-        dest_file.write_text(content, encoding="utf-8")
-        invalidate_library_cache()
-        return jsonify({"ok": True, "path": str(dest_file)})
+    try:
+        if _use_drive():
+            import drive
+            svc = _get_sa_service()
+            if not svc:
+                return jsonify({"error": "Serviço Drive indisponível"}), 503
+            folder_id = drive.resolve_folder(svc, section, category or "_raiz", CIFRAS_FOLDER_ID)
+            file_id = drive.upload_md(svc, title, content, folder_id)
+            _ensure_songs_meta_loaded()
+            _set_song_meta(file_id, meta, persist=True, svc=svc)
+            invalidate_library_cache()
+            return jsonify({"ok": True, "fileId": file_id})
+        else:
+            safe_name = re.sub(r'[<>:"/\\|?*]', "_", title).strip()
+            dest_dir = Path(CIFRAS_ROOT) / section / (category if category and category != "_raiz" else "")
+            dest_dir.mkdir(parents=True, exist_ok=True)
+            dest_file = dest_dir / (safe_name + ".md")
+            dest_file.write_text(content, encoding="utf-8")
+            invalidate_library_cache()
+            return jsonify({"ok": True, "path": str(dest_file)})
+    except Exception as e:
+        log.error("[import_save] Erro: %s", e)
+        return jsonify({"error": str(e)}), 500
 
 
 @app.route("/api/export/docx", methods=["POST"])
