@@ -46,6 +46,8 @@ def list_folder(service, folder_id):
                 fields="nextPageToken, files(id, name, mimeType, modifiedTime, shortcutDetails)",
                 pageToken=page_token,
                 orderBy="folder,name_natural",
+                supportsAllDrives=True,
+                includeItemsFromAllDrives=True,
             )
             .execute()
         )
@@ -96,6 +98,8 @@ def _get_or_create_json_file(service, name, parent_id):
         .list(
             q=f"name='{name}' and '{parent_id}' in parents and trashed=false",
             fields="files(id)",
+            supportsAllDrives=True,
+            includeItemsFromAllDrives=True,
         )
         .execute()
     )
@@ -104,7 +108,7 @@ def _get_or_create_json_file(service, name, parent_id):
         return files[0]["id"]
     metadata = {"name": name, "parents": [parent_id]}
     media = MediaIoBaseUpload(io.BytesIO(b"{}"), mimetype="application/json")
-    f = service.files().create(body=metadata, media_body=media, fields="id").execute()
+    f = service.files().create(body=metadata, media_body=media, fields="id", supportsAllDrives=True).execute()
     return f.get("id")
 
 
@@ -207,6 +211,8 @@ def _find_json_file(service, name, parent_id):
         .list(
             q=f"name='{name}' and '{parent_id}' in parents and trashed=false",
             fields="files(id)",
+            supportsAllDrives=True,
+            includeItemsFromAllDrives=True,
         )
         .execute()
     )
@@ -272,7 +278,7 @@ def update_md_content(service, file_id, content):
     media = MediaIoBaseUpload(
         io.BytesIO(content.encode("utf-8")), mimetype="text/markdown"
     )
-    service.files().update(fileId=file_id, media_body=media).execute()
+    service.files().update(fileId=file_id, media_body=media, supportsAllDrives=True).execute()
 
 
 def upload_md(service, name, content, folder_id):
@@ -287,7 +293,7 @@ def upload_md(service, name, content, folder_id):
     )
     f = (
         service.files()
-        .create(body=metadata, media_body=media, fields="id")
+        .create(body=metadata, media_body=media, fields="id", supportsAllDrives=True)
         .execute()
     )
     return f.get("id")
@@ -297,24 +303,24 @@ def upload_md(service, name, content, folder_id):
 
 def get_file_name(service, file_id):
     """Retorna o nome real (com extensão) do arquivo no Drive."""
-    f = service.files().get(fileId=file_id, fields="name").execute()
+    f = service.files().get(fileId=file_id, fields="name", supportsAllDrives=True).execute()
     return f.get("name", "")
 
 
 def trash_file(service, file_id):
     """Move arquivo para a lixeira do Drive."""
-    service.files().update(fileId=file_id, body={"trashed": True}).execute()
+    service.files().update(fileId=file_id, body={"trashed": True}, supportsAllDrives=True).execute()
 
 
 def rename_file(service, file_id, new_name_with_ext):
     """Renomeia arquivo no Drive."""
-    service.files().update(fileId=file_id, body={"name": new_name_with_ext}).execute()
+    service.files().update(fileId=file_id, body={"name": new_name_with_ext}, supportsAllDrives=True).execute()
 
 
 def copy_file(service, file_id, new_name, target_folder_id):
     """Copia arquivo para outra pasta no Drive."""
     body = {"name": new_name, "parents": [target_folder_id]}
-    return service.files().copy(fileId=file_id, body=body, fields="id").execute()
+    return service.files().copy(fileId=file_id, body=body, fields="id", supportsAllDrives=True).execute()
 
 
 def create_shortcut(service, name, target_id, target_folder_id):
@@ -325,7 +331,7 @@ def create_shortcut(service, name, target_id, target_folder_id):
         "shortcutDetails": {"targetId": target_id},
         "parents": [target_folder_id],
     }
-    return service.files().create(body=body, fields="id").execute()
+    return service.files().create(body=body, fields="id", supportsAllDrives=True).execute()
 
 
 def find_shortcuts_to(service, target_id):
@@ -338,6 +344,8 @@ def find_shortcuts_to(service, target_id):
             q=q,
             fields="nextPageToken, files(id)",
             pageToken=page_token,
+            supportsAllDrives=True,
+            includeItemsFromAllDrives=True,
         ).execute()
         results.extend(f["id"] for f in resp.get("files", []))
         page_token = resp.get("nextPageToken")
@@ -353,6 +361,7 @@ def move_file(service, file_id, source_folder_id, target_folder_id):
         addParents=target_folder_id,
         removeParents=source_folder_id,
         fields="id",
+        supportsAllDrives=True,
     ).execute()
 
 
@@ -366,6 +375,8 @@ def find_folder_by_name(service, name, parent_id):
                 f"and mimeType='{FOLDER_MIME}' and trashed=false"
             ),
             fields="files(id)",
+            supportsAllDrives=True,
+            includeItemsFromAllDrives=True,
         )
         .execute()
     )
@@ -376,12 +387,12 @@ def find_folder_by_name(service, name, parent_id):
 def create_folder(service, name, parent_id):
     """Cria nova pasta. Retorna {id, name}."""
     metadata = {"name": name, "mimeType": FOLDER_MIME, "parents": [parent_id]}
-    return service.files().create(body=metadata, fields="id,name").execute()
+    return service.files().create(body=metadata, fields="id,name", supportsAllDrives=True).execute()
 
 
 def rename_folder(service, folder_id, new_name):
     """Renomeia pasta."""
-    service.files().update(fileId=folder_id, body={"name": new_name}).execute()
+    service.files().update(fileId=folder_id, body={"name": new_name}, supportsAllDrives=True).execute()
 
 
 def is_folder_empty(service, folder_id):
@@ -392,6 +403,8 @@ def is_folder_empty(service, folder_id):
             q=f"'{folder_id}' in parents and trashed=false",
             fields="files(id)",
             pageSize=1,
+            supportsAllDrives=True,
+            includeItemsFromAllDrives=True,
         )
         .execute()
     )
@@ -400,7 +413,7 @@ def is_folder_empty(service, folder_id):
 
 def delete_folder(service, folder_id):
     """Move pasta para a lixeira do Drive."""
-    service.files().update(fileId=folder_id, body={"trashed": True}).execute()
+    service.files().update(fileId=folder_id, body={"trashed": True}, supportsAllDrives=True).execute()
 
 
 def get_user_data_folder(service):
@@ -434,6 +447,8 @@ def get_or_create_folder(service, name, parent_id):
                 f"and mimeType='{FOLDER_MIME}' and trashed=false"
             ),
             fields="files(id)",
+            supportsAllDrives=True,
+            includeItemsFromAllDrives=True,
         )
         .execute()
     )
@@ -441,7 +456,7 @@ def get_or_create_folder(service, name, parent_id):
     if files:
         return files[0]["id"]
     metadata = {"name": name, "mimeType": FOLDER_MIME, "parents": [parent_id]}
-    folder = service.files().create(body=metadata, fields="id").execute()
+    folder = service.files().create(body=metadata, fields="id", supportsAllDrives=True).execute()
     return folder.get("id")
 
 
