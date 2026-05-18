@@ -67,7 +67,7 @@ _OWNER_EMAILS = {
 }
 
 # Registra blueprint de autenticação
-from auth import bp as auth_bp, login_required, current_user, is_oauth_configured
+from auth import bp as auth_bp, login_required, current_user, is_oauth_configured, get_service
 app.register_blueprint(auth_bp)
 
 
@@ -113,6 +113,17 @@ def _get_sa_service():
     except Exception as e:
         log.error("[sa] Falha ao construir Drive service: %s", e)
         return None
+
+
+def _get_write_service():
+    """Serviço Drive com credenciais de escrita.
+    Em produção (OAuth configurado) usa o token do owner para criar/editar arquivos —
+    Service Accounts não têm quota de armazenamento no Drive pessoal.
+    Em modo local (sem OAuth) cai de volta para a SA.
+    """
+    if is_oauth_configured():
+        return get_service()
+    return _get_sa_service()
 
 
 # ---------------------------------------------------------------------------
@@ -1683,7 +1694,7 @@ def api_save_content():
 
     if file_id:
         import drive
-        svc = _get_sa_service()
+        svc = _get_write_service()
         try:
             raw = drive.download_bytes(svc, file_id).decode("utf-8", errors="replace")
         except Exception:
@@ -2246,9 +2257,7 @@ def api_import_save():
     try:
         if _use_drive():
             import drive
-            svc = _get_sa_service()
-            if not svc:
-                return jsonify({"error": "Serviço Drive indisponível"}), 503
+            svc = _get_write_service()
             folder_id = drive.resolve_folder(svc, section, category or "_raiz", CIFRAS_FOLDER_ID)
             file_id = drive.upload_md(svc, title, content, folder_id)
             _ensure_songs_meta_loaded()
@@ -2427,7 +2436,7 @@ def api_update_meta():
 
     if file_id:
         import drive
-        svc = _get_sa_service()
+        svc = _get_write_service()
         try:
             raw = drive.download_bytes(svc, file_id).decode("utf-8", errors="replace")
         except Exception as e:
@@ -2480,7 +2489,7 @@ def api_save_tone():
     if file_id:
         # Drive: baixa o arquivo original para preservar frontmatter
         import drive
-        svc = _get_sa_service()
+        svc = _get_write_service()
         try:
             raw = drive.download_bytes(svc, file_id)
             original = raw.decode("utf-8", errors="replace")
@@ -2790,7 +2799,7 @@ def api_fix_keys():
     """Percorre todos os .md do acervo e escreve o campo key nos que não têm."""
     from drive import scan_library, download_bytes, update_md_content
 
-    svc = _get_sa_service()
+    svc = _get_write_service()
     try:
         lib = scan_library(svc, CIFRAS_FOLDER_ID)
     except Exception as e:
