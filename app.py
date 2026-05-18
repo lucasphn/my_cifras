@@ -1181,26 +1181,33 @@ def api_song_delete():
     shortcut_file_id = (data.get("shortcutFileId") or "").strip()
     file_id          = (data.get("fileId") or "").strip()
     path             = (data.get("path") or "").strip()
-    if shortcut_file_id:
-        # Excluir atalho: apenas o atalho é enviado para a lixeira
-        import drive as drv
-        drv.trash_file(_get_sa_service(), shortcut_file_id)
-    elif file_id:
-        # Excluir original: manda para lixeira + todos os atalhos que apontam para ele
-        import drive as drv
-        svc = _get_sa_service()
-        drv.trash_file(svc, file_id)
-        for sc_id in drv.find_shortcuts_to(svc, file_id):
-            drv.trash_file(svc, sc_id)
-    elif path:
-        if not is_safe_path(path):
-            return jsonify({"error": "Caminho não permitido"}), 403
-        p = Path(path)
-        if not p.exists():
-            return jsonify({"error": "Arquivo não encontrado"}), 404
-        p.unlink()
-    else:
-        return jsonify({"error": "fileId ou path obrigatório"}), 400
+    try:
+        if shortcut_file_id:
+            import drive as drv
+            svc = _get_sa_service()
+            if not svc:
+                return jsonify({"error": "Serviço Drive indisponível"}), 503
+            drv.trash_file(svc, shortcut_file_id)
+        elif file_id:
+            import drive as drv
+            svc = _get_sa_service()
+            if not svc:
+                return jsonify({"error": "Serviço Drive indisponível"}), 503
+            drv.trash_file(svc, file_id)
+            for sc_id in drv.find_shortcuts_to(svc, file_id):
+                drv.trash_file(svc, sc_id)
+        elif path:
+            if not is_safe_path(path):
+                return jsonify({"error": "Caminho não permitido"}), 403
+            p = Path(path)
+            if not p.exists():
+                return jsonify({"error": "Arquivo não encontrado"}), 404
+            p.unlink()
+        else:
+            return jsonify({"error": "fileId ou path obrigatório"}), 400
+    except Exception as e:
+        log.error("[song_delete] Erro ao excluir: %s", e)
+        return jsonify({"error": str(e)}), 500
     invalidate_library_cache()
     return jsonify({"ok": True})
 
@@ -1216,28 +1223,32 @@ def api_song_rename():
     new_name = (data.get("newName") or "").strip()
     if not new_name:
         return jsonify({"error": "newName obrigatório"}), 400
-    if file_id:
-        import drive as drv
-        svc = _get_sa_service()
-        # Renomeia sempre o arquivo original (targetId)
-        current = drv.get_file_name(svc, file_id)
-        ext = Path(current).suffix or ".md"
-        drv.rename_file(svc, file_id, new_name + ext)
-        # Se vier de um atalho, sincroniza o nome do atalho também
-        if shortcut_file_id:
-            drv.rename_file(svc, shortcut_file_id, new_name + ext)
-    elif path:
-        if not is_safe_path(path):
-            return jsonify({"error": "Caminho não permitido"}), 403
-        p = Path(path)
-        if not p.exists():
-            return jsonify({"error": "Arquivo não encontrado"}), 404
-        new_path = p.parent / (new_name + p.suffix)
-        if new_path.exists():
-            return jsonify({"error": "Já existe arquivo com esse nome"}), 409
-        p.rename(new_path)
-    else:
-        return jsonify({"error": "fileId ou path obrigatório"}), 400
+    try:
+        if file_id:
+            import drive as drv
+            svc = _get_sa_service()
+            if not svc:
+                return jsonify({"error": "Serviço Drive indisponível"}), 503
+            current = drv.get_file_name(svc, file_id)
+            ext = Path(current).suffix or ".md"
+            drv.rename_file(svc, file_id, new_name + ext)
+            if shortcut_file_id:
+                drv.rename_file(svc, shortcut_file_id, new_name + ext)
+        elif path:
+            if not is_safe_path(path):
+                return jsonify({"error": "Caminho não permitido"}), 403
+            p = Path(path)
+            if not p.exists():
+                return jsonify({"error": "Arquivo não encontrado"}), 404
+            new_path = p.parent / (new_name + p.suffix)
+            if new_path.exists():
+                return jsonify({"error": "Já existe arquivo com esse nome"}), 409
+            p.rename(new_path)
+        else:
+            return jsonify({"error": "fileId ou path obrigatório"}), 400
+    except Exception as e:
+        log.error("[song_rename] Erro: %s", e)
+        return jsonify({"error": str(e)}), 500
     invalidate_library_cache()
     return jsonify({"ok": True})
 
@@ -1254,27 +1265,33 @@ def api_song_copy():
     target_category = (data.get("targetCategory") or "").strip()
     if not target_section:
         return jsonify({"error": "targetSection obrigatório"}), 400
-    if file_id:
-        import drive as drv
-        svc = _get_sa_service()
-        target_id = drv.resolve_folder(svc, target_section, target_category or None, CIFRAS_FOLDER_ID)
-        fname = drv.get_file_name(svc, file_id)
-        drv.create_shortcut(svc, fname, file_id, target_id)
-    elif path:
-        if not is_safe_path(path):
-            return jsonify({"error": "Caminho não permitido"}), 403
-        src = Path(path)
-        if not src.exists():
-            return jsonify({"error": "Arquivo não encontrado"}), 404
-        dest_dir = Path(CIFRAS_ROOT) / target_section / target_category if target_category else Path(CIFRAS_ROOT) / target_section
-        if not dest_dir.exists():
-            return jsonify({"error": "Pasta destino não encontrada"}), 404
-        dest = dest_dir / src.name
-        if dest.exists():
-            return jsonify({"error": "Já existe arquivo com esse nome no destino"}), 409
-        shutil.copy2(str(src), str(dest))
-    else:
-        return jsonify({"error": "fileId ou path obrigatório"}), 400
+    try:
+        if file_id:
+            import drive as drv
+            svc = _get_sa_service()
+            if not svc:
+                return jsonify({"error": "Serviço Drive indisponível"}), 503
+            target_id = drv.resolve_folder(svc, target_section, target_category or None, CIFRAS_FOLDER_ID)
+            fname = drv.get_file_name(svc, file_id)
+            drv.create_shortcut(svc, fname, file_id, target_id)
+        elif path:
+            if not is_safe_path(path):
+                return jsonify({"error": "Caminho não permitido"}), 403
+            src = Path(path)
+            if not src.exists():
+                return jsonify({"error": "Arquivo não encontrado"}), 404
+            dest_dir = Path(CIFRAS_ROOT) / target_section / target_category if target_category else Path(CIFRAS_ROOT) / target_section
+            if not dest_dir.exists():
+                return jsonify({"error": "Pasta destino não encontrada"}), 404
+            dest = dest_dir / src.name
+            if dest.exists():
+                return jsonify({"error": "Já existe arquivo com esse nome no destino"}), 409
+            shutil.copy2(str(src), str(dest))
+        else:
+            return jsonify({"error": "fileId ou path obrigatório"}), 400
+    except Exception as e:
+        log.error("[song_copy] Erro ao copiar: %s", e)
+        return jsonify({"error": str(e)}), 500
     invalidate_library_cache()
     return jsonify({"ok": True})
 
@@ -1294,27 +1311,33 @@ def api_song_move():
     target_category = (data.get("targetCategory") or "").strip()
     if not target_section:
         return jsonify({"error": "targetSection obrigatório"}), 400
-    if file_id:
-        import drive as drv
-        svc = _get_sa_service()
-        source_id = drv.resolve_folder(svc, source_section, source_category or None, CIFRAS_FOLDER_ID)
-        target_id = drv.resolve_folder(svc, target_section, target_category or None, CIFRAS_FOLDER_ID)
-        drv.move_file(svc, file_id, source_id, target_id)
-    elif path:
-        if not is_safe_path(path):
-            return jsonify({"error": "Caminho não permitido"}), 403
-        src = Path(path)
-        if not src.exists():
-            return jsonify({"error": "Arquivo não encontrado"}), 404
-        dest_dir = Path(CIFRAS_ROOT) / target_section / target_category if target_category else Path(CIFRAS_ROOT) / target_section
-        if not dest_dir.exists():
-            return jsonify({"error": "Pasta destino não encontrada"}), 404
-        dest = dest_dir / src.name
-        if dest.exists():
-            return jsonify({"error": "Já existe arquivo com esse nome no destino"}), 409
-        shutil.move(str(src), str(dest))
-    else:
-        return jsonify({"error": "fileId ou path obrigatório"}), 400
+    try:
+        if file_id:
+            import drive as drv
+            svc = _get_sa_service()
+            if not svc:
+                return jsonify({"error": "Serviço Drive indisponível"}), 503
+            source_id = drv.resolve_folder(svc, source_section, source_category or None, CIFRAS_FOLDER_ID)
+            target_id = drv.resolve_folder(svc, target_section, target_category or None, CIFRAS_FOLDER_ID)
+            drv.move_file(svc, file_id, source_id, target_id)
+        elif path:
+            if not is_safe_path(path):
+                return jsonify({"error": "Caminho não permitido"}), 403
+            src = Path(path)
+            if not src.exists():
+                return jsonify({"error": "Arquivo não encontrado"}), 404
+            dest_dir = Path(CIFRAS_ROOT) / target_section / target_category if target_category else Path(CIFRAS_ROOT) / target_section
+            if not dest_dir.exists():
+                return jsonify({"error": "Pasta destino não encontrada"}), 404
+            dest = dest_dir / src.name
+            if dest.exists():
+                return jsonify({"error": "Já existe arquivo com esse nome no destino"}), 409
+            shutil.move(str(src), str(dest))
+        else:
+            return jsonify({"error": "fileId ou path obrigatório"}), 400
+    except Exception as e:
+        log.error("[song_move] Erro ao mover: %s", e)
+        return jsonify({"error": str(e)}), 500
     invalidate_library_cache()
     return jsonify({"ok": True})
 
