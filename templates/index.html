@@ -4000,9 +4000,6 @@ html.pwa-standalone #modal-footer {
         Importar cifra
       </button>
       <input type="file" id="file-input" accept=".docx,.doc,.pdf,.txt" style="display:none">
-      <button class="btn" id="btn-lixeira" title="Lixeira" style="gap:5px">
-        🗑️ Lixeira
-      </button>
       {% endif %}
       {% if user %}
       <button id="btn-notif" title="Notificações" aria-label="Notificações">
@@ -5933,72 +5930,6 @@ function confirmDeleteSong(card, song) {
   });
 }
 
-// ─── Lixeira ──────────────────────────────────────────────────────────────────
-
-async function moveToLixeira(song) {
-  var fid = song.shortcutFileId || song.fileId;
-  if (!fid) return;
-  showToast("Movendo para Lixeira...");
-  try {
-    var r = await _opQueue.add(function() {
-      return fetch("/api/songs/to-lixeira", {
-        method: "POST",
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({fileId: song.fileId, shortcutFileId: song.shortcutFileId || ""})
-      });
-    });
-    var j = await r.json();
-    if (!r.ok) { showToast(j.error || "Erro ao mover"); return; }
-    await reloadLibrary();
-    if (currentCategory && currentCategory.section) {
-      renderSongGrid((library[currentCategory.section]||{})[currentCategory.cat]||[]);
-    } else { renderHomeTable(allSongs); showHomeTable(); }
-    showToast("\"" + song.name + "\" movido para Lixeira.");
-  } catch(e) { showToast("Erro: " + e.message); }
-}
-
-async function openLixeiraPanel() {
-  var existing = document.getElementById("lixeira-panel");
-  if (existing) { existing.remove(); return; }
-  var panel = document.createElement("div");
-  panel.id = "lixeira-panel";
-  panel.style.cssText = "position:fixed;top:0;right:0;width:min(360px,100vw);height:100%;background:var(--surface);border-left:1px solid var(--border);z-index:900;display:flex;flex-direction:column;box-shadow:-4px 0 24px rgba(0,0,0,.12)";
-  panel.innerHTML =
-    '<div style="display:flex;align-items:center;justify-content:space-between;padding:16px 18px;border-bottom:1px solid var(--border)">' +
-      '<span style="font-weight:700;font-size:1rem">🗑️ Lixeira</span>' +
-      '<button id="lixeira-close" style="background:none;border:none;font-size:1.2rem;cursor:pointer;color:var(--text-muted)">✕</button>' +
-    '</div>' +
-    '<div id="lixeira-body" style="flex:1;overflow-y:auto;padding:16px 18px">' +
-      '<div style="color:var(--text-muted);font-size:.85rem">Carregando...</div>' +
-    '</div>' +
-    '<div id="lixeira-footer" style="padding:12px 18px;border-top:1px solid var(--border);font-size:.78rem;color:var(--text-muted)">' +
-      'Selecione os arquivos no Google Drive e exclua permanentemente.' +
-    '</div>';
-  document.body.appendChild(panel);
-  panel.querySelector("#lixeira-close").onclick = function() { panel.remove(); };
-  try {
-    var r = await fetch("/api/lixeira");
-    var j = await r.json();
-    var body = panel.querySelector("#lixeira-body");
-    var footer = panel.querySelector("#lixeira-footer");
-    if (!r.ok || j.error) { body.innerHTML = '<div style="color:var(--danger)">' + (j.error || "Erro") + '</div>'; return; }
-    if (!j.files || j.files.length === 0) {
-      body.innerHTML = '<div style="color:var(--text-muted);font-size:.85rem">A Lixeira está vazia.</div>';
-    } else {
-      var html = j.files.map(function(f) {
-        return '<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border)">' +
-          '<span style="flex:1;font-size:.85rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + escHtml(f.name) + '">' + escHtml(f.name) + '</span>' +
-        '</div>';
-      }).join("");
-      body.innerHTML = html;
-    }
-    if (j.folder_url) {
-      footer.innerHTML = '<a href="' + j.folder_url + '" target="_blank" rel="noopener" style="color:var(--accent);font-weight:600;font-size:.82rem">Abrir pasta Lixeira no Drive →</a>' +
-        '<br><span style="font-size:.75rem;color:var(--text-muted)">Selecione tudo (Ctrl+A) e exclua permanentemente.</span>';
-    }
-  } catch(e) { panel.querySelector("#lixeira-body").innerHTML = '<div style="color:var(--danger)">Erro: ' + e.message + '</div>'; }
-}
-
 // Folder picker (copy/move)
 var _sfmAction = null;
 var _sfmSong = null;
@@ -6204,9 +6135,7 @@ function _makeTableRow(song, rank) {
     var dd = document.createElement("div");
     dd.className = "song-ops-dropdown";
     dd._owner = opsBtn;
-    var deleteBtn = song.fileId
-      ? '<button class="sop-to-lixeira danger">🗑️ Mover para Lixeira</button>'
-      : '<button class="sop-delete danger">🗑️ Excluir</button>';
+    var deleteBtn = '<button class="sop-delete danger">🗑️ Excluir</button>';
     dd.innerHTML =
       '<button class="sop-meta">⚙️ Metadados</button>' +
       '<button class="sop-rename">✏️ Renomear</button>' +
@@ -6237,8 +6166,6 @@ function _makeTableRow(song, rank) {
     dd.querySelector(".sop-move").addEventListener("click", function(ev) { ev.stopPropagation(); closeOpenSongMenu(); openFolderPicker("move", song); });
     var delEl = dd.querySelector(".sop-delete");
     if (delEl) delEl.addEventListener("click", function(ev) { ev.stopPropagation(); closeOpenSongMenu(); confirmDeleteSong(row, song); });
-    var lixEl = dd.querySelector(".sop-to-lixeira");
-    if (lixEl) lixEl.addEventListener("click", function(ev) { ev.stopPropagation(); closeOpenSongMenu(); moveToLixeira(song); });
   });
 
   row.addEventListener("click", function(e) {
@@ -10191,8 +10118,6 @@ function initImportModal() {
   if (!_iEl("btn-import")) return;
 
   _iEl("btn-import").addEventListener("click", openImportModal);
-  var _btnLixeira = _iEl("btn-lixeira");
-  if (_btnLixeira) _btnLixeira.addEventListener("click", openLixeiraPanel);
   _iEl("import-close").addEventListener("click", tryCloseImport);
 
   // Shroud: mousedown para não fechar ao soltar fora após seleção de texto

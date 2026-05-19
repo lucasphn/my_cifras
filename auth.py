@@ -27,6 +27,21 @@ from google.oauth2.credentials import Credentials
 from google.auth.transport.requests import Request
 from google_auth_oauthlib.flow import Flow
 from googleapiclient.discovery import build
+from googleapiclient.discovery_cache.base import Cache
+
+
+class _MemoryCache(Cache):
+    """Discovery document cache em memória — evita HTTP round-trip a cada build()."""
+    _store: dict = {}
+
+    def get(self, url):
+        return self._store.get(url)
+
+    def set(self, url, content):
+        self._store[url] = content
+
+
+_drive_service_cache: dict = {}  # token → service object
 
 # Permite HTTP em localhost (apenas desenvolvimento local)
 os.environ.setdefault("OAUTHLIB_INSECURE_TRANSPORT", "1")
@@ -115,7 +130,12 @@ def _get_creds_refreshed():
 
 def get_service():
     """Retorna Google Drive service autenticado com o usuário da sessão atual."""
-    return build("drive", "v3", credentials=_get_creds_refreshed(), cache_discovery=False)
+    creds = _get_creds_refreshed()
+    token = creds.token
+    if token not in _drive_service_cache:
+        _drive_service_cache.clear()  # descarta token anterior (expirado)
+        _drive_service_cache[token] = build("drive", "v3", credentials=creds, cache=_MemoryCache())
+    return _drive_service_cache[token]
 
 
 

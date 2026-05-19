@@ -67,7 +67,7 @@ _OWNER_EMAILS = {
 }
 
 # Registra blueprint de autenticação
-from auth import bp as auth_bp, login_required, current_user, is_oauth_configured, get_service
+from auth import bp as auth_bp, login_required, current_user, is_oauth_configured, get_service, _MemoryCache
 app.register_blueprint(auth_bp)
 
 
@@ -76,6 +76,7 @@ app.register_blueprint(auth_bp)
 # ---------------------------------------------------------------------------
 
 _sa_creds = None
+_sa_service = None
 
 def _build_sa_creds():
     global _sa_creds
@@ -103,13 +104,17 @@ def _build_sa_creds():
 
 
 def _get_sa_service():
-    """Retorna um novo Drive service autenticado como service account."""
+    """Retorna Drive service da SA — construído uma vez e reutilizado (singleton)."""
+    global _sa_service
+    if _sa_service is not None:
+        return _sa_service
     from googleapiclient.discovery import build as _build
     creds = _build_sa_creds()
     if creds is None:
         return None
     try:
-        return _build("drive", "v3", credentials=creds, cache_discovery=False)
+        _sa_service = _build("drive", "v3", credentials=creds, cache=_MemoryCache())
+        return _sa_service
     except Exception as e:
         log.error("[sa] Falha ao construir Drive service: %s", e)
         return None
@@ -1195,15 +1200,11 @@ def api_song_delete():
     try:
         if shortcut_file_id:
             import drive as drv
-            svc = _get_sa_service()
-            if not svc:
-                return jsonify({"error": "Serviço Drive indisponível"}), 503
+            svc = _get_write_service()
             drv.trash_file(svc, shortcut_file_id)
         elif file_id:
             import drive as drv
-            svc = _get_sa_service()
-            if not svc:
-                return jsonify({"error": "Serviço Drive indisponível"}), 503
+            svc = _get_write_service()
             drv.trash_file(svc, file_id)
             for sc_id in drv.find_shortcuts_to(svc, file_id):
                 drv.trash_file(svc, sc_id)
@@ -1218,57 +1219,10 @@ def api_song_delete():
             return jsonify({"error": "fileId ou path obrigatório"}), 400
     except Exception as e:
         log.error("[song_delete] Erro ao excluir: %s", e)
-        if "insufficientFilePermissions" in str(e):
-            return jsonify({"error": "Sem permissão para excluir. Este arquivo foi enviado diretamente ao Google Drive — exclua-o pelo Drive."}), 403
         return jsonify({"error": str(e)}), 500
     invalidate_library_cache()
     return jsonify({"ok": True})
 
-
-@app.route("/api/songs/to-lixeira", methods=["POST"])
-@login_required
-@owner_required
-def api_song_to_lixeira():
-    import drive as drv
-    data = request.get_json(force=True)
-    file_id = (data.get("shortcutFileId") or data.get("fileId") or "").strip()
-    if not file_id:
-        return jsonify({"error": "fileId obrigatório"}), 400
-    try:
-        svc = _get_sa_service()
-        if not svc:
-            return jsonify({"error": "Serviço Drive indisponível"}), 503
-        lixeira_id = drv.get_lixeira_folder_id(svc, CIFRAS_FOLDER_ID)
-        current_parent = drv.get_file_parent(svc, file_id)
-        if current_parent and current_parent != lixeira_id:
-            drv.move_file(svc, file_id, current_parent, lixeira_id)
-    except Exception as e:
-        log.error("[to_lixeira] Erro: %s", e)
-        return jsonify({"error": str(e)}), 500
-    invalidate_library_cache()
-    return jsonify({"ok": True})
-
-
-@app.route("/api/lixeira", methods=["GET"])
-@login_required
-@owner_required
-def api_lixeira():
-    import drive as drv
-    if not _use_drive():
-        return jsonify({"files": [], "folder_url": None})
-    try:
-        svc = _get_sa_service()
-        if not svc:
-            return jsonify({"error": "Serviço Drive indisponível"}), 503
-        files, folder_id = drv.list_lixeira(svc, CIFRAS_FOLDER_ID)
-        folder_url = f"https://drive.google.com/drive/folders/{folder_id}" if folder_id else None
-        return jsonify({
-            "files": [{"id": f["id"], "name": f["name"]} for f in files],
-            "folder_url": folder_url,
-        })
-    except Exception as e:
-        log.error("[lixeira] Erro: %s", e)
-        return jsonify({"error": str(e)}), 500
 
 
 @app.route("/api/songs/rename", methods=["POST"])
