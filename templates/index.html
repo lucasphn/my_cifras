@@ -5989,12 +5989,19 @@ document.getElementById("sfm-ok").addEventListener("click", async function() {
   if (_sfmAction === "move") { body.sourceSection = song.section; body.sourceCategory = song.category === "_raiz" ? "" : (song.category || ""); }
   var endpoint = _sfmAction === "copy" ? "/api/songs/copy" : "/api/songs/move";
   var btn = this; btn.disabled = true; btn.textContent = "Aguarde...";
-  var r = await _opQueue.add(function() { return fetch(endpoint, {method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify(body)}); });
-  var j = await r.json();
-  btn.disabled = false; btn.textContent = "Confirmar";
-  if (!r.ok) { alert(j.error || "Erro"); return; }
-  document.getElementById("sfm-overlay").classList.add("hidden");
-  await reloadLibrary();
+  try {
+    var r = await _opQueue.add(function() { return fetch(endpoint, {method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify(body)}); });
+    var j = await r.json();
+    if (!r.ok) { alert(j.error || "Erro"); return; }
+    document.getElementById("sfm-overlay").classList.add("hidden");
+    var label = _sfmAction === "copy" ? "Atalho criado!" : "Música movida!";
+    showToast(label);
+    reloadLibrary(); // fire-and-forget — não bloqueia o próximo copy/move
+  } catch(e) {
+    alert("Erro: " + e.message);
+  } finally {
+    btn.disabled = false; btn.textContent = "Confirmar";
+  }
 });
 
 document.getElementById("sfm-overlay").addEventListener("click", function(e) {

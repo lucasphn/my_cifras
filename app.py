@@ -1281,9 +1281,7 @@ def api_song_copy():
     try:
         if file_id:
             import drive as drv
-            svc = _get_sa_service()
-            if not svc:
-                return jsonify({"error": "Serviço Drive indisponível"}), 503
+            svc = _get_write_service()
             target_id = drv.resolve_folder(svc, target_section, target_category or None, CIFRAS_FOLDER_ID)
             fname = drv.get_file_name(svc, file_id)
             drv.create_shortcut(svc, fname, file_id, target_id)
@@ -1327,9 +1325,7 @@ def api_song_move():
     try:
         if file_id:
             import drive as drv
-            svc = _get_sa_service()
-            if not svc:
-                return jsonify({"error": "Serviço Drive indisponível"}), 503
+            svc = _get_write_service()
             source_id = drv.resolve_folder(svc, source_section, source_category or None, CIFRAS_FOLDER_ID)
             target_id = drv.resolve_folder(svc, target_section, target_category or None, CIFRAS_FOLDER_ID)
             drv.move_file(svc, file_id, source_id, target_id)
