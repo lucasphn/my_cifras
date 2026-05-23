@@ -2152,6 +2152,43 @@ body.android #presenter-cifra .chord-line {
 .pres-dot.active { background: var(--pr-dot-act); width: 22px; }
 .pres-dot:not(.active):hover { background: var(--pr-muted); transform: scale(1.4); }
 
+/* ── Painel de navegação rápida ── */
+#presenter-jump-panel {
+  position: absolute; inset: 0; z-index: 20;
+  background: rgba(0,0,0,.52); backdrop-filter: blur(3px);
+  display: none; align-items: flex-start; justify-content: center;
+  padding: 16px; box-sizing: border-box;
+}
+#presenter-jump-panel.open { display: flex; }
+#presenter-jump-box {
+  background: var(--pr-nav-bg); border: 1px solid var(--pr-nav-brd);
+  border-radius: 14px; width: 100%; max-width: 400px;
+  max-height: calc(100% - 32px); display: flex; flex-direction: column;
+  overflow: hidden; box-shadow: 0 8px 32px rgba(0,0,0,.3);
+}
+#presenter-jump-title {
+  padding: 13px 16px; font-weight: 700; font-size: .88em;
+  color: var(--pr-text); border-bottom: 1px solid var(--pr-nav-brd);
+  display: flex; align-items: center; justify-content: space-between; flex-shrink: 0;
+}
+#btn-jump-close {
+  width: 26px; height: 26px; border-radius: 6px; border: none;
+  background: var(--pr-pill); color: var(--pr-muted); cursor: pointer;
+  display: flex; align-items: center; justify-content: center; font-size: 14px;
+}
+#btn-jump-close:hover { background: var(--pr-pill-brd); }
+#presenter-jump-list { overflow-y: auto; flex: 1; }
+.pj-item {
+  display: flex; align-items: center; gap: 12px;
+  padding: 11px 16px; cursor: pointer;
+  border-bottom: 1px solid var(--pr-nav-brd); transition: background .1s;
+}
+.pj-item:last-child { border-bottom: none; }
+.pj-item:hover, .pj-item.pj-active { background: var(--pr-pill); }
+.pj-num { font-size: .74em; font-weight: 700; color: var(--pr-muted); min-width: 26px; text-align: right; flex-shrink: 0; }
+.pj-name { font-size: .88em; font-weight: 600; color: var(--pr-text); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pj-item.pj-active .pj-num, .pj-item.pj-active .pj-name { color: var(--pr-chord); }
+
 /* ── Spinner ── */
 .loading-spinner {
   display: inline-block; width: 18px; height: 18px;
@@ -4507,16 +4544,16 @@ body.has-selection #th-rank-hash,
 <div id="presenter-overlay">
   <!-- Topbar -->
   <div id="presenter-topbar">
-    <button class="pr-icon-btn" id="btn-pres-close" title="Fechar (Esc)" aria-label="Fechar">
-      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-        <line x1="2" y1="2" x2="14" y2="14"/><line x1="14" y1="2" x2="2" y2="14"/>
-      </svg>
-    </button>
     <span id="presenter-rep-name"></span>
     <div class="pr-progress-wrap">
       <div class="pr-progress-track"><div class="pr-progress-bar" id="pr-progress-bar"></div></div>
       <span id="presenter-pos"></span>
     </div>
+    <button class="pr-icon-btn" id="btn-pres-jump" title="Ir para música..." aria-label="Navegar para música">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+        <line x1="2" y1="4" x2="14" y2="4"/><line x1="2" y1="8" x2="14" y2="8"/><line x1="2" y1="12" x2="10" y2="12"/>
+      </svg>
+    </button>
     <button class="pr-icon-btn" id="btn-pres-fullscreen" title="Tela cheia (F)" aria-label="Tela cheia">
       <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
         <path d="M2 6V2h4M10 2h4v4M14 10v4h-4M6 14H2v-4"/>
@@ -4531,6 +4568,21 @@ body.has-selection #th-rank-hash,
         <path d="M8 1v2M8 13v2M1 8h2M13 8h2M3.2 3.2l1.4 1.4M11.4 11.4l1.4 1.4M3.2 12.8l1.4-1.4M11.4 4.6l1.4-1.4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" fill="none"/>
       </svg>
     </button>
+    <button class="pr-icon-btn" id="btn-pres-close" title="Fechar (Esc)" aria-label="Fechar">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <line x1="2" y1="2" x2="14" y2="14"/><line x1="14" y1="2" x2="2" y2="14"/>
+      </svg>
+    </button>
+  </div>
+  <!-- Painel de navegação rápida -->
+  <div id="presenter-jump-panel">
+    <div id="presenter-jump-box">
+      <div id="presenter-jump-title">
+        <span>Ir para música</span>
+        <button id="btn-jump-close">✕</button>
+      </div>
+      <div id="presenter-jump-list"></div>
+    </div>
   </div>
   <!-- Head: song info + toolbar -->
   <div id="presenter-head">
@@ -8930,10 +8982,35 @@ function _renderPresenterSong() {
 
 function closePresenter() {
   _presenterStopAutoscroll();
+  _closePresenterJump();
   var overlay = document.getElementById("presenter-overlay");
   overlay.classList.remove("show", "pr-focus");
   document.getElementById("btn-pres-fullscreen").classList.remove("active");
   if (document.fullscreenElement) document.exitFullscreen();
+}
+
+function _openPresenterJump() {
+  var panel = document.getElementById("presenter-jump-panel");
+  var list  = document.getElementById("presenter-jump-list");
+  list.innerHTML = "";
+  presenterSongs.forEach(function(song, i) {
+    var item = document.createElement("div");
+    item.className = "pj-item" + (i === presenterIdx ? " pj-active" : "");
+    item.innerHTML = '<span class="pj-num">' + (i + 1) + '</span><span class="pj-name">' + escHtml(song.name) + '</span>';
+    item.addEventListener("click", function() {
+      presenterIdx = i;
+      _renderPresenterSong();
+      _closePresenterJump();
+    });
+    list.appendChild(item);
+  });
+  panel.classList.add("open");
+  var active = list.querySelector(".pj-active");
+  if (active) setTimeout(function() { active.scrollIntoView({ block: "center" }); }, 30);
+}
+
+function _closePresenterJump() {
+  document.getElementById("presenter-jump-panel").classList.remove("open");
 }
 
 // ─── Presenter: dark mode toggle ─────────────────────────────────────────────
@@ -9590,21 +9667,33 @@ function init() {
   document.addEventListener("keydown", function(e) {
     // Modo Apresentação tem prioridade no teclado
     if (document.getElementById("presenter-overlay").classList.contains("show")) {
-      if (e.key === "ArrowRight" || e.key === "ArrowDown" || e.key === "PageDown") {
-        if (presenterIdx < presenterSongs.length - 1) { presenterIdx++; _renderPresenterSong(); }
-      } else if (e.key === "ArrowLeft" || e.key === "ArrowUp" || e.key === "PageUp") {
-        if (presenterIdx > 0) { presenterIdx--; _renderPresenterSong(); }
-      } else if (e.key === "Escape") {
-        closePresenter();
-      } else if (e.key === "f" || e.key === "F") {
-        presenterToggleFullscreen();
-      } else if (e.key === "+" || e.key === "=") {
-        presenterZoomChange(0.15);
-      } else if (e.key === "-") {
-        presenterZoomChange(-0.15);
+      var _jpOpen = document.getElementById("presenter-jump-panel").classList.contains("open");
+      if (e.key === "Escape") {
+        if (_jpOpen) { _closePresenterJump(); } else { closePresenter(); }
+      } else if (!_jpOpen) {
+        if (e.key === "ArrowRight" || e.key === "ArrowDown" || e.key === "PageDown") {
+          if (presenterIdx < presenterSongs.length - 1) { presenterIdx++; _renderPresenterSong(); }
+        } else if (e.key === "ArrowLeft" || e.key === "ArrowUp" || e.key === "PageUp") {
+          if (presenterIdx > 0) { presenterIdx--; _renderPresenterSong(); }
+        } else if (e.key === "f" || e.key === "F") {
+          presenterToggleFullscreen();
+        } else if (e.key === "+" || e.key === "=") {
+          presenterZoomChange(0.15);
+        } else if (e.key === "-") {
+          presenterZoomChange(-0.15);
+        } else if (e.key === "g" || e.key === "G") {
+          _openPresenterJump();
+        }
       }
       e.preventDefault();
       return;
+    }
+    // M: toggle YouTube pip (fora do presenter)
+    if ((e.key === "m" || e.key === "M") && !e.ctrlKey && !e.altKey && !e.metaKey &&
+        !(e.target instanceof HTMLInputElement) && !(e.target instanceof HTMLTextAreaElement)) {
+      var _wrap = document.getElementById("yt-wrap");
+      if (_wrap && _wrap.dataset.mode === "modal") { _ytMinimize(); return; }
+      if (_wrap && _wrap.dataset.mode === "pip")   { _ytExpandFromPip(); return; }
     }
     if (e.key === "Escape") {
       if (_focusMode) {
@@ -9718,6 +9807,14 @@ function init() {
     if (presenterIdx < presenterSongs.length - 1) { presenterIdx++; _renderPresenterSong(); }
   });
   document.getElementById("btn-pres-close").addEventListener("click", closePresenter);
+  document.getElementById("btn-pres-jump").addEventListener("click", function() {
+    var panel = document.getElementById("presenter-jump-panel");
+    if (panel.classList.contains("open")) _closePresenterJump(); else _openPresenterJump();
+  });
+  document.getElementById("btn-jump-close").addEventListener("click", _closePresenterJump);
+  document.getElementById("presenter-jump-panel").addEventListener("click", function(e) {
+    if (e.target === this) _closePresenterJump();
+  });
   document.getElementById("btn-pres-fullscreen").addEventListener("click", presenterToggleFocus);
   document.getElementById("btn-pres-unfocus").addEventListener("click", presenterToggleFocus);
   document.addEventListener("fullscreenchange", function() {
