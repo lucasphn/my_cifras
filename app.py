@@ -1843,6 +1843,13 @@ def api_upload():
 _MESES_PT = ["janeiro","fevereiro","março","abril","maio","junho",
              "julho","agosto","setembro","outubro","novembro","dezembro"]
 
+def _song_title_size_class(nome: str) -> str:
+    n = len(nome.strip())
+    if n <= 22: return "size-lg"
+    if n <= 32: return "size-md"
+    return "size-sm"
+
+
 def _title_size_class(nome: str) -> str:
     n = len(nome.strip())
     if n <= 10: return "size-xl"
@@ -1952,10 +1959,12 @@ def _build_export_html(songs, title, auto_print=False, event_date=None):
         logo_svg = ""
 
     def _song_card(idx, s):
-        num     = idx + 1
-        name    = _esc(s.get("name", ""))
-        note    = _esc((s.get("note") or "").strip())
-        capo    = int(s.get("capo") or 0)
+        num      = idx + 1
+        raw_name = (s.get("name") or "").strip()
+        name     = _esc(raw_name)
+        note     = _esc((s.get("note") or "").strip())
+        capo     = int(s.get("capo") or 0)
+        sz       = _song_title_size_class(raw_name)
         meta_parts = []
         if note:
             meta_parts.append(f'<span class="badge badge-note">{note}</span>')
@@ -1966,15 +1975,17 @@ def _build_export_html(songs, title, auto_print=False, event_date=None):
         return (
             f'<div class="song">'
             f'  <div class="song-header">'
-            f'    <h2><span class="song-num">{num}.</span> {name}</h2>'
+            f'    <h2 class="song-title {sz}">'
+            f'      <span class="song-rank">{num}.</span>'
+            f'      <span class="song-name">{name}</span>'
+            f'    </h2>'
             f'  </div>'
             f'  {meta_row}'
-            f'  <pre>{cifra_html}</pre>'
+            f'  <pre class="cifra-body">{cifra_html}</pre>'
             f'</div>\n'
         )
 
     n = len(songs)
-    song_word = "música" if n == 1 else "músicas"
 
     html = f"""<!DOCTYPE html>
 <html lang="pt-BR">
@@ -2025,32 +2036,45 @@ def _build_export_html(songs, title, auto_print=False, event_date=None):
   /* ── Song card ── */
   .song {{
     background: #fff;
-    border: 1px solid #e4e0f4;
-    border-radius: 12px;
-    padding: 20px 24px 24px;
+    border: 1px solid rgba(26,21,40,.08);
+    border-radius: 14px;
+    padding: 26px 32px;
     margin-bottom: 24px;
-    page-break-inside: avoid;
-    break-inside: avoid;
+    page-break-inside: auto;
   }}
   .song-header {{
-    margin-bottom: 8px;
-    padding-bottom: 10px;
-    border-bottom: 1px solid #ede9fa;
+    margin-bottom: 18px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid rgba(26,21,40,.08);
   }}
-  .song h2 {{
-    font-size: 1.05em;
-    font-weight: 700;
-    color: #5b4b8a;
-    letter-spacing: -.015em;
+  .song-title {{
     display: flex;
     align-items: baseline;
-    gap: 6px;
+    gap: 8px;
+    font-family: 'Fraunces', 'Cormorant Garamond', serif;
+    font-weight: 700;
+    line-height: 1.15;
+    letter-spacing: -0.3px;
+    color: var(--ink);
+    margin: 0;
+    min-width: 0;
+    white-space: nowrap;
+    font-variation-settings: "opsz" 144;
   }}
-  .song-num {{
-    color: #d4af37;
-    font-size: .9em;
-    font-weight: 800;
+  .song-title.size-lg {{ font-size: 22px; }}
+  .song-title.size-md {{ font-size: 19px; }}
+  .song-title.size-sm {{ font-size: 16px; }}
+  .song-rank {{
+    color: var(--gold-dark);
+    font-weight: 700;
     flex-shrink: 0;
+  }}
+  .song-name {{
+    flex: 1;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }}
   .song-meta {{
     display: flex;
@@ -2071,22 +2095,13 @@ def _build_export_html(songs, title, auto_print=False, event_date=None):
     border-radius: 99px;
     white-space: nowrap;
   }}
-  .badge-cat {{
-    background: rgba(91,75,138,.1);
-    color: #5b4b8a;
-    border: 1px solid rgba(91,75,138,.2);
-  }}
-  .badge-key {{
-    background: rgba(212,175,55,.12);
-    color: #9a7a10;
-    border: 1px solid rgba(212,175,55,.3);
-    font-weight: 700;
-  }}
   .badge-capo {{
     background: #d4af37;
     color: #fff;
     border: 1px solid #b8942a;
     font-weight: 700;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
   }}
   .badge-note {{
     background: rgba(91,75,138,.08);
@@ -2096,16 +2111,18 @@ def _build_export_html(songs, title, auto_print=False, event_date=None):
   }}
 
   /* ── Cifra ── */
-  pre {{
+  .cifra-body {{
     font-family: 'Roboto Mono', 'Consolas', 'Courier New', monospace;
-    font-size: .8em;
-    line-height: 1.35;
+    font-size: 11.5px;
+    line-height: 1.55;
     white-space: pre-wrap;
-    word-break: break-word;
-    color: #2e2645;
+    word-break: keep-all;
+    overflow-wrap: anywhere;
+    color: var(--ink);
     font-weight: 400;
+    margin: 0;
   }}
-  .chord-line {{ color: #5b4b8a; font-weight: 800; }}
+  .chord-line {{ color: var(--brand); font-weight: 800; }}
 
   /* ── Footer ── */
   .doc-footer {{
@@ -2260,48 +2277,23 @@ def _build_export_html(songs, title, auto_print=False, event_date=None):
   }}
   @page {{
     size: A4 portrait;
-    margin: 1.1cm 1.4cm 1.1cm 1.4cm;
+    margin: 18mm 22mm 18mm 22mm;
   }}
   @media print {{
-    body {{
-      background: #fff;
-      max-width: 100%;
-      padding: 0;
-    }}
-    .doc-banner {{
-      padding: 12px 18px 10px;
+    body {{ background: #fff; max-width: 100%; padding: 0; }}
+    .doc-body {{ padding: 10px 0 0; }}
+    .doc-footer {{ margin: 16px 0 0; }}
+    .btn-back {{ display: none !important; }}
+    .badge, .pill {{
       -webkit-print-color-adjust: exact;
       print-color-adjust: exact;
     }}
-    .doc-banner .logo svg {{ height: 36px; }}
-    .doc-title {{ font-size: 1.25em; }}
-    .doc-body {{ padding: 10px 0 0; }}
-    .song {{
-      border: 1px solid #ddd;
-      margin-bottom: 10px;
-      padding: 10px 14px 12px;
-      border-radius: 8px;
-    }}
-    .song-meta {{ margin-bottom: 8px; }}
-    .doc-footer {{ margin: 16px 0 0; }}
-    .btn-back {{ display: none !important; }}
-    .badge {{ -webkit-print-color-adjust: exact; print-color-adjust: exact; }}
   }}
 </style>
 </head>
 <body>
 
 {_build_cover_html(title, n, ev_date, today)}
-
-<header class="doc-banner">
-  <div>
-    <div class="logo">{logo_svg}</div>
-  </div>
-  <div class="doc-banner-right">
-    <div class="doc-title">{_esc(title)}</div>
-    <div class="doc-subtitle">{n} {song_word} · {_esc(today_str)}</div>
-  </div>
-</header>
 
 <div class="doc-body">
 {"".join(_song_card(i, s) for i, s in enumerate(songs))}
