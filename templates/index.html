@@ -3530,7 +3530,50 @@ html.pwa-standalone #modal-footer {
   position: relative;
 }
 .song-table-row:hover { background: var(--surface2); border-color: rgba(91,75,138,.2); }
-.song-table-rank { font-size: 12px; font-weight: 700; color: var(--text-muted); text-align: center; }
+.song-table-rank { font-size: 12px; font-weight: 700; color: var(--text-muted); text-align: center; position: relative; display: flex; align-items: center; justify-content: center; }
+.song-rank-num { transition: opacity .12s; pointer-events: none; }
+.song-cb {
+  position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);
+  width: 15px; height: 15px; cursor: pointer; margin: 0;
+  accent-color: var(--primary, #5b4b8a);
+  opacity: 0; pointer-events: none;
+  transition: opacity .12s;
+}
+.song-table-row:hover .song-cb,
+body.has-selection .song-cb { opacity: 1; pointer-events: auto; }
+.song-table-row:hover .song-rank-num,
+body.has-selection .song-rank-num { opacity: 0; }
+.row-selected { background: rgba(91,75,138,.1) !important; border-color: rgba(91,75,138,.45) !important; }
+/* Header select-all */
+.song-table-head > span:first-child { position: relative; display: flex; align-items: center; justify-content: center; }
+#th-rank-hash { transition: opacity .12s; }
+#cb-select-all {
+  position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);
+  width: 15px; height: 15px; cursor: pointer; margin: 0;
+  accent-color: var(--primary, #5b4b8a);
+  opacity: 0; pointer-events: none;
+  transition: opacity .12s;
+}
+body.has-selection #cb-select-all,
+.song-table-head:hover #cb-select-all { opacity: 1; pointer-events: auto; }
+body.has-selection #th-rank-hash,
+.song-table-head:hover #th-rank-hash { opacity: 0; }
+/* Bulk action bar */
+#bulk-bar {
+  position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 14px; padding: 10px 16px;
+  display: flex; align-items: center; gap: 8px;
+  box-shadow: 0 4px 28px rgba(0,0,0,.28);
+  z-index: 900; white-space: nowrap;
+}
+#bulk-bar.hidden { display: none !important; }
+#bulk-bar-count { font-size: 12px; font-weight: 700; color: var(--text-muted); padding-right: 4px; }
+.bulk-btn { border: none; border-radius: 8px; padding: 7px 12px; font-size: 12px; font-weight: 700; cursor: pointer; line-height: 1; }
+.bulk-copy { background: var(--primary-light); color: var(--primary); }
+.bulk-move { background: var(--surface2); color: var(--text); border: 1px solid var(--border) !important; }
+.bulk-del { background: rgba(200,50,50,.12); color: #e05252; }
+.bulk-cancel { background: transparent; color: var(--text-muted); border: 1px solid var(--border) !important; }
 .song-table-name { font-size: 13px; font-weight: 700; color: var(--text); letter-spacing: -0.1px; display: flex; align-items: center; gap: 8px; min-width: 0; }
 .song-name-text { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; min-width: 0; }
 .song-offline-badge {
@@ -3839,6 +3882,39 @@ html.pwa-standalone #modal-footer {
   .yt-modal-meta { flex-wrap: wrap; bottom: 10px; }
   .yt-modal-channel { display: none; }
 }
+/* Botão minimizar no modal */
+#yt-modal-minimize {
+  position: absolute; top: 20px; right: 68px;
+  width: 40px; height: 40px; border-radius: 99px;
+  background: rgba(255,255,255,.12); border: none; color: #fff;
+  cursor: pointer; display: flex; align-items: center; justify-content: center; z-index: 1;
+  transition: background .15s;
+}
+#yt-modal-minimize:hover { background: rgba(255,255,255,.26); }
+/* Mini player flutuante */
+#yt-pip {
+  position: fixed; bottom: 24px; right: 24px;
+  width: 300px; border-radius: 12px; overflow: hidden;
+  background: #000; box-shadow: 0 8px 36px rgba(0,0,0,.55);
+  z-index: 9998; display: none; flex-direction: column;
+  user-select: none;
+}
+#yt-pip.pip-visible { display: flex; }
+#yt-pip-topbar {
+  background: rgba(12,12,18,.96); padding: 7px 10px;
+  display: flex; align-items: center; gap: 6px;
+  cursor: grab;
+}
+#yt-pip-topbar:active { cursor: grabbing; }
+#yt-pip-title { font-size: 11px; font-weight: 700; color: #fff; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#yt-pip-expand, #yt-pip-close {
+  width: 24px; height: 24px; border-radius: 6px; border: none;
+  background: rgba(255,255,255,.1); color: #fff; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  font-size: 13px; transition: background .12s;
+}
+#yt-pip-expand:hover, #yt-pip-close:hover { background: rgba(255,255,255,.25); }
+#yt-pip-stage { width: 100%; aspect-ratio: 16/9; background: #000; }
 </style>
 </head>
 <body data-owner="{% if is_owner %}1{% else %}0{% endif %}" data-user-email="{{ user.email if user else '' }}" data-user-name="{{ user.name if user else '' }}">
@@ -4071,7 +4147,7 @@ html.pwa-standalone #modal-footer {
         </div>
         <!-- Column headers for table (desktop only) -->
         <div class="song-table-head">
-          <span style="text-align:center">#</span>
+          <span><span id="th-rank-hash">#</span><input type="checkbox" id="cb-select-all" title="Selecionar tudo"></span>
           <span>Título</span>
           <span>Artista</span>
           <span class="song-table-cat">Categoria</span>
@@ -5388,7 +5464,7 @@ function renderHomeTable(songs) {
   var sorted = songs.slice().sort(function(a, b) { return (b.views||0) - (a.views||0); });
   var withViews = sorted.filter(function(s) { return (s.views||0) > 0; });
   var topSongs = withViews.length ? withViews.slice(0, 6)
-                                  : songs.slice().sort(function(a,b){ return a.name.localeCompare(b.name,"pt"); }).slice(0, 6);
+                                  : songs.slice().sort(function(a,b){ return (a.name||"").localeCompare(b.name||"","pt"); }).slice(0, 6);
   var hasViews = withViews.length > 0;
 
   var topSection = document.getElementById("home-top-section");
@@ -5933,8 +6009,116 @@ function confirmDeleteSong(card, song) {
 // Folder picker (copy/move)
 var _sfmAction = null;
 var _sfmSong = null;
+var _sfmBulk = false;
+
+// ── Multi-select ─────────────────────────────────────────────────────────────
+
+var _selectedSongs = new Map();
+
+function _songKey(song) {
+  return song.fileId || song.path || song.name;
+}
+
+function _updateBulkBar() {
+  var count = _selectedSongs.size;
+  document.body.classList.toggle("has-selection", count > 0);
+  var bar = document.getElementById("bulk-bar");
+  if (!bar) return;
+  if (count > 0) {
+    bar.classList.remove("hidden");
+    document.getElementById("bulk-bar-count").textContent =
+      count + " selecionada" + (count === 1 ? "" : "s");
+  } else {
+    bar.classList.add("hidden");
+  }
+  var cbAll = document.getElementById("cb-select-all");
+  if (cbAll) {
+    var rows = document.querySelectorAll("#song-grid .song-table-row");
+    var total = 0;
+    rows.forEach(function(r) { if (r._song) total++; });
+    cbAll.checked = count > 0 && count >= total;
+    cbAll.indeterminate = count > 0 && count < total;
+  }
+}
+
+function _clearSelection() {
+  _selectedSongs.clear();
+  document.querySelectorAll(".row-selected").forEach(function(r) { r.classList.remove("row-selected"); });
+  document.querySelectorAll(".song-cb").forEach(function(cb) { cb.checked = false; });
+  _updateBulkBar();
+}
+
+function _initBulkBar() {
+  var bar = document.createElement("div");
+  bar.id = "bulk-bar";
+  bar.className = "hidden";
+  bar.innerHTML =
+    '<span id="bulk-bar-count">0 selecionadas</span>' +
+    '<button class="bulk-btn bulk-copy">📋 Copiar para...</button>' +
+    '<button class="bulk-btn bulk-move">📂 Mover para...</button>' +
+    '<button class="bulk-btn bulk-del">🗑️ Excluir</button>' +
+    '<button class="bulk-btn bulk-cancel">✕ Cancelar</button>';
+  document.body.appendChild(bar);
+  bar.querySelector(".bulk-copy").addEventListener("click", function() { openFolderPickerBulk("copy"); });
+  bar.querySelector(".bulk-move").addEventListener("click", function() { openFolderPickerBulk("move"); });
+  bar.querySelector(".bulk-del").addEventListener("click", bulkDelete);
+  bar.querySelector(".bulk-cancel").addEventListener("click", _clearSelection);
+}
+
+async function bulkDelete() {
+  var count = _selectedSongs.size;
+  if (!count) return;
+  var names = Array.from(_selectedSongs.values()).map(function(s) { return "• " + s.name; });
+  var preview = names.slice(0, 5).join("\n") + (names.length > 5 ? "\n... e mais " + (names.length - 5) : "");
+  if (!confirm("Excluir " + count + " música" + (count === 1 ? "" : "s") + "?\n\n" + preview)) return;
+  var songs = Array.from(_selectedSongs.values());
+  var errors = [];
+  for (var i = 0; i < songs.length; i++) {
+    var s = songs[i];
+    var delBody = s.fileId ? {fileId: s.fileId} : {path: s.path};
+    try {
+      var r = await _opQueue.add((function(b) { return function() {
+        return fetch("/api/songs/delete", {method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify(b)});
+      }; })(delBody));
+      var j = await r.json();
+      if (!r.ok) errors.push(s.name + ": " + (j.error || "Erro"));
+    } catch(e) {
+      errors.push(s.name + ": " + e.message);
+    }
+  }
+  _clearSelection();
+  if (errors.length) {
+    alert("Erros ao excluir:\n" + errors.join("\n"));
+  } else {
+    showToast("Excluída" + (songs.length === 1 ? "" : "s") + "!");
+  }
+  reloadLibrary();
+}
+
+function openFolderPickerBulk(action) {
+  _sfmBulk = true;
+  _sfmAction = action;
+  _sfmSong = null;
+  var count = _selectedSongs.size;
+  document.getElementById("sfm-title").textContent =
+    action === "copy" ? "📋 Copiar " + count + " música" + (count === 1 ? "" : "s") + " para..."
+                      : "📂 Mover " + count + " música" + (count === 1 ? "" : "s") + " para...";
+  var secSel = document.getElementById("sfm-section");
+  secSel.innerHTML = "";
+  Object.keys(library).forEach(function(sec) {
+    var opt = document.createElement("option");
+    opt.value = sec; opt.textContent = cleanLabel(sec);
+    secSel.appendChild(opt);
+  });
+  if (currentCategory && library[currentCategory.section]) secSel.value = currentCategory.section;
+  sfmPopulateCats();
+  document.getElementById("sfm-overlay").classList.remove("hidden");
+}
+
+// ── /Multi-select ─────────────────────────────────────────────────────────────
 
 function openFolderPicker(action, song) {
+  _sfmBulk = false;
   _sfmAction = action;
   _sfmSong = song;
   document.getElementById("sfm-title").textContent = action === "copy" ? "📋 Copiar para..." : "📂 Mover para...";
@@ -5983,20 +6167,47 @@ document.getElementById("sfm-ok").addEventListener("click", async function() {
   var sec = document.getElementById("sfm-section").value;
   var cat = document.getElementById("sfm-category").value;
   var targetCat = cat === "_raiz" ? "" : cat;
-  var song = _sfmSong;
-  var body = {targetSection: sec, targetCategory: targetCat};
-  if (song.fileId) { body.fileId = song.fileId; if (song.shortcutFileId) body.shortcutFileId = song.shortcutFileId; } else body.path = song.path;
-  if (_sfmAction === "move") { body.sourceSection = song.section; body.sourceCategory = song.category === "_raiz" ? "" : (song.category || ""); }
   var endpoint = _sfmAction === "copy" ? "/api/songs/copy" : "/api/songs/move";
   var btn = this; btn.disabled = true; btn.textContent = "Aguarde...";
   try {
-    var r = await _opQueue.add(function() { return fetch(endpoint, {method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify(body)}); });
-    var j = await r.json();
-    if (!r.ok) { alert(j.error || "Erro"); return; }
-    document.getElementById("sfm-overlay").classList.add("hidden");
-    var label = _sfmAction === "copy" ? "Atalho criado!" : "Música movida!";
-    showToast(label);
-    reloadLibrary(); // fire-and-forget — não bloqueia o próximo copy/move
+    if (_sfmBulk) {
+      var songs = Array.from(_selectedSongs.values());
+      var errors = [];
+      for (var i = 0; i < songs.length; i++) {
+        var s = songs[i];
+        var bulkBody = {targetSection: sec, targetCategory: targetCat};
+        if (s.fileId) { bulkBody.fileId = s.fileId; if (s.shortcutFileId) bulkBody.shortcutFileId = s.shortcutFileId; } else bulkBody.path = s.path;
+        if (_sfmAction === "move") { bulkBody.sourceSection = s.section; bulkBody.sourceCategory = s.category === "_raiz" ? "" : (s.category || ""); }
+        try {
+          var r = await _opQueue.add((function(b, ep) { return function() {
+            return fetch(ep, {method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify(b)});
+          }; })(bulkBody, endpoint));
+          var j = await r.json();
+          if (!r.ok) errors.push(s.name + ": " + (j.error || "Erro"));
+        } catch(e) { errors.push(s.name + ": " + e.message); }
+      }
+      document.getElementById("sfm-overlay").classList.add("hidden");
+      _clearSelection();
+      if (errors.length) {
+        alert("Erros:\n" + errors.join("\n"));
+      } else {
+        var label = _sfmAction === "copy" ? "Atalhos criados!" : "Músicas movidas!";
+        showToast(label);
+      }
+      reloadLibrary();
+    } else {
+      var song = _sfmSong;
+      var body = {targetSection: sec, targetCategory: targetCat};
+      if (song.fileId) { body.fileId = song.fileId; if (song.shortcutFileId) body.shortcutFileId = song.shortcutFileId; } else body.path = song.path;
+      if (_sfmAction === "move") { body.sourceSection = song.section; body.sourceCategory = song.category === "_raiz" ? "" : (song.category || ""); }
+      var r = await _opQueue.add(function() { return fetch(endpoint, {method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify(body)}); });
+      var j = await r.json();
+      if (!r.ok) { alert(j.error || "Erro"); return; }
+      document.getElementById("sfm-overlay").classList.add("hidden");
+      var label = _sfmAction === "copy" ? "Atalho criado!" : "Música movida!";
+      showToast(label);
+      reloadLibrary();
+    }
   } catch(e) {
     alert("Erro: " + e.message);
   } finally {
@@ -6007,6 +6218,29 @@ document.getElementById("sfm-ok").addEventListener("click", async function() {
 document.getElementById("sfm-overlay").addEventListener("click", function(e) {
   if (e.target === this) this.classList.add("hidden");
 });
+
+if (_isOwner) {
+  _initBulkBar();
+  var _cbAll = document.getElementById("cb-select-all");
+  if (_cbAll) _cbAll.addEventListener("change", function() {
+    var rows = document.querySelectorAll("#song-grid .song-table-row");
+    rows.forEach(function(row) {
+      if (!row._song) return;
+      var cb = row.querySelector(".song-cb");
+      if (!cb) return;
+      if (_cbAll.checked) {
+        _selectedSongs.set(_songKey(row._song), row._song);
+        row.classList.add("row-selected");
+        cb.checked = true;
+      } else {
+        _selectedSongs.delete(_songKey(row._song));
+        row.classList.remove("row-selected");
+        cb.checked = false;
+      }
+    });
+    _updateBulkBar();
+  });
+}
 
 // ── /Song operations ─────────────────────────────────────────────────────────
 
@@ -6093,9 +6327,14 @@ function _makeTableRow(song, rank) {
   row.dataset.songPath = song.path || "";
   row.dataset.songFileId = song.fileId || "";
   if (song.fileId && _offlineFileIds.has(song.fileId)) row.setAttribute('data-offline', '1');
+  row._song = song;
 
   row.innerHTML =
-    '<span class="song-table-rank">' + String(rank).padStart(2, "0") + '</span>' +
+    '<span class="song-table-rank">' +
+      (_isOwner
+        ? '<span class="song-rank-num">' + String(rank).padStart(2, "0") + '</span><input type="checkbox" class="song-cb">'
+        : String(rank).padStart(2, "0")) +
+    '</span>' +
     '<div class="song-table-name">' +
       '<span class="song-offline-badge" aria-label="Disponível offline" title="Disponível offline" role="img">' +
         '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg>' +
@@ -6175,8 +6414,25 @@ function _makeTableRow(song, rank) {
     if (delEl) delEl.addEventListener("click", function(ev) { ev.stopPropagation(); closeOpenSongMenu(); confirmDeleteSong(row, song); });
   });
 
+  if (_isOwner) {
+    var cb = row.querySelector(".song-cb");
+    if (cb) cb.addEventListener("change", function(e) {
+      e.stopPropagation();
+      var key = _songKey(song);
+      if (this.checked) {
+        _selectedSongs.set(key, song);
+        row.classList.add("row-selected");
+      } else {
+        _selectedSongs.delete(key);
+        row.classList.remove("row-selected");
+      }
+      _updateBulkBar();
+    });
+  }
+
   row.addEventListener("click", function(e) {
     if (e.target.closest(".song-table-actions")) return;
+    if (e.target.classList.contains("song-cb")) return;
     openModal(song);
   });
   return row;
@@ -6185,6 +6441,7 @@ function _makeTableRow(song, rank) {
 var _catFilter = "all"; // "all" | "artist"
 
 function _renderSongGridByArtist(songs) {
+  _clearSelection();
   var grid = document.getElementById("song-grid");
   var empty = document.getElementById("empty-state");
   var toggleWrap = document.getElementById("view-toggle-wrap");
@@ -6229,6 +6486,7 @@ function _renderSongGridByArtist(songs) {
 }
 
 function renderSongGrid(songs) {
+  _clearSelection();
   // Modo "Artista" só se aplica no desktop e fora de busca
   if (!searchActive && _catFilter === "artist" && window.innerWidth > 1024) {
     _renderSongGridByArtist(songs);
@@ -9520,6 +9778,8 @@ function init() {
     _ytModal.addEventListener('click', function(e) { if (e.target === _ytModal) _ytCloseModal(); });
     var _ytClose = document.getElementById('yt-modal-close');
     if (_ytClose) _ytClose.addEventListener('click', _ytCloseModal);
+    var _ytMinBtn = document.getElementById('yt-modal-minimize');
+    if (_ytMinBtn) _ytMinBtn.addEventListener('click', _ytMinimize);
     var _ytStage = document.getElementById('yt-modal-stage');
     if (_ytStage) _ytStage.addEventListener('click', function(e) { e.stopPropagation(); });
     document.addEventListener('keydown', function(e) { if (e.key === 'Escape') _ytCloseModal(); });
@@ -9532,6 +9792,59 @@ function init() {
       if (sb) { sb.value = title.textContent; sb.dispatchEvent(new Event('input')); sb.focus(); }
     });
   }
+
+  // PiP controls
+  var _pipExpand = document.getElementById('yt-pip-expand');
+  if (_pipExpand) _pipExpand.addEventListener('click', _ytExpandFromPip);
+  var _pipClose = document.getElementById('yt-pip-close');
+  if (_pipClose) _pipClose.addEventListener('click', _ytClosePip);
+
+  // Drag do mini player
+  (function() {
+    var pip = document.getElementById('yt-pip');
+    var handle = document.getElementById('yt-pip-topbar');
+    if (!pip || !handle) return;
+    var dx = 0, dy = 0, startX = 0, startY = 0, dragging = false;
+    handle.addEventListener('mousedown', function(e) {
+      if (e.target.closest('button')) return;
+      dragging = true;
+      startX = e.clientX; startY = e.clientY;
+      var rect = pip.getBoundingClientRect();
+      dx = rect.left; dy = rect.top;
+      e.preventDefault();
+    });
+    document.addEventListener('mousemove', function(e) {
+      if (!dragging) return;
+      var nx = dx + (e.clientX - startX);
+      var ny = dy + (e.clientY - startY);
+      // Mantém dentro da janela
+      nx = Math.max(0, Math.min(nx, window.innerWidth  - pip.offsetWidth));
+      ny = Math.max(0, Math.min(ny, window.innerHeight - pip.offsetHeight));
+      pip.style.left   = nx + 'px';
+      pip.style.top    = ny + 'px';
+      pip.style.right  = 'auto';
+      pip.style.bottom = 'auto';
+    });
+    document.addEventListener('mouseup', function() { dragging = false; });
+    // Touch
+    handle.addEventListener('touchstart', function(e) {
+      if (e.target.closest('button')) return;
+      var t = e.touches[0];
+      dragging = true; startX = t.clientX; startY = t.clientY;
+      var rect = pip.getBoundingClientRect(); dx = rect.left; dy = rect.top;
+    }, {passive: true});
+    document.addEventListener('touchmove', function(e) {
+      if (!dragging) return;
+      var t = e.touches[0];
+      var nx = dx + (t.clientX - startX);
+      var ny = dy + (t.clientY - startY);
+      nx = Math.max(0, Math.min(nx, window.innerWidth  - pip.offsetWidth));
+      ny = Math.max(0, Math.min(ny, window.innerHeight - pip.offsetHeight));
+      pip.style.left = nx + 'px'; pip.style.top = ny + 'px';
+      pip.style.right = 'auto'; pip.style.bottom = 'auto';
+    }, {passive: true});
+    document.addEventListener('touchend', function() { dragging = false; });
+  })();
 
   // ─── Groups ────────────────────────────────────────────────────────────────
   var _btnGroupNew = document.getElementById("btn-group-new");
@@ -10465,10 +10778,105 @@ async function loadYoutubeTrending() {
   }
 }
 
+// ── YouTube PiP helpers ───────────────────────────────────────────────────────
+
+var _ytPipTitle = '';
+
+function _ytGetIframe() {
+  // O iframe pode estar no modal ou no pip — retorna onde estiver
+  return document.getElementById('yt-modal-iframe') ||
+         document.querySelector('#yt-pip-stage iframe');
+}
+
+function _ytEnsureIframeInModal() {
+  var stage = document.getElementById('yt-modal-stage');
+  var iframe = document.getElementById('yt-modal-iframe');
+  if (!iframe) {
+    // iframe está no pip — move de volta
+    var pipStage = document.getElementById('yt-pip-stage');
+    iframe = pipStage && pipStage.firstElementChild;
+    if (iframe && stage) {
+      iframe.id = 'yt-modal-iframe';
+      iframe.className = 'yt-modal-iframe';
+      stage.appendChild(iframe);
+    }
+  }
+  return iframe;
+}
+
+function _ytMinimize() {
+  var modal  = document.getElementById('yt-modal');
+  var iframe = document.getElementById('yt-modal-iframe');
+  var pip    = document.getElementById('yt-pip');
+  var pipStage = document.getElementById('yt-pip-stage');
+  var pipTitle = document.getElementById('yt-pip-title');
+  if (!modal || !iframe || !pip || !pipStage) return;
+  // Move o iframe (sem recarregar) para o pip
+  iframe.className = '';
+  iframe.style.cssText = 'width:100%;height:100%;border:0;display:block;';
+  pipStage.appendChild(iframe);
+  if (pipTitle) pipTitle.textContent = _ytPipTitle;
+  modal.style.display = 'none';
+  document.body.style.overflow = '';
+  pip.classList.add('pip-visible');
+}
+
+function _ytExpandFromPip() {
+  var modal    = document.getElementById('yt-modal');
+  var stage    = document.getElementById('yt-modal-stage');
+  var pip      = document.getElementById('yt-pip');
+  var pipStage = document.getElementById('yt-pip-stage');
+  if (!modal || !stage || !pip || !pipStage) return;
+  var iframe = pipStage.firstElementChild;
+  if (iframe) {
+    iframe.id = 'yt-modal-iframe';
+    iframe.className = 'yt-modal-iframe';
+    iframe.style.cssText = '';
+    stage.appendChild(iframe);
+  }
+  pip.classList.remove('pip-visible');
+  modal.style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+}
+
+function _ytClosePip() {
+  var pip      = document.getElementById('yt-pip');
+  var pipStage = document.getElementById('yt-pip-stage');
+  var stage    = document.getElementById('yt-modal-stage');
+  if (!pip) return;
+  var iframe = pipStage && pipStage.firstElementChild;
+  if (iframe) {
+    iframe.src = '';
+    iframe.id = 'yt-modal-iframe';
+    iframe.className = 'yt-modal-iframe';
+    iframe.style.cssText = '';
+    if (stage) stage.appendChild(iframe);
+  }
+  pip.classList.remove('pip-visible');
+}
+
+// ── /YouTube PiP helpers ──────────────────────────────────────────────────────
+
 function _ytOpenModal(v) {
   var modal = document.getElementById('yt-modal');
+  if (!modal) return;
+  // Se o pip estiver ativo, move iframe de volta ao modal
+  var pip = document.getElementById('yt-pip');
+  if (pip && pip.classList.contains('pip-visible')) {
+    pip.classList.remove('pip-visible');
+    var pipStage = document.getElementById('yt-pip-stage');
+    var stage    = document.getElementById('yt-modal-stage');
+    var fi = pipStage && pipStage.firstElementChild;
+    if (fi && stage) {
+      fi.id = 'yt-modal-iframe';
+      fi.className = 'yt-modal-iframe';
+      fi.style.cssText = '';
+      stage.appendChild(fi);
+    }
+  }
   var iframe = document.getElementById('yt-modal-iframe');
-  if (!modal || !iframe) return;
+  if (!iframe) return;
+  _ytPipTitle = v.title || '';
   iframe.src = 'https://www.youtube.com/embed/' + v.videoId + '?autoplay=1&rel=0';
   iframe.title = v.title || '';
   var t = document.getElementById('yt-modal-title');
@@ -10480,7 +10888,7 @@ function _ytOpenModal(v) {
 }
 
 function _ytCloseModal() {
-  var modal = document.getElementById('yt-modal');
+  var modal  = document.getElementById('yt-modal');
   var iframe = document.getElementById('yt-modal-iframe');
   if (!modal) return;
   modal.style.display = 'none';
@@ -10493,6 +10901,9 @@ document.addEventListener("DOMContentLoaded", init);
 
 <!-- YouTube video modal -->
 <div class="yt-modal" id="yt-modal" role="dialog" aria-modal="true" aria-label="Reproduzindo vídeo" style="display:none">
+  <button id="yt-modal-minimize" title="Minimizar — continuar ouvindo">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><rect x="2" y="13" width="8" height="6" rx="1.5"/><path d="M2 7h20M2 11h14"/></svg>
+  </button>
   <button class="yt-modal-close" id="yt-modal-close" aria-label="Fechar">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
   </button>
@@ -10506,6 +10917,20 @@ document.addEventListener("DOMContentLoaded", init);
     </div>
     <button class="yt-modal-cifra" id="yt-modal-cifra">Procurar cifra</button>
   </div>
+</div>
+
+<!-- Mini player flutuante (PiP) -->
+<div id="yt-pip">
+  <div id="yt-pip-topbar">
+    <div id="yt-pip-title"></div>
+    <button id="yt-pip-expand" title="Expandir">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" width="13" height="13"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
+    </button>
+    <button id="yt-pip-close" title="Fechar">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" width="12" height="12"><path d="M18 6 6 18M6 6l12 12"/></svg>
+    </button>
+  </div>
+  <div id="yt-pip-stage"></div>
 </div>
 </body>
 </html>

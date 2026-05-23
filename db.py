@@ -53,11 +53,13 @@ def _get(table: str, **params) -> list:
     return r.json()
 
 
-def _post(table: str, body, upsert: bool = False) -> list:
+def _post(table: str, body, upsert: bool = False, on_conflict: str | None = None) -> list:
     prefer = "resolution=merge-duplicates,return=representation" if upsert else "return=representation"
+    params = {"on_conflict": on_conflict} if upsert and on_conflict else {}
     r = httpx.post(
         f"{SUPABASE_URL}/rest/v1/{table}",
         headers=_h(prefer),
+        params=params,
         json=body,
         timeout=10,
     )
@@ -343,13 +345,19 @@ def upsert_song_meta(file_id: str, meta: dict) -> None:
     payload = {"file_id": file_id}
     for k in _META_COLS:
         payload[k] = meta.get(k) or None
-    _post("songs_meta", payload, upsert=True)
+    _post("songs_meta", payload, upsert=True, on_conflict="file_id")
 
 
 def upsert_songs_meta_batch(records: list) -> None:
     """Upsert em lote. Cada record deve ter 'file_id' + campos opcionais."""
-    if records:
-        _post("songs_meta", records, upsert=True)
+    if not records:
+        return
+    # Normaliza: todos os registros devem ter as mesmas chaves (None para ausentes)
+    all_keys: set = set()
+    for rec in records:
+        all_keys.update(rec.keys())
+    normalized = [{k: rec.get(k) for k in all_keys} for rec in records]
+    _post("songs_meta", normalized, upsert=True, on_conflict="file_id")
 
 
 # ─── User status ──────────────────────────────────────────────────────────────
