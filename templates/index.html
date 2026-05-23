@@ -3884,11 +3884,11 @@ body.has-selection #th-rank-hash,
 #yt-stage iframe { width: 100%; height: 100%; border: 0; display: block; }
 
 #yt-btn-close, #yt-btn-minimize {
-  position: absolute; top: 20px;
+  position: fixed; top: 20px;
   width: 40px; height: 40px; border-radius: 99px;
   background: rgba(255,255,255,.12); border: none; color: #fff;
   cursor: pointer; display: flex; align-items: center; justify-content: center;
-  z-index: 1; transition: background .15s;
+  z-index: 10000; transition: background .15s;
 }
 #yt-btn-close     { right: 20px; }
 #yt-btn-minimize  { right: 68px; }
