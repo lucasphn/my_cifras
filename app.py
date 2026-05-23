@@ -1838,9 +1838,108 @@ def api_upload():
     return jsonify({"text": text, "name": Path(file.filename).stem})
 
 
-def _build_export_html(songs, title, auto_print=False):
+# ── Helpers para capa de PDF ─────────────────────────────────────────────────
+
+_MESES_PT = ["janeiro","fevereiro","março","abril","maio","junho",
+             "julho","agosto","setembro","outubro","novembro","dezembro"]
+
+def _title_size_class(nome: str) -> str:
+    n = len(nome.strip())
+    if n <= 10: return "size-xl"
+    if n <= 14: return "size-lg"
+    if n <= 20: return "size-md"
+    if n <= 28: return "size-sm"
+    return "size-xs"
+
+def _format_dmy(dt) -> str:
+    return dt.strftime("%d / %m / %Y")
+
+def _format_long_pt(dt) -> str:
+    return f"{dt.day} de {_MESES_PT[dt.month - 1]} de {dt.year}"
+
+
+_STAFF_SVG = """<svg viewBox="0 0 480 200" preserveAspectRatio="xMidYMid meet" fill="none">
+  <g stroke="#1a1528" stroke-width="0.6">
+    <line x1="0"  y1="80"  x2="480" y2="80"/>
+    <line x1="0"  y1="95"  x2="480" y2="95"/>
+    <line x1="0"  y1="110" x2="480" y2="110"/>
+    <line x1="0"  y1="125" x2="480" y2="125"/>
+    <line x1="0"  y1="140" x2="480" y2="140"/>
+  </g>
+  <ellipse cx="60"  cy="125" rx="8" ry="5.5" fill="#6457e8" transform="rotate(-15 60 125)"/>
+  <line x1="67"  y1="123" x2="67"  y2="85" stroke="#1a1528" stroke-width="1.4"/>
+  <ellipse cx="140" cy="110" rx="8" ry="5.5" fill="#1a1528" transform="rotate(-15 140 110)"/>
+  <line x1="147" y1="108" x2="147" y2="68" stroke="#1a1528" stroke-width="1.4"/>
+  <path d="M147 68 Q156 64 158 56 Q156 60 152 64" fill="#1a1528"/>
+  <ellipse cx="220" cy="125" rx="8" ry="5.5" fill="#f0c040" transform="rotate(-15 220 125)"/>
+  <line x1="227" y1="123" x2="227" y2="85" stroke="#1a1528" stroke-width="1.4"/>
+  <ellipse cx="300" cy="95"  rx="8" ry="5.5" fill="#6457e8" transform="rotate(-15 300 95)"/>
+  <line x1="307" y1="93"  x2="307" y2="55" stroke="#1a1528" stroke-width="1.4"/>
+  <ellipse cx="380" cy="110" rx="8" ry="5.5" fill="#1a1528" transform="rotate(-15 380 110)"/>
+  <line x1="387" y1="108" x2="387" y2="68" stroke="#1a1528" stroke-width="1.4"/>
+  <line x1="100" y1="80" x2="100" y2="140" stroke="#1a1528" stroke-width="0.6" opacity="0.35"/>
+  <line x1="190" y1="80" x2="190" y2="140" stroke="#1a1528" stroke-width="0.6" opacity="0.35"/>
+  <line x1="280" y1="80" x2="280" y2="140" stroke="#1a1528" stroke-width="0.6" opacity="0.35"/>
+  <line x1="360" y1="80" x2="360" y2="140" stroke="#1a1528" stroke-width="0.6" opacity="0.35"/>
+  <line x1="450" y1="80" x2="450" y2="140" stroke="#1a1528" stroke-width="1.6"/>
+</svg>"""
+
+
+def _build_cover_html(title: str, n_songs: int, event_date, today) -> str:
+    """Gera o bloco HTML da capa (sem <html>/<body> — inserido dentro do documento)."""
+    size_cls = _title_size_class(title)
+    song_word = "música" if n_songs == 1 else "músicas"
+    pill_text = f"{n_songs} {song_word}".upper()
+
+    date_span = ""
+    if event_date:
+        date_span = f'<span class="date-event">{_esc(_format_dmy(event_date))}</span>'
+
+    brand_icon_svg = (
+        '<svg viewBox="0 0 24 24" width="18" height="18" fill="none">'
+        '<path d="M9 18V6l12-2v12" stroke="#fff" stroke-width="2"'
+        ' fill="none" stroke-linecap="round" stroke-linejoin="round"/>'
+        '<circle cx="6" cy="18" r="3" fill="#f0c040"/>'
+        '<circle cx="18" cy="16" r="3" fill="#fff" opacity="0.9"/>'
+        '</svg>'
+    )
+
+    return f"""
+<article class="cover">
+  <header class="cover-top">
+    <div class="brand">
+      <div class="brand-icon">{brand_icon_svg}</div>
+      <div class="brand-name"><span class="my">my</span>Cifras<span class="dot">.</span></div>
+    </div>
+  </header>
+  <section class="cover-center">
+    <div class="eyebrow">Repertório</div>
+    <h1 class="title {size_cls}">{_esc(title.strip())}.</h1>
+    <div class="meta">
+      {date_span}
+      <span class="pill">{_esc(pill_text)}</span>
+    </div>
+    <div class="staff-ornament">{_STAFF_SVG}</div>
+  </section>
+  <footer class="cover-bottom">
+    <span class="export-date">Exportado em {_esc(_format_long_pt(today))}</span>
+  </footer>
+</article>
+"""
+
+
+def _build_export_html(songs, title, auto_print=False, event_date=None):
     """Gera o HTML estilizado do repertório (usado pelo endpoint HTML e PDF)."""
-    today = date.today().strftime("%d/%m/%Y")
+    from datetime import datetime as _dt
+    today = date.today()
+    today_str = today.strftime("%d/%m/%Y")
+
+    ev_date = None
+    if event_date:
+        try:
+            ev_date = _dt.strptime(str(event_date)[:10], "%Y-%m-%d").date()
+        except Exception:
+            pass
 
     # Inline logo SVG
     logo_path = Path(__file__).parent / "static" / "brand" / "logo-mono-dark.svg"
@@ -1884,7 +1983,7 @@ def _build_export_html(songs, title, auto_print=False):
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{_esc(title)}</title>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Roboto+Mono:wght@400;700;800&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,700;1,9..144,400&family=Inter:wght@400;500;600;700;800&family=Roboto+Mono:wght@400;700;800&family=Sora:wght@400;500;700;800&display=swap');
 
   *, *::before, *::after {{ box-sizing: border-box; margin: 0; padding: 0; }}
 
@@ -2039,7 +2138,126 @@ def _build_export_html(songs, title, auto_print=False):
     .btn-back {{ display: inline-flex; align-items: center; gap: .4rem; }}
   }}
 
+  /* ── Capa de PDF ── */
+  :root {{
+    --brand: #6457e8;
+    --gold-dark: #c89a1e;
+    --ink: #1a1528;
+    --ink-soft: #4a3f5e;
+    --muted: #8a82a8;
+  }}
+  .cover {{
+    width: 100%;
+    min-height: 100vh;
+    padding: 56px 56px 48px;
+    display: flex;
+    flex-direction: column;
+    background: #fff;
+    page-break-after: always;
+    page: cover;
+  }}
+  .cover-top {{ margin-bottom: 60px; }}
+  .brand {{ display: flex; align-items: center; gap: 10px; }}
+  .brand-icon {{
+    width: 30px; height: 30px;
+    border-radius: 8px;
+    background: var(--brand);
+    display: flex; align-items: center; justify-content: center;
+  }}
+  .brand-name {{
+    font-family: 'Sora', 'Inter', sans-serif;
+    font-size: 14px;
+    font-weight: 800;
+    color: var(--ink);
+    letter-spacing: -0.3px;
+    line-height: 1.1;
+  }}
+  .brand-name .my {{
+    display: block;
+    font-size: 8.5px;
+    font-weight: 500;
+    color: var(--brand);
+    letter-spacing: 0.4px;
+    margin-bottom: 1px;
+  }}
+  .brand-name .dot {{ color: var(--gold-dark); }}
+  .cover-center {{
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }}
+  .eyebrow {{
+    font-family: 'Inter', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 3.5px;
+    text-transform: uppercase;
+    color: var(--gold-dark);
+    margin-bottom: 18px;
+  }}
+  .title {{
+    font-family: 'Fraunces', 'Cormorant Garamond', serif;
+    font-weight: 700;
+    line-height: 1.0;
+    color: var(--ink);
+    margin-bottom: 24px;
+    white-space: nowrap;
+    font-variation-settings: "opsz" 144;
+  }}
+  .title.size-xl {{ font-size: 84px; letter-spacing: -3px; }}
+  .title.size-lg {{ font-size: 76px; letter-spacing: -2.6px; }}
+  .title.size-md {{ font-size: 64px; letter-spacing: -2.2px; }}
+  .title.size-sm {{ font-size: 52px; letter-spacing: -1.8px; }}
+  .title.size-xs {{ font-size: 42px; letter-spacing: -1.4px; white-space: normal; }}
+  .meta {{ display: flex; align-items: center; gap: 18px; }}
+  .date-event {{
+    font-family: 'Inter', sans-serif;
+    font-size: 22px;
+    font-weight: 500;
+    color: var(--ink-soft);
+    letter-spacing: -0.3px;
+  }}
+  .pill {{
+    font-family: 'Inter', sans-serif;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    background: var(--brand);
+    color: #fff;
+    padding: 6px 14px;
+    border-radius: 99px;
+    white-space: nowrap;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }}
+  .staff-ornament {{
+    margin-top: 60px;
+    height: 200px;
+    display: flex;
+    align-items: center;
+  }}
+  .staff-ornament svg {{ display: block; width: 100%; height: 200px; }}
+  .cover-bottom {{
+    display: flex;
+    justify-content: flex-end;
+    align-items: flex-end;
+    padding-top: 22px;
+    border-top: 1px solid rgba(26,21,40,0.15);
+  }}
+  .export-date {{
+    font-family: 'Fraunces', serif;
+    font-style: italic;
+    font-size: 13px;
+    color: var(--muted);
+  }}
+
   /* ── Print / WeasyPrint ── */
+  @page cover {{
+    size: A4 portrait;
+    margin: 0;
+  }}
   @page {{
     size: A4 portrait;
     margin: 1.1cm 1.4cm 1.1cm 1.4cm;
@@ -2073,13 +2291,15 @@ def _build_export_html(songs, title, auto_print=False):
 </head>
 <body>
 
+{_build_cover_html(title, n, ev_date, today)}
+
 <header class="doc-banner">
   <div>
     <div class="logo">{logo_svg}</div>
   </div>
   <div class="doc-banner-right">
     <div class="doc-title">{_esc(title)}</div>
-    <div class="doc-subtitle">{n} {song_word} · {_esc(today)}</div>
+    <div class="doc-subtitle">{n} {song_word} · {_esc(today_str)}</div>
   </div>
 </header>
 
@@ -2087,7 +2307,7 @@ def _build_export_html(songs, title, auto_print=False):
 {"".join(_song_card(i, s) for i, s in enumerate(songs))}
 </div>
 
-<footer class="doc-footer">My Cifras · gerado em {_esc(today)}</footer>
+<footer class="doc-footer">My Cifras · gerado em {_esc(today_str)}</footer>
 
 <a class="btn-back" onclick="window.close(); history.back(); return false;" href="#">← Voltar</a>
 
@@ -2105,7 +2325,8 @@ def api_export():
     songs = data.get("songs", [])
     title = data.get("title", "Repertório")
     auto_print = data.get("print", False)
-    html = _build_export_html(songs, title, auto_print)
+    event_date = data.get("event_date")
+    html = _build_export_html(songs, title, auto_print, event_date=event_date)
     return Response(html, mimetype="text/html; charset=utf-8")
 
 
@@ -2119,7 +2340,8 @@ def api_export_pdf():
     data  = request.get_json(force=True)
     songs = data.get("songs", [])
     title = data.get("title", "Repertório")
-    html  = _build_export_html(songs, title, auto_print=False)
+    event_date = data.get("event_date")
+    html  = _build_export_html(songs, title, auto_print=False, event_date=event_date)
     try:
         from weasyprint import HTML as WP_HTML
         pdf_bytes = WP_HTML(
