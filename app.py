@@ -2115,7 +2115,7 @@ def _build_export_html(songs, title, auto_print=False, event_date=None):
   /* ── Cifra ── */
   .cifra-body {{
     font-family: 'Roboto Mono', 'Consolas', 'Courier New', monospace;
-    font-size: 11.5px;
+    font-size: 10px;
     line-height: 1.55;
     white-space: pre-wrap;
     word-break: keep-all;
@@ -2167,13 +2167,14 @@ def _build_export_html(songs, title, auto_print=False, event_date=None):
   }}
   .cover {{
     width: 100%;
-    min-height: 260mm;
+    height: 257mm;
     padding: 48px 48px 40px;
     display: flex;
     flex-direction: column;
     background: #fff;
     page-break-after: always;
     break-after: page;
+    overflow: hidden;
   }}
   .cover-top {{ margin-bottom: 60px; }}
   .brand {{ display: flex; align-items: center; gap: 10px; }}
