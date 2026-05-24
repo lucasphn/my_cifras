@@ -2035,13 +2035,13 @@ def _build_export_html(songs, title, auto_print=False, event_date=None):
 
   /* ── Song ── */
   .song {{
-    padding: 0 0 40px;
-    margin-bottom: 40px;
+    padding: 12mm 0 10mm;
+    margin-bottom: 0;
     border-bottom: 1px solid rgba(26,21,40,.1);
     break-inside: avoid;
     page-break-inside: avoid;
   }}
-  .song:last-child {{ border-bottom: none; margin-bottom: 0; }}
+  .song:last-child {{ border-bottom: none; }}
   .song-header {{
     margin-bottom: 18px;
     padding-bottom: 12px;
@@ -2280,8 +2280,8 @@ def _build_export_html(songs, title, auto_print=False, event_date=None):
   }}
   @media print {{
     body {{ background: #fff; max-width: 100%; padding: 0; }}
-    .doc-body {{ padding: 10mm 12mm 0; }}
-    .doc-footer {{ margin: 10mm 12mm 0; }}
+    .doc-body {{ padding: 0 12mm 0; }}
+    .doc-footer {{ margin: 6mm 12mm 0; }}
     .btn-back {{ display: none !important; }}
     .badge, .pill {{
       -webkit-print-color-adjust: exact;
