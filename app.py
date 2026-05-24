@@ -2033,15 +2033,15 @@ def _build_export_html(songs, title, auto_print=False, event_date=None):
 
   .doc-body {{ padding: 32px 40px 0; }}
 
-  /* ── Song card ── */
+  /* ── Song ── */
   .song {{
-    background: #fff;
-    border: 1px solid rgba(26,21,40,.08);
-    border-radius: 14px;
-    padding: 26px 32px;
-    margin-bottom: 24px;
-    page-break-inside: auto;
+    padding: 0 0 40px;
+    margin-bottom: 40px;
+    border-bottom: 1px solid rgba(26,21,40,.1);
+    break-inside: avoid;
+    page-break-inside: avoid;
   }}
+  .song:last-child {{ border-bottom: none; margin-bottom: 0; }}
   .song-header {{
     margin-bottom: 18px;
     padding-bottom: 12px;
@@ -2275,7 +2275,7 @@ def _build_export_html(songs, title, auto_print=False, event_date=None):
   /* ── Print / WeasyPrint ── */
   @page {{
     size: A4 portrait;
-    margin: 18mm 22mm 18mm 22mm;
+    margin: 20mm 30mm 20mm 30mm;
   }}
   @media print {{
     body {{ background: #fff; max-width: 100%; padding: 0; }}
