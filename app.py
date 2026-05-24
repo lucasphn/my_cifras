@@ -2115,7 +2115,7 @@ def _build_export_html(songs, title, auto_print=False, event_date=None):
   /* ── Cifra ── */
   .cifra-body {{
     font-family: 'Roboto Mono', 'Consolas', 'Courier New', monospace;
-    font-size: 10px;
+    font-size: 11.5px;
     line-height: 1.55;
     white-space: pre-wrap;
     word-break: keep-all;
@@ -2167,8 +2167,8 @@ def _build_export_html(songs, title, auto_print=False, event_date=None):
   }}
   .cover {{
     width: 100%;
-    height: 257mm;
-    padding: 48px 48px 40px;
+    height: 297mm;
+    padding: 56px 56px 48px;
     display: flex;
     flex-direction: column;
     background: #fff;
@@ -2276,12 +2276,12 @@ def _build_export_html(songs, title, auto_print=False, event_date=None):
   /* ── Print / WeasyPrint ── */
   @page {{
     size: A4 portrait;
-    margin: 20mm 30mm 20mm 30mm;
+    margin: 0;
   }}
   @media print {{
     body {{ background: #fff; max-width: 100%; padding: 0; }}
-    .doc-body {{ padding: 10px 0 0; }}
-    .doc-footer {{ margin: 16px 0 0; }}
+    .doc-body {{ padding: 10mm 12mm 0; }}
+    .doc-footer {{ margin: 10mm 12mm 0; }}
     .btn-back {{ display: none !important; }}
     .badge, .pill {{
       -webkit-print-color-adjust: exact;
