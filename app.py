@@ -2178,6 +2178,8 @@ def _build_export_html(songs, title, auto_print=False, event_date=None):
     background: #fff;
     page-break-after: always;
     break-after: page;
+    page-break-inside: avoid;
+    break-inside: avoid;
     overflow: hidden;
   }}
   .cover-top {{ margin-bottom: 60px; }}
@@ -2207,9 +2209,11 @@ def _build_export_html(songs, title, auto_print=False, event_date=None):
   .brand-name .dot {{ color: var(--gold-dark); }}
   .cover-center {{
     flex: 1;
+    min-height: 0;
     display: flex;
     flex-direction: column;
     justify-content: center;
+    overflow: hidden;
   }}
   .eyebrow {{
     font-family: 'Inter', sans-serif;
