@@ -2046,6 +2046,8 @@ def _build_export_html(songs, title, auto_print=False, event_date=None):
     margin-bottom: 18px;
     padding-bottom: 12px;
     border-bottom: 1px solid rgba(26,21,40,.08);
+    page-break-after: avoid;
+    break-after: avoid;
   }}
   .song-title {{
     display: flex;
@@ -2165,13 +2167,13 @@ def _build_export_html(songs, title, auto_print=False, event_date=None):
   }}
   .cover {{
     width: 100%;
-    min-height: 100vh;
-    padding: 56px 56px 48px;
+    min-height: 260mm;
+    padding: 48px 48px 40px;
     display: flex;
     flex-direction: column;
     background: #fff;
     page-break-after: always;
-    page: cover;
+    break-after: page;
   }}
   .cover-top {{ margin-bottom: 60px; }}
   .brand {{ display: flex; align-items: center; gap: 10px; }}
@@ -2271,10 +2273,6 @@ def _build_export_html(songs, title, auto_print=False, event_date=None):
   }}
 
   /* ── Print / WeasyPrint ── */
-  @page cover {{
-    size: A4 portrait;
-    margin: 0;
-  }}
   @page {{
     size: A4 portrait;
     margin: 18mm 22mm 18mm 22mm;
