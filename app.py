@@ -3041,6 +3041,14 @@ _TITLE_BLOCK = {
     # Rezas e devoções — não são músicas
     "rosário", "terço", "novena", "via crucis", "hora santa",
     "adoração ao santíssimo", "quaresma", "| dia ",
+    # Orações diárias e devocionais
+    "oração da manhã", "oração da tarde", "oração da noite",
+    "oração do dia", "oração diária", "oração de hoje",
+    "rosário da manhã", "rosário da tarde", "rosário da noite",
+    "rosário da madrugada", "terço da manhã", "terço da tarde",
+    "terço da noite", "terço da madrugada",
+    "santo rosário", "coroa franciscana",
+    "angelus", "vésperas", "laudes", "completas",
     # Conteúdo não-musical
     "vlog", "reflexão", "meditação", "reel", "ep.", "podcast",
     "entrevista", "depoimento", "pregação", "homilia",
