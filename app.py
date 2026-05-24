@@ -2083,12 +2083,9 @@ def _build_export_html(songs, title, auto_print=False, event_date=None):
     text-overflow: ellipsis;
   }}
   .song-meta {{
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    flex-wrap: nowrap;
     flex-shrink: 0;
-    justify-content: flex-end;
+    white-space: nowrap;
+    text-align: right;
   }}
   .meta-artist {{
     font-size: .78em;
@@ -2096,11 +2093,13 @@ def _build_export_html(songs, title, auto_print=False, event_date=None):
     color: #7a6fa8;
   }}
   .badge {{
+    display: inline-block;
     font-size: .72em;
     font-weight: 600;
     padding: 2px 9px;
     border-radius: 99px;
     white-space: nowrap;
+    margin-left: 4px;
   }}
   .badge-capo {{
     background: #d4af37;
