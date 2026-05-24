@@ -1966,10 +1966,10 @@ def _build_export_html(songs, title, auto_print=False, event_date=None):
         capo     = int(s.get("capo") or 0)
         sz       = _song_title_size_class(raw_name)
         meta_parts = []
-        if note:
-            meta_parts.append(f'<span class="badge badge-note">{note}</span>')
         if capo > 0:
             meta_parts.append(f'<span class="badge badge-capo">Capotraste na {capo}ª casa</span>')
+        if note:
+            meta_parts.append(f'<span class="badge badge-note">{note}</span>')
         meta_row = f'<div class="song-meta">{" ".join(meta_parts)}</div>' if meta_parts else ""
         cifra_html = _render_cifra_html(s.get("text", ""))
         return (
@@ -1979,8 +1979,8 @@ def _build_export_html(songs, title, auto_print=False, event_date=None):
             f'      <span class="song-rank">{num}.</span>'
             f'      <span class="song-name">{name}</span>'
             f'    </h2>'
+            f'    {meta_row}'
             f'  </div>'
-            f'  {meta_row}'
             f'  <pre class="cifra-body">{cifra_html}</pre>'
             f'</div>\n'
         )
@@ -2031,18 +2031,22 @@ def _build_export_html(songs, title, auto_print=False, event_date=None):
     margin-top: 4px;
   }}
 
-  .doc-body {{ padding: 32px 40px 0; }}
+  .doc-body {{ padding: 32px 20px 0; }}
 
   /* ── Song ── */
   .song {{
-    padding: 12mm 0 10mm;
-    margin-bottom: 0;
-    border-bottom: 1px solid rgba(26,21,40,.1);
+    padding: 10mm 10mm 8mm;
+    margin-bottom: 5mm;
+    border: 1px solid rgba(26,21,40,.12);
+    border-radius: 8px;
     break-inside: avoid;
     page-break-inside: avoid;
   }}
-  .song:last-child {{ border-bottom: none; }}
   .song-header {{
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
     margin-bottom: 18px;
     padding-bottom: 12px;
     border-bottom: 1px solid rgba(26,21,40,.08);
@@ -2059,8 +2063,8 @@ def _build_export_html(songs, title, auto_print=False, event_date=None):
     letter-spacing: -0.3px;
     color: var(--ink);
     margin: 0;
+    flex: 1;
     min-width: 0;
-    white-space: nowrap;
     font-variation-settings: "opsz" 144;
   }}
   .song-title.size-lg {{ font-size: 22px; }}
@@ -2083,7 +2087,8 @@ def _build_export_html(songs, title, auto_print=False, event_date=None):
     align-items: center;
     gap: 8px;
     flex-wrap: wrap;
-    margin-bottom: 14px;
+    flex-shrink: 0;
+    justify-content: flex-end;
   }}
   .meta-artist {{
     font-size: .78em;
@@ -2109,22 +2114,21 @@ def _build_export_html(songs, title, auto_print=False, event_date=None):
     background: rgba(91,75,138,.08);
     color: #5b4b8a;
     border: 1px solid rgba(91,75,138,.18);
-    font-style: italic;
   }}
 
   /* ── Cifra ── */
   .cifra-body {{
     font-family: 'Roboto Mono', 'Consolas', 'Courier New', monospace;
-    font-size: 11.5px;
-    line-height: 1.55;
+    font-size: .8em;
+    line-height: 1.35;
     white-space: pre-wrap;
-    word-break: keep-all;
+    word-break: break-word;
     overflow-wrap: anywhere;
     color: #2e2645;
     font-weight: 400;
     margin: 0;
   }}
-  .chord-line {{ color: #5b4b8a; font-weight: 800; }}
+  .chord-line {{ color: #5b4b8a; font-weight: 600; }}
 
   /* ── Footer ── */
   .doc-footer {{
@@ -2167,7 +2171,7 @@ def _build_export_html(songs, title, auto_print=False, event_date=None):
   }}
   .cover {{
     width: 100%;
-    height: 297mm;
+    height: 291mm;
     padding: 56px 56px 48px;
     display: flex;
     flex-direction: column;
@@ -2276,11 +2280,11 @@ def _build_export_html(songs, title, auto_print=False, event_date=None):
   /* ── Print / WeasyPrint ── */
   @page {{
     size: A4 portrait;
-    margin: 0;
+    margin: 6mm 0 0;
   }}
   @media print {{
     body {{ background: #fff; max-width: 100%; padding: 0; }}
-    .doc-body {{ padding: 0 12mm 0; }}
+    .doc-body {{ padding: 0 8mm 0; }}
     .doc-footer {{ margin: 6mm 12mm 0; }}
     .btn-back {{ display: none !important; }}
     .badge, .pill {{

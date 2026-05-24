@@ -108,7 +108,7 @@ def grant_writer(svc, file_id, name):
 
 def main():
     flow = InstalledAppFlow.from_client_config(CLIENT_CONFIG, SCOPES)
-    creds = flow.run_local_server(port=0, open_browser=True)
+    creds = flow.run_local_server(port=8080, open_browser=True)
     svc = build("drive", "v3", credentials=creds, cache_discovery=False)
 
     print(f"\nListando arquivos em {FOLDER_ID}...")
