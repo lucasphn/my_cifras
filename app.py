@@ -2086,7 +2086,7 @@ def _build_export_html(songs, title, auto_print=False, event_date=None):
     display: flex;
     align-items: center;
     gap: 8px;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     flex-shrink: 0;
     justify-content: flex-end;
   }}
@@ -2173,6 +2173,7 @@ def _build_export_html(songs, title, auto_print=False, event_date=None):
     width: 100%;
     height: 291mm;
     padding: 56px 56px 48px;
+    position: relative;
     display: flex;
     flex-direction: column;
     background: #fff;
@@ -2268,6 +2269,10 @@ def _build_export_html(songs, title, auto_print=False, event_date=None):
   }}
   .staff-ornament svg {{ display: block; width: 100%; height: 200px; }}
   .cover-bottom {{
+    position: absolute;
+    bottom: 48px;
+    left: 56px;
+    right: 56px;
     display: flex;
     justify-content: flex-end;
     align-items: flex-end;
