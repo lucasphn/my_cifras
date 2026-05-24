@@ -2118,11 +2118,11 @@ def _build_export_html(songs, title, auto_print=False, event_date=None):
     white-space: pre-wrap;
     word-break: keep-all;
     overflow-wrap: anywhere;
-    color: var(--ink);
+    color: #2e2645;
     font-weight: 400;
     margin: 0;
   }}
-  .chord-line {{ color: var(--brand); font-weight: 800; }}
+  .chord-line {{ color: #5b4b8a; font-weight: 800; }}
 
   /* ── Footer ── */
   .doc-footer {{
