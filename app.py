@@ -3041,7 +3041,7 @@ _TITLE_BLOCK = {
     # Conteúdo não-musical
     "vlog", "reflexão", "meditação", "reel", "ep.", "podcast",
     "entrevista", "depoimento", "pregação", "homilia",
-    "making of", "bastidores", "making-of",
+    "making of", "bastidores", "making-of", "playback",
     # Compilações
     "1 hora", "2 horas", "3 horas", "4 horas", "5 horas",
     "coletânea", "compilado", "as melhores", "mix",
@@ -3057,8 +3057,23 @@ _TITLE_ALLOW = {
 
 _TAGS_ALLOW = {"música", "música católica", "louvor", "worship", "canção", "hino"}
 
-_MAX_DURATION_S = 5 * 60    # 5 minutos — apenas clipes/músicas curtas
+_MAX_DURATION_S = 8 * 60    # 8 minutos — acomoda músicas católicas mais longas
 _MAX_PER_CHANNEL = 2        # variedade: no máximo 2 vídeos por canal
+
+# Stop words inglesas — usadas para detectar títulos em inglês
+_EN_STOP = {"the", "of", "and", "how", "to", "is", "in", "for", "at", "by",
+            "it", "an", "on", "are", "was", "be", "with", "from", "or", "not",
+            "but", "so", "if", "a", "as", "this", "that", "your", "my"}
+_PT_ACCENTS = set("àáâãäçèéêëìíîïòóôõöùúûü")
+
+
+def _seems_english(title: str) -> bool:
+    """True se o título parece estar em inglês (sem acentos pt-BR + ≥ 2 stop words EN)."""
+    tl = title.lower()
+    if any(c in tl for c in _PT_ACCENTS):
+        return False
+    words = [w.strip(".,!?()[]:-") for w in tl.split()]
+    return sum(1 for w in words if w in _EN_STOP) >= 2
 
 
 def _parse_duration_seconds(iso: str) -> int:
@@ -3098,6 +3113,12 @@ def _is_music_video(item: dict) -> bool:
     # Títulos que começam com emoji ou símbolo especial são conteúdo não-musical (vlogs, posts, etc.)
     first_char = raw_title[:1]
     if first_char and unicodedata.category(first_char)[0] not in ("L", "N"):
+        return False
+    # Perguntas não são músicas
+    if raw_title.rstrip().endswith("?"):
+        return False
+    # Títulos em inglês sem marcadores pt-BR
+    if _seems_english(raw_title):
         return False
     if any(w in title for w in _TITLE_BLOCK):
         return False
