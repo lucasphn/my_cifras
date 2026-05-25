@@ -66,6 +66,16 @@ _OWNER_EMAILS = {
     if e.strip()
 }
 
+# Seções visíveis apenas para owners (insensível a maiúsculas/minúsculas)
+_OWNER_ONLY_SECTIONS = {
+    s.strip().lower()
+    for s in os.environ.get("OWNER_ONLY_SECTIONS", "casamento").split(",")
+    if s.strip()
+}
+
+# Ordem de exibição das seções (seções não listadas ficam no final, em ordem alfabética)
+_SECTION_ORDER = ["ministração", "missa", "casamento"]
+
 # Registra blueprint de autenticação
 from auth import bp as auth_bp, login_required, current_user, is_oauth_configured, get_service, _MemoryCache
 app.register_blueprint(auth_bp)
@@ -140,6 +150,21 @@ def is_owner() -> bool:
     if not _OWNER_EMAILS:
         return True
     return current_user().get("email", "").lower().strip() in _OWNER_EMAILS
+
+
+def _visible_library(library: dict) -> dict:
+    """Filtra seções owner-only (para não-owners) e aplica ordem definida."""
+    filtered = {
+        k: v for k, v in library.items()
+        if is_owner() or k.lower() not in _OWNER_ONLY_SECTIONS
+    }
+    def _sec_sort_key(name: str) -> tuple:
+        lname = name.lower()
+        try:
+            return (0, _SECTION_ORDER.index(lname))
+        except ValueError:
+            return (1, lname)
+    return dict(sorted(filtered.items(), key=lambda kv: _sec_sort_key(kv[0])))
 
 
 def owner_required(f):
@@ -1571,7 +1596,7 @@ def index():
 @login_required
 def api_library():
     try:
-        return jsonify(_get_library())
+        return jsonify(_visible_library(_get_library()))
     except Exception as e:
         err = str(e)
         cause = str(e.__cause__) if getattr(e, "__cause__", None) else ""
@@ -1591,7 +1616,7 @@ def api_songs():
     _ensure_songs_meta_loaded()
     views = _load_views()
     songs = []
-    for s in flatten_songs(_get_library()):
+    for s in flatten_songs(_visible_library(_get_library())):
         fid = s.get("fileId", "")
         # Arquivos locais .md: lê frontmatter direto do disco
         if not s.get("artist") and not s.get("key") and s.get("path","").endswith(".md"):
@@ -1743,7 +1768,7 @@ def api_cifras_bundle():
     import drive as drv
     from googleapiclient.discovery import build as _gdrive_build
 
-    songs = [s for s in flatten_songs(_get_library()) if s.get("fileId")]
+    songs = [s for s in flatten_songs(_visible_library(_get_library())) if s.get("fileId")]
     etag  = _compute_bundle_etag(songs)
 
     # 304 se cliente já tem esta versão
@@ -2732,7 +2757,7 @@ def api_search_content():
             items = drv.search_content(svc, q, CIFRAS_FOLDER_ID)
             views = _load_views()
             # Enriquece com section/category a partir da biblioteca cacheada
-            lib = _get_library()
+            lib = _visible_library(_get_library())
             # Monta índice fileId → {section, category, name, key}
             fid_index = {}
             for sec, cats in lib.items():
@@ -2812,7 +2837,7 @@ def api_search_content():
 @app.route("/api/sections")
 @login_required
 def api_sections():
-    library = _get_library()
+    library = _visible_library(_get_library())
     return jsonify({sec: list(cats.keys()) for sec, cats in library.items()})
 
 
