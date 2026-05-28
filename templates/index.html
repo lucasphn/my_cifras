@@ -272,7 +272,17 @@ button, a, .song-card, .home-card, .home-top-card, .sidebar-cat,
   animation: spin .7s linear infinite;
   flex-shrink: 0;
 }
-#search-content-spinner.active { display: block; }
+#search-content-spinner.active {
+  display: block;
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 36px;
+  height: 36px;
+  border-width: 3px;
+  z-index: 20;
+}
 @keyframes spin { to { transform: rotate(360deg); } }
 .btn {
   background: var(--surface);
@@ -1239,6 +1249,13 @@ button, a, .song-card, .home-card, .home-top-card, .sidebar-cat,
   line-height: 1.6;
 }
 #empty-state .icon { font-size: 2.5em; }
+#search-by-letra-hint {
+  font-size: .85em;
+  color: var(--primary);
+  text-decoration: underline;
+  cursor: pointer;
+  margin-top: 4px;
+}
 
 /* ─── Repertório (painel direito) ────────────────────────────────────────── */
 #rep-panel {
@@ -6557,9 +6574,19 @@ function renderSongGrid(songs) {
     grid.style.display = "none";
     if (toggleWrap) toggleWrap.style.display = "none";
     empty.style.display = "flex";
-    document.getElementById("empty-msg").textContent = searchActive
-      ? "Nenhuma música encontrada."
-      : "Em breve, músicas serão adicionadas aqui.";
+    var emptyMsgEl = document.getElementById("empty-msg");
+    if (searchActive && _searchMode === "name") {
+      emptyMsgEl.innerHTML = 'Nenhuma música encontrada.<br><a href="#" id="search-by-letra-hint">Quer procurar pela letra?</a>';
+      document.getElementById("search-by-letra-hint").onclick = function(e) {
+        e.preventDefault();
+        var btn = document.querySelector('#search-mode-toggle button[data-mode="content"]');
+        if (btn) btn.click();
+      };
+    } else {
+      emptyMsgEl.textContent = searchActive
+        ? "Nenhuma música encontrada."
+        : "Em breve, músicas serão adicionadas aqui.";
+    }
     return;
   }
 
