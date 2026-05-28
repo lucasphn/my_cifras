@@ -1064,25 +1064,38 @@ def _get_song_meta(file_id: str) -> dict:
         return _songs_meta.get(file_id, {})
 
 def _get_library():
-    """Retorna a biblioteca escaneada, usando cache quando possível."""
+    """Retorna a biblioteca escaneada, usando cache quando possível.
+
+    O lock é mantido apenas para leitura/escrita do dict de cache, nunca
+    durante o scan (que pode levar vários segundos no Drive). Assim requisições
+    simultâneas de dispositivos diferentes não se bloqueiam mutuamente.
+    """
     now = time.monotonic()
     with _cache_lock:
-        if _library_cache["data"] is None or (now - _library_cache["ts"]) > CACHE_TTL:
-            try:
-                if _use_drive():
-                    import drive
-                    data = drive.scan_library(_get_sa_service(), CIFRAS_FOLDER_ID)
-                else:
-                    data = scan_library_local()
-                _library_cache["data"] = data
-                _library_cache["ts"] = now
-            except Exception as e:
-                app.logger.error("Erro ao escanear biblioteca: %s", e)
-                # Se já tinha cache antigo, retorna ele em vez de falhar
-                if _library_cache["data"] is not None:
-                    return _library_cache["data"]
-                raise
-        return _library_cache["data"]
+        cached_data = _library_cache["data"]
+        cached_ts   = _library_cache["ts"]
+
+    # Cache válido — retorna imediatamente sem nenhum I/O
+    if cached_data is not None and (now - cached_ts) <= CACHE_TTL:
+        return cached_data
+
+    # Cache expirado ou ausente — escaneia FORA do lock
+    try:
+        if _use_drive():
+            import drive
+            data = drive.scan_library(_get_sa_service(), CIFRAS_FOLDER_ID)
+        else:
+            data = scan_library_local()
+    except Exception as e:
+        app.logger.error("Erro ao escanear biblioteca: %s", e)
+        if cached_data is not None:
+            return cached_data   # retorna cache antigo em vez de falhar
+        raise
+
+    with _cache_lock:
+        _library_cache["data"] = data
+        _library_cache["ts"]   = now
+    return data
 
 def invalidate_library_cache():
     with _cache_lock:
