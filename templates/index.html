@@ -9332,10 +9332,14 @@ function _doContentSearchAppend(q, nameResults) {
   var nameKeys = {};
   nameResults.forEach(function(s) { nameKeys[s.fileId || s.path || ""] = true; });
 
+  var _spinner = document.getElementById("search-content-spinner");
+  var _spinnerKill = setTimeout(function() { _spinner.classList.remove("active"); }, 8000);
+  function _doneSpinner() { clearTimeout(_spinnerKill); _spinner.classList.remove("active"); }
+
   fetch("/api/search/content?q=" + encodeURIComponent(q))
     .then(function(r) { return r.json(); })
     .then(function(data) {
-      document.getElementById("search-content-spinner").classList.remove("active");
+      _doneSpinner();
       if (!data || data.error || !data.length) return;
 
       var extras = data.filter(function(s) {
@@ -9369,7 +9373,7 @@ function _doContentSearchAppend(q, nameResults) {
       });
     })
     .catch(function() {
-      document.getElementById("search-content-spinner").classList.remove("active");
+      _doneSpinner();
       showToast("Falha na busca por conteúdo.");
       renderSongGrid([]);
     });
