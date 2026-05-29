@@ -2771,29 +2771,49 @@ def api_search_content():
             views = _load_views()
             # Enriquece com section/category a partir da biblioteca cacheada
             lib = _visible_library(_get_library())
-            # Monta índice fileId → {section, category, name, key}
-            fid_index = {}
+            # Monta índice fileId → {name, key, artist, categories[]}
+            # Acumula TODAS as (section, category) por fileId (uma música pode ter
+            # atalhos em múltiplas categorias). Primária = entrada sem isShortcut.
+            fid_index: dict = {}
             for sec, cats in lib.items():
                 for cat, songs in cats.items():
                     for s in songs:
-                        if s.get("fileId"):
-                            fid_index[s["fileId"]] = {
-                                "section": sec,
-                                "category": cat,
+                        fid = s.get("fileId")
+                        if not fid:
+                            continue
+                        is_primary = not s.get("isShortcut", False)
+                        cat_entry = {"section": sec, "category": cat, "isPrimary": is_primary}
+                        if fid not in fid_index:
+                            fid_index[fid] = {
                                 "name": s.get("name", ""),
                                 "key": s.get("key", ""),
                                 "artist": s.get("artist", ""),
+                                "categories": [],
                             }
+                        # Primary entry updates the base name/artist fields
+                        if is_primary:
+                            fid_index[fid]["name"] = s.get("name", "") or fid_index[fid]["name"]
+                            fid_index[fid]["key"] = s.get("key", "") or fid_index[fid]["key"]
+                            fid_index[fid]["artist"] = s.get("artist", "") or fid_index[fid]["artist"]
+                        fid_index[fid]["categories"].append(cat_entry)
+
             for item in items:
                 fid = item.get("fileId", "")
                 meta = fid_index.get(fid)
                 if not meta:
                     continue  # arquivo fora da biblioteca — ignorar
+                # Ordena: primária primeiro, depois por nome de categoria
+                cats_sorted = sorted(
+                    meta["categories"],
+                    key=lambda c: (not c["isPrimary"], c["category"])
+                )
+                primary = cats_sorted[0]
                 results.append({
                     "fileId": fid,
                     "name": meta.get("name") or item.get("name", ""),
-                    "section": meta.get("section", ""),
-                    "category": meta.get("category", ""),
+                    "section": primary["section"],
+                    "category": primary["category"],
+                    "categories": cats_sorted,
                     "key": meta.get("key", ""),
                     "artist": meta.get("artist", ""),
                     "mimeType": item.get("mimeType", ""),
