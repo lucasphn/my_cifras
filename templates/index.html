@@ -9329,29 +9329,60 @@ async function openPresenter(repId) {
   overlay.classList.add("show");
 
   var songs = rep.songs;
-  // Busca todas as cifras em paralelo (IDB first → rede)
-  presenterSongs = await Promise.all(songs.map(async function(s) {
-    var text = s.text || "";
-    if (!text) {
-      try {
-        // Cache-first: IDB imediatamente, rede só se necessário
-        if (s.fileId) {
-          var cached = await _idbGet(s.fileId).catch(function(){ return null; });
-          if (cached && cached.text) {
-            text = cached.text;
-          } else {
-            var url = "/api/cifra?fileId=" + encodeURIComponent(s.fileId) + "&mimeType=" + encodeURIComponent(s.mimeType || "");
-            var d = await fetch(url).then(function(r) { return r.json(); });
-            text = d.text || "";
-            if (text) _idbPut(s.fileId, { text: text, name: s.name, ts: Date.now() }).catch(function(){});
-          }
-        } else {
-          var url = "/api/cifra?path=" + encodeURIComponent(s.path);
+
+  // Fase 1: lê IDB para todas as músicas com fileId
+  var idbTexts = {};
+  await Promise.all(songs.map(async function(s) {
+    if (!s.fileId) return;
+    var cached = await _idbGet(s.fileId).catch(function(){ return null; });
+    if (cached && cached.text) idbTexts[s.fileId] = cached.text;
+  }));
+
+  // Fase 2: músicas que não estão no IDB e têm fileId → busca em lote (1 request)
+  var toFetch = songs.filter(function(s) { return s.fileId && !s.text && !idbTexts[s.fileId]; });
+  var batchTexts = {};
+  if (toFetch.length > 0) {
+    try {
+      var batchResp = await fetch("/api/cifras/batch", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ songs: toFetch.map(function(s) {
+          return { fileId: s.fileId, mimeType: s.mimeType || "" };
+        }) })
+      });
+      batchTexts = await batchResp.json();
+      // Persiste no IDB em background
+      Object.keys(batchTexts).forEach(function(fid) {
+        var song = toFetch.find(function(s) { return s.fileId === fid; });
+        if (batchTexts[fid]) _idbPut(fid, { text: batchTexts[fid], name: song ? song.name : "", ts: Date.now() }).catch(function(){});
+      });
+    } catch(e) {
+      // Fallback: requisições individuais se o batch falhar
+      await Promise.all(toFetch.map(async function(s) {
+        try {
+          var url = "/api/cifra?fileId=" + encodeURIComponent(s.fileId) + "&mimeType=" + encodeURIComponent(s.mimeType || "");
           var d = await fetch(url).then(function(r) { return r.json(); });
-          text = d.text || "";
-        }
-      } catch(e) { text = "[Erro ao carregar]"; }
+          if (d.text) batchTexts[s.fileId] = d.text;
+        } catch(e2) {}
+      }));
     }
+  }
+
+  // Fase 3: path-only songs (sem fileId) — ainda individuais, geralmente só no dev local
+  var pathTexts = {};
+  await Promise.all(songs.filter(function(s) { return !s.fileId; }).map(async function(s) {
+    try {
+      var url = "/api/cifra?path=" + encodeURIComponent(s.path);
+      var d = await fetch(url).then(function(r) { return r.json(); });
+      pathTexts[s.path] = d.text || "";
+    } catch(e) { pathTexts[s.path] = "[Erro ao carregar]"; }
+  }));
+
+  presenterSongs = songs.map(function(s) {
+    var text = s.text
+      || (s.fileId && (idbTexts[s.fileId] || batchTexts[s.fileId]))
+      || (!s.fileId && pathTexts[s.path])
+      || "[Erro ao carregar]";
     return {
       name: s.name,
       note: s.note || "",
@@ -9361,7 +9392,7 @@ async function openPresenter(repId) {
       semitone: 0,
       twoCol: false
     };
-  }));
+  });
 
   document.getElementById("presenter-loading").style.display = "none";
   presenterIdx = 0;

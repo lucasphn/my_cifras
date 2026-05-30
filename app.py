@@ -1110,6 +1110,13 @@ def invalidate_library_cache():
 _bundle_cache = {"etag": None, "ts": 0}  # só ETag — não guarda bytes em memória
 _bundle_lock  = threading.Lock()
 
+# Cache de texto de cifras (fileId → {text, ts}) — evita re-fetch ao Drive
+# para acessos repetidos (ex: presenter de repertório compartilhado).
+_text_cache: dict = {}
+_text_cache_lock = threading.Lock()
+_TEXT_CACHE_TTL  = 3600   # 1 hora
+_TEXT_CACHE_MAX  = 300    # máx entradas; ao atingir, descarta metade mais antiga
+
 def invalidate_bundle_cache():
     with _bundle_lock:
         _bundle_cache["etag"] = None
@@ -1767,6 +1774,82 @@ def api_cifra():
                         "title": meta.get("title",""), "tags": meta.get("tags",[]), "capo": meta.get("capo",""),
                         "youtube": meta.get("youtube","")})
     return jsonify({"text": extract_text(path), "artist": "", "key": "", "title": "", "tags": [], "youtube": ""})
+
+
+def _text_cache_get(fid: str) -> str | None:
+    now = time.monotonic()
+    with _text_cache_lock:
+        entry = _text_cache.get(fid)
+        if entry and (now - entry["ts"]) < _TEXT_CACHE_TTL:
+            return entry["text"]
+    return None
+
+
+def _text_cache_put(fid: str, text: str) -> None:
+    now = time.monotonic()
+    with _text_cache_lock:
+        if len(_text_cache) >= _TEXT_CACHE_MAX:
+            # Descarta metade mais antiga
+            oldest = sorted(_text_cache.items(), key=lambda x: x[1]["ts"])
+            for k, _ in oldest[: _TEXT_CACHE_MAX // 2]:
+                del _text_cache[k]
+        _text_cache[fid] = {"text": text, "ts": now}
+
+
+@app.route("/api/cifras/batch", methods=["POST"])
+@login_required
+def api_cifras_batch():
+    """Busca o texto de N cifras em uma única requisição (para presenter mode).
+
+    Body JSON: {"songs": [{"fileId": "...", "mimeType": "..."}, ...]}
+    Resposta:  {"fileId1": "texto...", "fileId2": "texto...", ...}
+    """
+    if not _use_drive():
+        return jsonify({"error": "Drive não configurado"}), 404
+
+    import drive as drv
+
+    data = request.get_json(silent=True) or {}
+    songs = data.get("songs", [])
+    if not songs:
+        return jsonify({}), 200
+
+    def _fetch_one(s: dict) -> tuple[str, str | None]:
+        fid  = s.get("fileId", "")
+        mime = s.get("mimeType", "")
+        if not fid:
+            return fid, None
+        # Cache hit
+        cached = _text_cache_get(fid)
+        if cached is not None:
+            return fid, cached
+        try:
+            svc = _get_sa_service()
+            if mime == drv.GDOCS_MIME:
+                text = drv.export_gdoc_as_text(svc, fid)
+            else:
+                raw_bytes = drv.download_bytes(svc, fid)
+                ext = _mime_to_ext(mime)
+                text = extract_text_from_bytes(raw_bytes, ext)
+            # Strip frontmatter para devolver só o corpo da cifra
+            is_md = mime in ("text/markdown", "text/plain") or (
+                text.startswith("---") and "\n---" in text
+            )
+            if is_md and text.startswith("---"):
+                text, _ = _parse_frontmatter(text)
+            _text_cache_put(fid, text)
+            return fid, text
+        except Exception as e:
+            log.error("[batch] Erro ao buscar %s: %s", fid, e)
+            return fid, None
+
+    result: dict = {}
+    with concurrent.futures.ThreadPoolExecutor(max_workers=4) as pool:
+        for fid, text in pool.map(_fetch_one, songs):
+            if fid and text is not None:
+                result[fid] = text
+
+    return jsonify(result)
 
 
 @app.route("/api/cifras/bundle")
