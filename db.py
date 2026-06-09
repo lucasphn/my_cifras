@@ -428,3 +428,63 @@ def create_coupon(code: str, max_uses: int | None = 1,
 
 def list_coupons() -> list:
     return _get("coupons", select="*", order="created_at.desc")
+
+
+# ─── Song Suggestions ─────────────────────────────────────────────────────────
+
+def load_suggestions_owner() -> list:
+    """Todas as sugestões, mais recentes primeiro."""
+    return _get("song_suggestions", select="*", order="created_at.desc")
+
+
+def load_suggestions_user(user_id: str) -> list:
+    """Sugestões do usuário, mais recentes primeiro."""
+    return _get("song_suggestions", select="*",
+                user_id=f"eq.{user_id}", order="created_at.desc")
+
+
+def create_suggestion(user_id: str, from_email: str, from_name: str,
+                      from_picture: str, song_name: str, artist: str) -> dict:
+    rows = _post("song_suggestions", {
+        "user_id":      user_id,
+        "from_email":   from_email,
+        "from_name":    from_name,
+        "from_picture": from_picture,
+        "song_name":    song_name,
+        "artist":       artist or "",
+    })
+    return rows[0] if rows else {}
+
+
+def fulfill_suggestion(suggestion_id: str, file_id: str, song_name: str) -> dict:
+    rows = _patch("song_suggestions", {
+        "status":              "fulfilled",
+        "fulfilled_file_id":   file_id,
+        "fulfilled_song_name": song_name,
+        "updated_at":          "now()",
+    }, id=f"eq.{suggestion_id}")
+    return rows[0] if rows else {}
+
+
+def reject_suggestion(suggestion_id: str, reason: str) -> dict:
+    rows = _patch("song_suggestions", {
+        "status":           "rejected",
+        "rejection_reason": reason,
+        "updated_at":       "now()",
+    }, id=f"eq.{suggestion_id}")
+    return rows[0] if rows else {}
+
+
+def mark_suggestion_owner_read(suggestion_id: str) -> None:
+    _patch("song_suggestions", {"owner_read": True}, id=f"eq.{suggestion_id}")
+
+
+def mark_suggestion_user_read(suggestion_id: str) -> None:
+    _patch("song_suggestions", {"user_read": True}, id=f"eq.{suggestion_id}")
+
+
+def count_unread_suggestions_owner() -> int:
+    """Sugestões pendentes não lidas pelo owner."""
+    rows = _get("song_suggestions", select="id",
+                status="eq.pending", owner_read="eq.false")
+    return len(rows)

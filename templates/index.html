@@ -2462,6 +2462,203 @@ body.android #presenter-cifra .chord-line {
   padding: 24px 16px; font-size: 0.82em; color: var(--text-muted);
   text-align: center;
 }
+.notif-panel-footer {
+  padding: 8px 12px; border-top: 1px solid var(--border);
+  display: flex; justify-content: center;
+}
+.notif-suggest-link {
+  font-size: 0.78em; color: var(--primary); background: none; border: none;
+  cursor: pointer; font-weight: 600; padding: 4px 8px; border-radius: 6px;
+}
+.notif-suggest-link:hover { background: var(--primary-light); }
+/* notif items diferenciados por tipo */
+.notif-item.type-suggestion .notif-avatar svg { color: var(--accent); }
+.notif-item.type-suggestion.fulfilled .notif-avatar { background: rgba(22,163,74,.1); border-color: rgba(22,163,74,.2); }
+.notif-item.type-suggestion.rejected  .notif-avatar { background: rgba(239,68,68,.08); border-color: rgba(239,68,68,.15); }
+/* ─── Suggestion modal (user: enviar sugestão) ─────────────────────────── */
+#suggest-overlay {
+  position: fixed; inset: 0; z-index: 1200;
+  background: rgba(0,0,0,.45);
+  display: none; align-items: center; justify-content: center;
+}
+#suggest-overlay.open { display: flex; }
+#suggest-dialog {
+  background: var(--surface); border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg); padding: 28px 28px 24px;
+  width: min(420px, calc(100vw - 32px));
+  display: flex; flex-direction: column; gap: 16px;
+}
+#suggest-dialog h3 { font-size: 1em; font-weight: 700; color: var(--text); margin: 0; }
+#suggest-dialog p { font-size: 0.82em; color: var(--text-muted); margin: -8px 0 0; }
+.suggest-field { display: flex; flex-direction: column; gap: 5px; }
+.suggest-field label { font-size: 0.78em; font-weight: 600; color: var(--text-muted); }
+.suggest-field input {
+  padding: 9px 12px; border: 1px solid var(--border); border-radius: 8px;
+  background: var(--surface2); color: var(--text); font-size: 0.9em;
+  outline: none; transition: border-color .15s;
+}
+.suggest-field input:focus { border-color: var(--primary); }
+.suggest-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 4px; }
+.suggest-actions button { padding: 9px 20px; border-radius: 8px; font-size: 0.85em; font-weight: 700; border: none; cursor: pointer; }
+#btn-suggest-cancel { background: var(--surface2); color: var(--text-muted); }
+#btn-suggest-cancel:hover { background: var(--border); }
+#btn-suggest-submit { background: var(--primary); color: #fff; }
+#btn-suggest-submit:hover { background: var(--primary-dark, #4a3a7a); }
+#btn-suggest-submit:disabled { opacity: .5; cursor: not-allowed; }
+/* ─── Owner: painel de sugestões pendentes ─────────────────────────────── */
+#suggestions-overlay {
+  position: fixed; inset: 0; z-index: 1200;
+  background: rgba(0,0,0,.45);
+  display: none; align-items: center; justify-content: center;
+}
+#suggestions-overlay.open { display: flex; }
+#suggestions-dialog {
+  background: var(--surface); border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg); padding: 28px 28px 20px;
+  width: min(520px, calc(100vw - 32px));
+  display: flex; flex-direction: column; gap: 14px;
+  max-height: 80vh;
+}
+#suggestions-dialog h3 { font-size: 1em; font-weight: 700; margin: 0; }
+#suggestions-list { display: flex; flex-direction: column; gap: 8px; overflow-y: auto; flex: 1; }
+.sug-item {
+  border: 1px solid var(--border); border-radius: 10px;
+  padding: 12px 14px; display: flex; flex-direction: column; gap: 6px;
+  background: var(--surface2);
+}
+.sug-item.fulfilled { border-color: rgba(22,163,74,.3); background: rgba(22,163,74,.05); }
+.sug-item.rejected  { border-color: rgba(239,68,68,.2); background: rgba(239,68,68,.04); opacity: .75; }
+.sug-header { display: flex; align-items: flex-start; gap: 10px; }
+.sug-avatar { width: 28px; height: 28px; border-radius: 50%; overflow: hidden; flex-shrink: 0; background: var(--primary-light); display: flex; align-items: center; justify-content: center; }
+.sug-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.sug-info { flex: 1; min-width: 0; }
+.sug-song  { font-size: 0.9em; font-weight: 700; color: var(--text); }
+.sug-artist { font-size: 0.78em; color: var(--text-muted); }
+.sug-from  { font-size: 0.75em; color: var(--text-muted); margin-top: 1px; }
+.sug-date  { font-size: 0.72em; color: var(--text-muted); white-space: nowrap; }
+.sug-status { font-size: 0.72em; font-weight: 700; padding: 2px 8px; border-radius: 99px; align-self: flex-start; }
+.sug-status.pending   { background: rgba(212,175,55,.12); color: var(--accent-text); border: 1px solid var(--accent-border); }
+.sug-status.fulfilled { background: rgba(22,163,74,.1); color: #16a34a; border: 1px solid rgba(22,163,74,.3); }
+.sug-status.rejected  { background: rgba(239,68,68,.08); color: #dc2626; border: 1px solid rgba(239,68,68,.2); }
+.sug-actions { display: flex; gap: 6px; margin-top: 2px; }
+.sug-actions button { padding: 5px 12px; border-radius: 99px; font-size: 0.75em; font-weight: 700; border: none; cursor: pointer; }
+.btn-sug-fulfill { background: var(--primary); color: #fff; }
+.btn-sug-fulfill:hover { background: var(--primary-dark, #4a3a7a); }
+.btn-sug-reject  { background: transparent; border: 1px solid var(--border) !important; color: var(--text-muted); }
+.btn-sug-reject:hover { border-color: #dc2626 !important; color: #dc2626; }
+/* ─── Owner: dialog fulfill ────────────────────────────────────────────── */
+#fulfill-overlay {
+  position: fixed; inset: 0; z-index: 1300;
+  background: rgba(0,0,0,.5);
+  display: none; align-items: center; justify-content: center;
+}
+#fulfill-overlay.open { display: flex; }
+#fulfill-dialog {
+  background: var(--surface); border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg); padding: 28px 28px 24px;
+  width: min(440px, calc(100vw - 32px));
+  display: flex; flex-direction: column; gap: 14px;
+}
+#fulfill-dialog h3 { font-size: 1em; font-weight: 700; margin: 0; }
+#fulfill-song-search {
+  padding: 9px 12px; border: 1px solid var(--border); border-radius: 8px;
+  background: var(--surface2); color: var(--text); font-size: 0.9em;
+  outline: none; width: 100%; box-sizing: border-box;
+}
+#fulfill-song-search:focus { border-color: var(--primary); }
+#fulfill-results {
+  max-height: 180px; overflow-y: auto;
+  border: 1px solid var(--border); border-radius: 8px;
+  display: none; flex-direction: column; background: var(--surface);
+}
+.fulfill-result-item {
+  padding: 9px 12px; font-size: 0.85em; cursor: pointer; border-bottom: 1px solid var(--border);
+  display: flex; flex-direction: column; gap: 2px;
+}
+.fulfill-result-item:last-child { border-bottom: none; }
+.fulfill-result-item:hover { background: var(--primary-light); }
+.fulfill-result-item strong { color: var(--text); font-weight: 700; }
+.fulfill-result-item span { color: var(--text-muted); font-size: 0.85em; }
+.fulfill-selected {
+  padding: 8px 12px; border-radius: 8px; background: rgba(22,163,74,.08);
+  border: 1px solid rgba(22,163,74,.25); font-size: 0.83em;
+  color: #16a34a; font-weight: 600; display: none;
+}
+.fulfill-note { font-size: 0.78em; color: var(--text-muted); }
+.fulfill-actions { display: flex; gap: 8px; justify-content: flex-end; }
+.fulfill-actions button { padding: 9px 20px; border-radius: 8px; font-size: 0.85em; font-weight: 700; border: none; cursor: pointer; }
+#btn-fulfill-cancel { background: var(--surface2); color: var(--text-muted); }
+#btn-fulfill-cancel:hover { background: var(--border); }
+#btn-fulfill-confirm { background: var(--primary); color: #fff; }
+#btn-fulfill-confirm:hover { background: var(--primary-dark, #4a3a7a); }
+#btn-fulfill-confirm:disabled { opacity: .5; cursor: not-allowed; }
+/* ─── Owner: dialog reject ─────────────────────────────────────────────── */
+#reject-overlay {
+  position: fixed; inset: 0; z-index: 1300;
+  background: rgba(0,0,0,.5);
+  display: none; align-items: center; justify-content: center;
+}
+#reject-overlay.open { display: flex; }
+#reject-dialog {
+  background: var(--surface); border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg); padding: 28px 28px 24px;
+  width: min(440px, calc(100vw - 32px));
+  display: flex; flex-direction: column; gap: 14px;
+}
+#reject-dialog h3 { font-size: 1em; font-weight: 700; margin: 0; }
+#reject-dialog p { font-size: 0.82em; color: var(--text-muted); margin: -8px 0 0; }
+.reject-reason-options { display: flex; flex-direction: column; gap: 6px; }
+.reject-reason-option {
+  padding: 9px 12px; border-radius: 8px; border: 1px solid var(--border);
+  background: var(--surface2); font-size: 0.83em; color: var(--text);
+  cursor: pointer; text-align: left; transition: border-color .12s, background .12s;
+}
+.reject-reason-option:hover { border-color: var(--primary); background: var(--primary-light); }
+.reject-reason-option.selected { border-color: var(--primary); background: var(--primary-light); font-weight: 600; color: var(--primary); }
+.reject-custom-label { font-size: 0.78em; font-weight: 600; color: var(--text-muted); }
+#reject-custom-text {
+  padding: 9px 12px; border: 1px solid var(--border); border-radius: 8px;
+  background: var(--surface2); color: var(--text); font-size: 0.85em;
+  width: 100%; box-sizing: border-box; resize: vertical; min-height: 72px; outline: none;
+}
+#reject-custom-text:focus { border-color: var(--primary); }
+.reject-actions { display: flex; gap: 8px; justify-content: flex-end; }
+.reject-actions button { padding: 9px 20px; border-radius: 8px; font-size: 0.85em; font-weight: 700; border: none; cursor: pointer; }
+#btn-reject-cancel  { background: var(--surface2); color: var(--text-muted); }
+#btn-reject-cancel:hover { background: var(--border); }
+#btn-reject-confirm { background: #dc2626; color: #fff; }
+#btn-reject-confirm:hover { background: #b91c1c; }
+#btn-reject-confirm:disabled { opacity: .5; cursor: not-allowed; }
+/* ─── User: modal Minhas Sugestões ─────────────────────────────────────── */
+#my-suggestions-overlay {
+  position: fixed; inset: 0; z-index: 1200;
+  background: rgba(0,0,0,.45);
+  display: none; align-items: center; justify-content: center;
+}
+#my-suggestions-overlay.open { display: flex; }
+#my-suggestions-dialog {
+  background: var(--surface); border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg); padding: 28px 28px 20px;
+  width: min(480px, calc(100vw - 32px));
+  display: flex; flex-direction: column; gap: 14px;
+  max-height: 80vh;
+}
+#my-suggestions-dialog h3 { font-size: 1em; font-weight: 700; margin: 0; }
+#my-suggestions-list { display: flex; flex-direction: column; gap: 8px; overflow-y: auto; flex: 1; }
+.my-sug-item {
+  border: 1px solid var(--border); border-radius: 10px;
+  padding: 12px 14px; display: flex; flex-direction: column; gap: 5px;
+  background: var(--surface2); cursor: default;
+}
+.my-sug-item.fulfilled { border-color: rgba(22,163,74,.3); background: rgba(22,163,74,.05); }
+.my-sug-item.rejected  { border-color: rgba(239,68,68,.2); background: rgba(239,68,68,.04); }
+.my-sug-top { display: flex; align-items: center; gap: 8px; }
+.my-sug-song  { font-size: 0.88em; font-weight: 700; color: var(--text); flex: 1; }
+.my-sug-artist { font-size: 0.75em; color: var(--text-muted); }
+.my-sug-reason { font-size: 0.78em; color: #dc2626; font-style: italic; margin-top: 2px; }
+.my-sug-date { font-size: 0.72em; color: var(--text-muted); }
+.my-sug-open { padding: 4px 10px; border-radius: 99px; background: var(--primary); color: #fff; font-size: 0.72em; font-weight: 700; border: none; cursor: pointer; white-space: nowrap; }
+.my-sug-open:hover { background: var(--primary-dark, #4a3a7a); }
 
 /* ─── Three-dot menu nos saved-rep items ────────────────────────────────── */
 .sri-menu-wrap { position: relative; flex-shrink: 0; }
@@ -4277,6 +4474,13 @@ body.has-selection #th-rank-hash,
     <div class="notif-panel-header">Notificações</div>
     <div id="notif-list"></div>
     <div id="notif-empty" style="display:none">Nenhuma notificação.</div>
+    <div class="notif-panel-footer" id="notif-panel-footer">
+      {% if is_owner %}
+      <button class="notif-suggest-link" onclick="document.getElementById('notif-panel').classList.remove('open');openSuggestionsPanel()">Ver todas as sugestões</button>
+      {% else %}
+      <button class="notif-suggest-link" onclick="document.getElementById('notif-panel').classList.remove('open');openMySuggestions()">Minhas sugestões</button>
+      {% endif %}
+    </div>
   </div>
 
   <div id="body">
@@ -4504,6 +4708,87 @@ body.has-selection #th-rank-hash,
     <div id="manage-shares-empty" style="font-size:0.82em;color:var(--text-muted);text-align:center;padding:12px 0;display:none;">Nenhum compartilhamento ativo.</div>
     <div style="display:flex;justify-content:flex-end;">
       <button id="btn-manage-shares-close" style="font-size:0.84em;padding:8px 20px;border-radius:8px;background:var(--primary);color:#fff;font-weight:700;">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Suggestion modal: user submits a song suggestion -->
+<div id="suggest-overlay">
+  <div id="suggest-dialog">
+    <h3>Sugerir uma música</h3>
+    <p>Envie o nome e artista da música que gostaria de ver no aplicativo.</p>
+    <div class="suggest-field">
+      <label for="suggest-song-name">Nome da música *</label>
+      <input id="suggest-song-name" type="text" placeholder="Ex: Vem Senhor Jesus" maxlength="120" autocomplete="off">
+    </div>
+    <div class="suggest-field">
+      <label for="suggest-artist">Artista / Banda</label>
+      <input id="suggest-artist" type="text" placeholder="Ex: Coral Magnificat" maxlength="120" autocomplete="off">
+    </div>
+    <div class="suggest-actions">
+      <button id="btn-suggest-cancel">Cancelar</button>
+      <button id="btn-suggest-submit">Enviar sugestão</button>
+    </div>
+  </div>
+</div>
+
+<!-- Owner: suggestions management panel -->
+<div id="suggestions-overlay">
+  <div id="suggestions-dialog">
+    <h3>Sugestões de músicas</h3>
+    <div id="suggestions-list"></div>
+    <div id="suggestions-empty" style="font-size:0.82em;color:var(--text-muted);text-align:center;padding:16px 0;display:none;">Nenhuma sugestão ainda.</div>
+    <div style="display:flex;justify-content:flex-end;">
+      <button id="btn-suggestions-close" style="font-size:0.84em;padding:8px 20px;border-radius:8px;background:var(--primary);color:#fff;font-weight:700;">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Owner: fulfill dialog -->
+<div id="fulfill-overlay">
+  <div id="fulfill-dialog">
+    <h3>Atender sugestão</h3>
+    <p id="fulfill-sug-label" style="font-size:0.82em;color:var(--text-muted);margin:-6px 0 0;"></p>
+    <input id="fulfill-song-search" type="text" placeholder="Buscar música no acervo…" autocomplete="off">
+    <div id="fulfill-results"></div>
+    <div class="fulfill-selected" id="fulfill-selected-label"></div>
+    <p class="fulfill-note">Dica: adicione a música ao Drive primeiro, depois busque aqui pelo nome.</p>
+    <div class="fulfill-actions">
+      <button id="btn-fulfill-cancel">Cancelar</button>
+      <button id="btn-fulfill-confirm">Confirmar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Owner: reject dialog -->
+<div id="reject-overlay">
+  <div id="reject-dialog">
+    <h3>Recusar sugestão</h3>
+    <p id="reject-sug-label" style="font-size:0.82em;color:var(--text-muted);margin:-6px 0 0;"></p>
+    <div class="reject-reason-options" id="reject-preset-options">
+      <button class="reject-reason-option" data-reason="A música já existe na plataforma.">A música já existe na plataforma.</button>
+      <button class="reject-reason-option" data-reason="A música não atende às normas e políticas internas do aplicativo.">A música não atende às normas e políticas internas do aplicativo.</button>
+      <button class="reject-reason-option" data-reason="A música está fora do repertório litúrgico da plataforma.">A música está fora do repertório litúrgico da plataforma.</button>
+      <button class="reject-reason-option" data-reason="Não foi possível encontrar a letra/cifra desta música.">Não foi possível encontrar a letra/cifra desta música.</button>
+    </div>
+    <div class="reject-custom-label">Ou escreva um motivo personalizado:</div>
+    <textarea id="reject-custom-text" placeholder="Motivo personalizado (opcional se já selecionou acima)…" maxlength="400"></textarea>
+    <div class="reject-actions">
+      <button id="btn-reject-cancel">Cancelar</button>
+      <button id="btn-reject-confirm">Recusar</button>
+    </div>
+  </div>
+</div>
+
+<!-- User: Minhas Sugestões modal -->
+<div id="my-suggestions-overlay">
+  <div id="my-suggestions-dialog">
+    <h3>Minhas sugestões</h3>
+    <div id="my-suggestions-list"></div>
+    <div id="my-suggestions-empty" style="font-size:0.82em;color:var(--text-muted);text-align:center;padding:16px 0;display:none;">Você ainda não enviou nenhuma sugestão.</div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px;">
+      <button id="btn-my-sug-new" style="font-size:0.83em;padding:8px 16px;border-radius:8px;background:var(--primary-light);color:var(--primary);font-weight:700;border:none;cursor:pointer;">+ Nova sugestão</button>
+      <button id="btn-my-sug-close" style="font-size:0.84em;padding:8px 20px;border-radius:8px;background:var(--surface2);color:var(--text-muted);font-weight:700;border:none;cursor:pointer;">Fechar</button>
     </div>
   </div>
 </div>
@@ -5332,6 +5617,14 @@ var _pendingDelete = null; // ID aguardando confirmação de exclusão
 var sharedWithMe = [];     // repertórios compartilhados comigo
 var sharesByMe = {};       // { rep_id: [share, ...] } — meus shares ativos
 var currentSharedId = null;// ID do share atualmente aberto (compartilhado comigo)
+
+// ─── Suggestions state ───────────────────────────────────────────────────────
+var _suggestions = [];          // owner: todas as sugestões; user: suas sugestões
+var _lsSugSeen  = function(id) { try { return new Set(JSON.parse(localStorage.getItem("mycifras:sug_seen") || "[]")).has(id); } catch(e) { return false; } };
+var _lsSugMarkSeen = function(id) { try { var s = new Set(JSON.parse(localStorage.getItem("mycifras:sug_seen") || "[]")); s.add(id); localStorage.setItem("mycifras:sug_seen", JSON.stringify([...s])); } catch(e) {} };
+// fulfill dialog state
+var _fulfillSugId = null;
+var _fulfillSelectedSong = null;
 
 // Estado local de shares — persiste no browser independente de deploy
 function _lsSeenShares()      { try { return new Set(JSON.parse(localStorage.getItem("mycifras:seen_shares") || "[]")); } catch(e) { return new Set(); } }
@@ -8318,7 +8611,7 @@ async function _loadSongsForExport() {
     var s = repertorio[i];
     setExportProgress(Math.round((i / total) * 80), "Carregando " + (i + 1) + " de " + total + "...");
     var _prefs = (s.fileId && _myTones[s.fileId]) || {};
-    var _key  = _prefs.my_key || s.key || "";
+    var _key  = s.key || _prefs.my_key || "";
     var _capo = s.capo || "";
     var text = s.text || "";
     if (!text) {
@@ -8650,15 +8943,45 @@ async function loadSharesByMe() {
   } catch(e) { /* silencia */ }
 }
 
+// ─── Song Suggestions ────────────────────────────────────────────────────────
+
+async function loadSuggestions() {
+  try {
+    var url = _isOwner ? "/api/suggestions" : "/api/suggestions/mine";
+    var r = await fetch(url);
+    if (r.status === 401) return;
+    if (!r.ok) return;
+    _suggestions = await r.json();
+    _updateNotifBadge();
+    renderNotifPanel(); // atualiza painel se aberto
+  } catch(e) { /* silencia */ }
+}
+
+function _countUnseenSuggestions() {
+  if (_isOwner) {
+    // Owner: conta sugestões pending + fulfilled/rejected não lidas
+    return _suggestions.filter(function(s) {
+      return s.status === 'pending' && !s.owner_read && !_lsSugSeen(s.id);
+    }).length;
+  } else {
+    // User: conta fulfilled/rejected ainda não lidas
+    return _suggestions.filter(function(s) {
+      return (s.status === 'fulfilled' || s.status === 'rejected') && !s.user_read && !_lsSugSeen(s.id);
+    }).length;
+  }
+}
+
 function _updateNotifBadge() {
   var btn = document.getElementById("btn-notif");
   var badge = document.getElementById("notif-badge");
   if (!btn || !badge) return;
   var userEmail = (document.body.dataset.userEmail || "").toLowerCase();
-  var unseen = sharedWithMe.filter(function(s) {
+  var unseenShares = sharedWithMe.filter(function(s) {
     var seenServer = (s.seen_by || []).map(function(e){ return e.toLowerCase(); }).includes(userEmail);
     return !seenServer && !_lsIsSeen(s.id);
   }).length;
+  var unseenSugg = _countUnseenSuggestions();
+  var unseen = unseenShares + unseenSugg;
   if (unseen > 0) {
     badge.textContent = unseen > 9 ? "9+" : String(unseen);
     badge.style.display = "flex";
@@ -8667,6 +8990,270 @@ function _updateNotifBadge() {
     badge.style.display = "none";
     btn.classList.remove("has-notif");
   }
+}
+
+// ─── Submit suggestion (user) ────────────────────────────────────────────────
+
+function openSuggestModal() {
+  document.getElementById("suggest-song-name").value = "";
+  document.getElementById("suggest-artist").value = "";
+  document.getElementById("btn-suggest-submit").disabled = false;
+  document.getElementById("suggest-overlay").classList.add("open");
+  setTimeout(function() { document.getElementById("suggest-song-name").focus(); }, 80);
+}
+
+async function _doSubmitSuggestion() {
+  var name = document.getElementById("suggest-song-name").value.trim();
+  var artist = document.getElementById("suggest-artist").value.trim();
+  if (!name) { document.getElementById("suggest-song-name").focus(); return; }
+  var btn = document.getElementById("btn-suggest-submit");
+  btn.disabled = true;
+  try {
+    var r = await fetch("/api/suggestions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ song_name: name, artist: artist }),
+    });
+    if (r.ok) {
+      document.getElementById("suggest-overlay").classList.remove("open");
+      showToast("Sugestão enviada! Obrigado.");
+      loadSuggestions();
+    } else {
+      var d = await r.json().catch(function(){ return {}; });
+      showToast(d.error || "Erro ao enviar sugestão.");
+      btn.disabled = false;
+    }
+  } catch(e) { showToast("Erro de rede."); btn.disabled = false; }
+}
+
+// ─── Minhas Sugestões (user) ─────────────────────────────────────────────────
+
+async function openMySuggestions() {
+  await loadSuggestions();
+  renderMySuggestions();
+  document.getElementById("my-suggestions-overlay").classList.add("open");
+}
+
+function renderMySuggestions() {
+  var list = document.getElementById("my-suggestions-list");
+  var empty = document.getElementById("my-suggestions-empty");
+  if (!list) return;
+  list.innerHTML = "";
+  var items = _suggestions.slice().sort(function(a, b) { return (b.created_at || "") < (a.created_at || "") ? -1 : 1; });
+  if (!items.length) { empty.style.display = "block"; return; }
+  empty.style.display = "none";
+  items.forEach(function(s) {
+    var item = document.createElement("div");
+    item.className = "my-sug-item " + s.status;
+    var dateStr = s.created_at ? new Date(s.created_at).toLocaleDateString("pt-BR") : "";
+    var statusLabel = { pending: "⏳ Aguardando", fulfilled: "✅ Atendida", rejected: "❌ Recusada" }[s.status] || s.status;
+    var html =
+      '<div class="my-sug-top">' +
+        '<span class="my-sug-song">' + escHtml(s.song_name) + '</span>' +
+        '<span class="sug-status ' + s.status + '">' + statusLabel + '</span>' +
+      '</div>' +
+      (s.artist ? '<div class="my-sug-artist">' + escHtml(s.artist) + '</div>' : '') +
+      (s.status === 'rejected' && s.rejection_reason ? '<div class="my-sug-reason">Motivo: ' + escHtml(s.rejection_reason) + '</div>' : '') +
+      '<div style="display:flex;align-items:center;justify-content:space-between;margin-top:4px;">' +
+        '<span class="my-sug-date">' + dateStr + '</span>' +
+        (s.status === 'fulfilled' && s.fulfilled_file_id ? '<button class="my-sug-open" data-fid="' + escHtml(s.fulfilled_file_id) + '" data-name="' + escHtml(s.fulfilled_song_name || s.song_name) + '">Abrir música</button>' : '') +
+      '</div>';
+    item.innerHTML = html;
+    if (s.status === 'fulfilled' && s.fulfilled_file_id) {
+      var openBtn = item.querySelector(".my-sug-open");
+      if (openBtn) openBtn.addEventListener("click", function() {
+        var fid = this.dataset.fid;
+        var sname = this.dataset.name;
+        document.getElementById("my-suggestions-overlay").classList.remove("open");
+        var song = allSongs.find(function(x) { return x.fileId === fid; }) || { name: sname, fileId: fid };
+        openModal(song);
+      });
+    }
+    // mark read
+    if ((s.status === 'fulfilled' || s.status === 'rejected') && !s.user_read) {
+      _lsSugMarkSeen(s.id);
+      fetch("/api/suggestions/" + s.id + "/user-read", { method: "POST" }).catch(function(){});
+    }
+    list.appendChild(item);
+  });
+}
+
+// ─── Owner: suggestions panel ────────────────────────────────────────────────
+
+async function openSuggestionsPanel() {
+  await loadSuggestions();
+  renderSuggestionsPanel();
+  document.getElementById("suggestions-overlay").classList.add("open");
+}
+
+function renderSuggestionsPanel() {
+  var list = document.getElementById("suggestions-list");
+  var empty = document.getElementById("suggestions-empty");
+  if (!list) return;
+  list.innerHTML = "";
+  var items = _suggestions.slice().sort(function(a, b) {
+    // pending primeiro, depois por data
+    var orderA = a.status === 'pending' ? 0 : 1;
+    var orderB = b.status === 'pending' ? 0 : 1;
+    if (orderA !== orderB) return orderA - orderB;
+    return (b.created_at || "") < (a.created_at || "") ? -1 : 1;
+  });
+  if (!items.length) { empty.style.display = "block"; return; }
+  empty.style.display = "none";
+  items.forEach(function(s) {
+    var item = document.createElement("div");
+    item.className = "sug-item " + s.status;
+    var dateStr = s.created_at ? new Date(s.created_at).toLocaleDateString("pt-BR") : "";
+    var statusLabel = { pending: "Pendente", fulfilled: "Atendida", rejected: "Recusada" }[s.status] || s.status;
+    var avatarHtml = s.from_picture
+      ? '<img src="' + escHtml(s.from_picture) + '" referrerpolicy="no-referrer" alt="">'
+      : '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#5b4b8a" stroke-width="2"><circle cx="12" cy="7" r="4"/><path d="M20 21a8 8 0 1 0-16 0"/></svg>';
+    item.innerHTML =
+      '<div class="sug-header">' +
+        '<div class="sug-avatar">' + avatarHtml + '</div>' +
+        '<div class="sug-info">' +
+          '<div class="sug-song">' + escHtml(s.song_name) + '</div>' +
+          (s.artist ? '<div class="sug-artist">' + escHtml(s.artist) + '</div>' : '') +
+          '<div class="sug-from">De: ' + escHtml(s.from_name || s.from_email || 'Usuário') + '</div>' +
+        '</div>' +
+        '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;">' +
+          '<span class="sug-status ' + s.status + '">' + statusLabel + '</span>' +
+          '<span class="sug-date">' + dateStr + '</span>' +
+        '</div>' +
+      '</div>' +
+      (s.status === 'rejected' && s.rejection_reason
+        ? '<div style="font-size:0.76em;color:#dc2626;font-style:italic;">Motivo: ' + escHtml(s.rejection_reason) + '</div>'
+        : '') +
+      (s.status === 'fulfilled' && s.fulfilled_song_name
+        ? '<div style="font-size:0.76em;color:#16a34a;">Música: ' + escHtml(s.fulfilled_song_name) + '</div>'
+        : '') +
+      (s.status === 'pending'
+        ? '<div class="sug-actions">' +
+            '<button class="btn-sug-fulfill">Atender</button>' +
+            '<button class="btn-sug-reject">Recusar</button>' +
+          '</div>'
+        : '');
+    if (s.status === 'pending') {
+      item.querySelector(".btn-sug-fulfill").addEventListener("click", function() { openFulfillDialog(s); });
+      item.querySelector(".btn-sug-reject").addEventListener("click", function() { openRejectDialog(s); });
+    }
+    // mark as read for owner
+    if (s.status === 'pending' && !s.owner_read) {
+      _lsSugMarkSeen(s.id);
+      fetch("/api/suggestions/" + s.id + "/owner-read", { method: "POST" }).catch(function(){});
+      s.owner_read = true;
+    }
+    list.appendChild(item);
+  });
+  _updateNotifBadge();
+}
+
+// ─── Owner: fulfill dialog ────────────────────────────────────────────────────
+
+function openFulfillDialog(sug) {
+  _fulfillSugId = sug.id;
+  _fulfillSelectedSong = null;
+  document.getElementById("fulfill-sug-label").textContent =
+    '"' + sug.song_name + '"' + (sug.artist ? ' — ' + sug.artist : '') + ' (de ' + (sug.from_name || sug.from_email) + ')';
+  document.getElementById("fulfill-song-search").value = "";
+  document.getElementById("fulfill-results").style.display = "none";
+  document.getElementById("fulfill-results").innerHTML = "";
+  document.getElementById("fulfill-selected-label").style.display = "none";
+  document.getElementById("fulfill-selected-label").textContent = "";
+  document.getElementById("btn-fulfill-confirm").disabled = false;
+  document.getElementById("fulfill-overlay").classList.add("open");
+  setTimeout(function() { document.getElementById("fulfill-song-search").focus(); }, 80);
+}
+
+function _renderFulfillResults(q) {
+  var box = document.getElementById("fulfill-results");
+  box.innerHTML = "";
+  if (!q) { box.style.display = "none"; return; }
+  var norm = q.toLowerCase();
+  var hits = allSongs.filter(function(s) {
+    return s.name.toLowerCase().includes(norm) || (s.artist || "").toLowerCase().includes(norm);
+  }).slice(0, 8);
+  if (!hits.length) { box.style.display = "none"; return; }
+  box.style.display = "flex";
+  hits.forEach(function(s) {
+    var item = document.createElement("div");
+    item.className = "fulfill-result-item";
+    item.innerHTML = '<strong>' + escHtml(s.name) + '</strong>' + (s.artist ? '<span>' + escHtml(s.artist) + '</span>' : '');
+    item.addEventListener("click", function() {
+      _fulfillSelectedSong = s;
+      box.style.display = "none";
+      document.getElementById("fulfill-song-search").value = s.name;
+      var lbl = document.getElementById("fulfill-selected-label");
+      lbl.textContent = "✓ " + s.name + (s.artist ? " — " + s.artist : "");
+      lbl.style.display = "block";
+    });
+    box.appendChild(item);
+  });
+}
+
+async function _doFulfillSuggestion() {
+  var btn = document.getElementById("btn-fulfill-confirm");
+  btn.disabled = true;
+  var fileId = _fulfillSelectedSong ? (_fulfillSelectedSong.fileId || "") : "";
+  var songName = _fulfillSelectedSong ? _fulfillSelectedSong.name : "";
+  try {
+    var r = await fetch("/api/suggestions/" + _fulfillSugId + "/fulfill", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ file_id: fileId, song_name: songName }),
+    });
+    if (r.ok) {
+      document.getElementById("fulfill-overlay").classList.remove("open");
+      showToast("Sugestão atendida! O usuário será notificado.");
+      await loadSuggestions();
+      renderSuggestionsPanel();
+    } else {
+      var d = await r.json().catch(function(){ return {}; });
+      showToast(d.error || "Erro ao atender.");
+      btn.disabled = false;
+    }
+  } catch(e) { showToast("Erro de rede."); btn.disabled = false; }
+}
+
+// ─── Owner: reject dialog ─────────────────────────────────────────────────────
+
+var _rejectSugId = null;
+var _rejectSelectedPreset = null;
+
+function openRejectDialog(sug) {
+  _rejectSugId = sug.id;
+  _rejectSelectedPreset = null;
+  document.getElementById("reject-sug-label").textContent =
+    '"' + sug.song_name + '"' + (sug.artist ? ' — ' + sug.artist : '') + ' (de ' + (sug.from_name || sug.from_email) + ')';
+  document.getElementById("reject-custom-text").value = "";
+  document.querySelectorAll(".reject-reason-option").forEach(function(btn) { btn.classList.remove("selected"); });
+  document.getElementById("btn-reject-confirm").disabled = false;
+  document.getElementById("reject-overlay").classList.add("open");
+}
+
+async function _doRejectSuggestion() {
+  var custom = document.getElementById("reject-custom-text").value.trim();
+  var reason = custom || _rejectSelectedPreset;
+  if (!reason) { showToast("Selecione ou escreva um motivo."); return; }
+  var btn = document.getElementById("btn-reject-confirm");
+  btn.disabled = true;
+  try {
+    var r = await fetch("/api/suggestions/" + _rejectSugId + "/reject", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ reason: reason }),
+    });
+    if (r.ok) {
+      document.getElementById("reject-overlay").classList.remove("open");
+      showToast("Sugestão recusada.");
+      await loadSuggestions();
+      renderSuggestionsPanel();
+    } else {
+      var d = await r.json().catch(function(){ return {}; });
+      showToast(d.error || "Erro ao recusar.");
+      btn.disabled = false;
+    }
+  } catch(e) { showToast("Erro de rede."); btn.disabled = false; }
 }
 
 function renderSharedWithMe() {
@@ -9195,18 +9782,36 @@ function renderNotifPanel() {
   var listEl = document.getElementById("notif-list");
   var emptyEl = document.getElementById("notif-empty");
   listEl.innerHTML = "";
-  if (!sharedWithMe.length) {
+
+  // Sugestão items para o painel de notificações
+  var sugItems = [];
+  if (_isOwner) {
+    // Owner: pending não lidas
+    sugItems = _suggestions.filter(function(s) {
+      return s.status === 'pending' && !s.owner_read && !_lsSugSeen(s.id);
+    });
+  } else {
+    // User: fulfilled/rejected não lidas
+    sugItems = _suggestions.filter(function(s) {
+      return (s.status === 'fulfilled' || s.status === 'rejected') && !s.user_read && !_lsSugSeen(s.id);
+    });
+  }
+
+  var hasItems = sharedWithMe.length > 0 || sugItems.length > 0;
+  if (!hasItems) {
     emptyEl.style.display = "block";
     return;
   }
   emptyEl.style.display = "none";
   var userEmail = (document.body.dataset.userEmail || "").toLowerCase();
+
+  // Shares
   sharedWithMe.forEach(function(share) {
     var item = document.createElement("div");
     var isSeen = (share.seen_by || []).map(function(e){ return e.toLowerCase(); }).includes(userEmail)
                || _lsIsSeen(share.id);
     item.className = "notif-item" + (isSeen ? " seen" : "");
-    var fromLabel = escHtml(share.from_name || share.from_email || "Alguém");
+    var fromLabel = escHtml(share.from_name || share.from_email || "Algu\xe9m");
     var dt = share.shared_at ? new Date(share.shared_at + "Z").toLocaleDateString("pt-BR") : "";
     item.innerHTML =
       '<div class="notif-avatar">' +
@@ -9222,13 +9827,51 @@ function renderNotifPanel() {
       (!isSeen ? '<div class="notif-dot"></div>' : '');
     item.addEventListener("click", function() {
       document.getElementById("notif-panel").classList.remove("open");
-      // Abre o painel de repertório e o share
       if (!repOpen) {
         var mbnRep = document.getElementById("mbn-rep");
         if (mbnRep) mbnRep.click();
         else toggleRepPanel();
       }
       setTimeout(function() { openSharedRep(share.id); }, 120);
+    });
+    listEl.appendChild(item);
+  });
+
+  // Suggestions
+  sugItems.forEach(function(s) {
+    var item = document.createElement("div");
+    item.className = "notif-item type-suggestion " + s.status;
+    var dt = s.created_at ? new Date(s.created_at).toLocaleDateString("pt-BR") : "";
+    var iconSvg = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>';
+    var bodyText, bodyNote;
+    if (_isOwner) {
+      bodyText = escHtml((s.from_name || s.from_email || 'Algu\xe9m') + ' sugeriu:');
+      bodyNote = '<em>' + escHtml(s.song_name) + (s.artist ? ' — ' + s.artist : '') + '</em>';
+    } else if (s.status === 'fulfilled') {
+      bodyText = 'Sua sugest\xe3o foi atendida!';
+      bodyNote = '<em>' + escHtml(s.song_name) + '</em>';
+    } else {
+      bodyText = 'Sua sugest\xe3o foi recusada.';
+      bodyNote = '<em>' + escHtml(s.song_name) + '</em>';
+    }
+    item.innerHTML =
+      '<div class="notif-avatar">' + iconSvg + '</div>' +
+      '<div class="notif-body">' +
+        '<strong>' + bodyText + '</strong>' +
+        '<p>' + bodyNote + '</p>' +
+        (s.status === 'rejected' && s.rejection_reason
+          ? '<p style="color:#dc2626;font-style:italic;">' + escHtml(s.rejection_reason) + '</p>' : '') +
+        (dt ? '<div class="notif-time">' + dt + '</div>' : '') +
+      '</div>' +
+      '<div class="notif-dot"></div>';
+    item.addEventListener("click", function() {
+      document.getElementById("notif-panel").classList.remove("open");
+      _lsSugMarkSeen(s.id);
+      if (_isOwner) {
+        openSuggestionsPanel();
+      } else {
+        openMySuggestions();
+      }
     });
     listEl.appendChild(item);
   });
@@ -10144,17 +10787,95 @@ function init() {
   window.addEventListener('offline', function() { _showOfflineBanner(); });
   if (!navigator.onLine) _showOfflineBanner();
 
+  // Carga inicial de sugestões
+  loadSuggestions();
+
   // Recarrega shares ao voltar para a aba (detecta descompartilhamentos feitos por terceiros)
   document.addEventListener('visibilitychange', function() {
     if (document.visibilityState === 'visible' && navigator.onLine) {
       loadSharedWithMe();
       loadSharesByMe();
+      loadSuggestions();
     }
   });
   // Poll a cada 30 segundos para manter shares e notificações sincronizados
   setInterval(function() {
-    if (navigator.onLine) { loadSharedWithMe(); loadSharesByMe(); }
+    if (navigator.onLine) { loadSharedWithMe(); loadSharesByMe(); loadSuggestions(); }
   }, 30 * 1000);
+
+  // ─── Event listeners: Suggestion modals ─────────────────────────────────
+
+  // User: suggestion submit modal
+  document.getElementById("btn-suggest-cancel").addEventListener("click", function() {
+    document.getElementById("suggest-overlay").classList.remove("open");
+  });
+  document.getElementById("suggest-overlay").addEventListener("click", function(e) {
+    if (e.target === this) this.classList.remove("open");
+  });
+  document.getElementById("btn-suggest-submit").addEventListener("click", _doSubmitSuggestion);
+  document.getElementById("suggest-song-name").addEventListener("keydown", function(e) {
+    if (e.key === "Enter") _doSubmitSuggestion();
+  });
+  document.getElementById("suggest-artist").addEventListener("keydown", function(e) {
+    if (e.key === "Enter") _doSubmitSuggestion();
+  });
+
+  // User: Minhas Sugestões modal
+  document.getElementById("btn-my-sug-close").addEventListener("click", function() {
+    document.getElementById("my-suggestions-overlay").classList.remove("open");
+  });
+  document.getElementById("btn-my-sug-new").addEventListener("click", function() {
+    document.getElementById("my-suggestions-overlay").classList.remove("open");
+    openSuggestModal();
+  });
+  document.getElementById("my-suggestions-overlay").addEventListener("click", function(e) {
+    if (e.target === this) this.classList.remove("open");
+  });
+
+  // Owner: suggestions panel
+  document.getElementById("btn-suggestions-close").addEventListener("click", function() {
+    document.getElementById("suggestions-overlay").classList.remove("open");
+  });
+  document.getElementById("suggestions-overlay").addEventListener("click", function(e) {
+    if (e.target === this) this.classList.remove("open");
+  });
+
+  // Owner: fulfill dialog
+  document.getElementById("btn-fulfill-cancel").addEventListener("click", function() {
+    document.getElementById("fulfill-overlay").classList.remove("open");
+  });
+  document.getElementById("fulfill-overlay").addEventListener("click", function(e) {
+    if (e.target === this) this.classList.remove("open");
+  });
+  document.getElementById("fulfill-song-search").addEventListener("input", function() {
+    _renderFulfillResults(this.value.trim());
+    _fulfillSelectedSong = null;
+    document.getElementById("fulfill-selected-label").style.display = "none";
+  });
+  document.getElementById("btn-fulfill-confirm").addEventListener("click", _doFulfillSuggestion);
+
+  // Owner: reject dialog
+  document.getElementById("btn-reject-cancel").addEventListener("click", function() {
+    document.getElementById("reject-overlay").classList.remove("open");
+  });
+  document.getElementById("reject-overlay").addEventListener("click", function(e) {
+    if (e.target === this) this.classList.remove("open");
+  });
+  document.querySelectorAll(".reject-reason-option").forEach(function(btn) {
+    btn.addEventListener("click", function() {
+      document.querySelectorAll(".reject-reason-option").forEach(function(b) { b.classList.remove("selected"); });
+      this.classList.add("selected");
+      _rejectSelectedPreset = this.dataset.reason;
+      document.getElementById("reject-custom-text").value = "";
+    });
+  });
+  document.getElementById("reject-custom-text").addEventListener("input", function() {
+    if (this.value.trim()) {
+      document.querySelectorAll(".reject-reason-option").forEach(function(b) { b.classList.remove("selected"); });
+      _rejectSelectedPreset = null;
+    }
+  });
+  document.getElementById("btn-reject-confirm").addEventListener("click", _doRejectSuggestion);
 
   // Registra Service Worker
   if ('serviceWorker' in navigator) {

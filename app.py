@@ -909,6 +909,138 @@ def api_notif_count():
 
 
 # ---------------------------------------------------------------------------
+# Song Suggestions
+# ---------------------------------------------------------------------------
+
+@app.route("/api/suggestions", methods=["POST"])
+@login_required
+def api_create_suggestion():
+    if not db.enabled():
+        return jsonify({"error": "Banco de dados não configurado"}), 503
+    me = current_user()
+    uid = _get_db_uid()
+    if not uid:
+        return jsonify({"error": "Usuário não encontrado"}), 404
+    body = request.get_json(force=True) or {}
+    song_name = (body.get("song_name") or "").strip()
+    if not song_name:
+        return jsonify({"error": "Nome da música é obrigatório"}), 400
+    artist = (body.get("artist") or "").strip()
+    try:
+        row = db.create_suggestion(
+            user_id=uid,
+            from_email=me.get("email", ""),
+            from_name=me.get("name", ""),
+            from_picture=me.get("picture", ""),
+            song_name=song_name,
+            artist=artist,
+        )
+        return jsonify(row), 201
+    except Exception as e:
+        log.error("[suggestions] Erro ao criar: %s", e)
+        return jsonify({"error": "Erro interno"}), 500
+
+
+@app.route("/api/suggestions", methods=["GET"])
+@login_required
+def api_get_suggestions():
+    """Owner: retorna todas as sugestões."""
+    if not is_owner():
+        return jsonify({"error": "Permissão negada"}), 403
+    if not db.enabled():
+        return jsonify([]), 200
+    try:
+        return jsonify(db.load_suggestions_owner())
+    except Exception as e:
+        log.error("[suggestions] Erro ao carregar: %s", e)
+        return jsonify([]), 200
+
+
+@app.route("/api/suggestions/mine", methods=["GET"])
+@login_required
+def api_my_suggestions():
+    """Usuário: retorna suas próprias sugestões."""
+    if not db.enabled():
+        return jsonify([]), 200
+    uid = _get_db_uid()
+    if not uid:
+        return jsonify([]), 200
+    try:
+        return jsonify(db.load_suggestions_user(uid))
+    except Exception as e:
+        log.error("[suggestions] Erro ao carregar mine: %s", e)
+        return jsonify([]), 200
+
+
+@app.route("/api/suggestions/<sid>/fulfill", methods=["POST"])
+@login_required
+def api_fulfill_suggestion(sid):
+    if not is_owner():
+        return jsonify({"error": "Permissão negada"}), 403
+    if not db.enabled():
+        return jsonify({"error": "DB não configurado"}), 503
+    body = request.get_json(force=True) or {}
+    file_id = (body.get("file_id") or "").strip()
+    song_name = (body.get("song_name") or "").strip()
+    try:
+        row = db.fulfill_suggestion(sid, file_id, song_name)
+        return jsonify(row)
+    except Exception as e:
+        log.error("[suggestions] Erro ao atender %s: %s", sid, e)
+        return jsonify({"error": "Erro interno"}), 500
+
+
+@app.route("/api/suggestions/<sid>/reject", methods=["POST"])
+@login_required
+def api_reject_suggestion(sid):
+    if not is_owner():
+        return jsonify({"error": "Permissão negada"}), 403
+    if not db.enabled():
+        return jsonify({"error": "DB não configurado"}), 503
+    body = request.get_json(force=True) or {}
+    reason = (body.get("reason") or "").strip()
+    if not reason:
+        return jsonify({"error": "Motivo é obrigatório"}), 400
+    try:
+        row = db.reject_suggestion(sid, reason)
+        return jsonify(row)
+    except Exception as e:
+        log.error("[suggestions] Erro ao recusar %s: %s", sid, e)
+        return jsonify({"error": "Erro interno"}), 500
+
+
+@app.route("/api/suggestions/<sid>/owner-read", methods=["POST"])
+@login_required
+def api_suggestion_owner_read(sid):
+    if not is_owner():
+        return jsonify({"error": "Permissão negada"}), 403
+    if not db.enabled():
+        return jsonify({"ok": True}), 200
+    try:
+        db.mark_suggestion_owner_read(sid)
+        return jsonify({"ok": True})
+    except Exception as e:
+        log.error("[suggestions] Erro ao marcar owner-read %s: %s", sid, e)
+        return jsonify({"ok": True})
+
+
+@app.route("/api/suggestions/<sid>/user-read", methods=["POST"])
+@login_required
+def api_suggestion_user_read(sid):
+    if not db.enabled():
+        return jsonify({"ok": True}), 200
+    uid = _get_db_uid()
+    if not uid:
+        return jsonify({"ok": True}), 200
+    try:
+        db.mark_suggestion_user_read(sid)
+        return jsonify({"ok": True})
+    except Exception as e:
+        log.error("[suggestions] Erro ao marcar user-read %s: %s", sid, e)
+        return jsonify({"ok": True})
+
+
+# ---------------------------------------------------------------------------
 # Views tracking (persistido em views.json com lock para concorrência)
 # ---------------------------------------------------------------------------
 
